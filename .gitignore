@@ -1,0 +1,29 @@
+# Maven
+target/
+
+# Java
+*.class
+
+# NetBeans
+nbproject/private/
+build/
+nbbuild/
+dist/
+nbdist/
+.nb-gradle/
+
+# Logs
+*.log
+
+# Variables de entorno / secretos
+.env
+.env.*
+
+# Otros IDE
+.idea/
+.vscode/
+*.iml
+
+# Sistema
+.DS_Store
+Thumbs.db
