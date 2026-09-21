@@ -21,6 +21,7 @@ import jakarta.validation.constraints.NotNull;
 import java.io.Serializable;
 import java.util.Collection;
 import java.util.Date;
+import java.util.UUID;
 
 /**
  *
@@ -34,12 +35,11 @@ import java.util.Date;
 public class Orden implements Serializable {
 
     private static final long serialVersionUID = 1L;
-    @Id
-    @Basic(optional = false)
-    @NotNull
-    @Lob
-    @Column(name = "id_orden")
-    private Object idOrden;
+@Id
+@Basic(optional = false)
+@NotNull
+@Column(name = "id_orden")
+private UUID idOrden;
     @Column(name = "fecha_creacion")
     @Temporal(TemporalType.TIMESTAMP)
     private Date fechaCreacion;
@@ -52,15 +52,15 @@ public class Orden implements Serializable {
     public Orden() {
     }
 
-    public Orden(Object idOrden) {
+    public Orden(UUID idOrden) {
         this.idOrden = idOrden;
     }
 
-    public Object getIdOrden() {
+    public UUID getIdOrden() {
         return idOrden;
     }
 
-    public void setIdOrden(Object idOrden) {
+    public void setIdOrden(UUID idOrden) {
         this.idOrden = idOrden;
     }
 
