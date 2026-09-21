@@ -1,15 +1,117 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<!--
-Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
-Click nbfs://nbhost/SystemFileSystem/Templates/JSP_Servlet/XHtml.xhtml to edit this template
--->
-<!DOCTYPE html>
-<html xmlns="http://www.w3.org/1999/xhtml">
-    <head>
-        <title>TODO supply a title</title>
-        <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    </head>
-    <body>
-        <div>TODO write content</div>
-    </body>
+<?xml version='1.0' encoding='UTF-8' ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" 
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:h="jakarta.faces.html"
+      xmlns:ui="jakarta.faces.facelets"
+      xmlns:p="http://primefaces.org/ui"
+      xmlns:f="jakarta.faces.core">
+
+    <h:head>
+        <title><ui:insert name="titulo">Cafefe</ui:insert></title>
+        <link rel="stylesheet" href="https://unpkg.com/primeflex@3.3.1/primeflex.min.css" />
+    </h:head>
+
+    <h:body>
+        <h:form id="frmPrincipal">
+
+            <div class="grid p-3">
+
+                <!-- ENCABEZADO SUPERIOR -->
+                <div class="col-12 flex align-items-center justify-content-between pb-3 border-bottom-1 surface-border">
+                    <div class="flex align-items-center">
+                        <h:graphicImage name="imagenes/200LogoCafefe.png" 
+                                        alt="Cafefe Logo" 
+                                        style="height: 80px; width: auto;" />
+                    </div>
+
+                    <div>
+                        <h1 class="text-2xl font-normal m-0">
+                            <ui:insert name="tituloHeader">Título Vista</ui:insert>
+                        </h1>
+                    </div>
+
+                    <div>
+                        <span class="text-color-secondary">Menú superior</span>
+                    </div>
+                </div>
+
+                <!-- CONTENIDO PRINCIPAL -->
+                <div class="col-12 grid mt-3">
+
+                    <div class="col-12 md:col-2">
+                        <span class="font-bold text-color-secondary">Menú navegación</span>
+                    </div>
+
+                    <div class="col-12 md:col-10">
+
+                        <!-- SECCIÓN 1: TABLA Y BOTÓN NUEVO (Se muestra cuando NO hay registro activo) -->
+                        <h:panelGroup id="pnlTablaContainer" layout="block" rendered="#{controller.registro == null}">
+                            <ui:insert name="tabla" />
+
+                            <div class="mt-3">
+                                <p:commandButton value="Nuevo #{nombreEntidad}" 
+                                                 actionListener="#{controller.btnNuevoHandler}" 
+                                                 update=":frmPrincipal" 
+                                                 icon="pi pi-plus" 
+                                                 styleClass="ui-button-primary" />
+                            </div>
+                        </h:panelGroup>
+
+                        <!-- SECCIÓN 2: FORMULARIO DE EDICIÓN / NUEVO (Se muestra cuando SÍ hay registro activo) -->
+                        <h:panelGroup id="pnlFormularioContainer" layout="block" rendered="#{controller.registro != null}">
+                            
+                            <p:panel header="Datos de #{nombreEntidad}">
+                                <h:panelGrid columns="2" cellpadding="5" id="pnlDetalle">
+                                    <p:outputLabel for="txtNombre" value="Nombre:" />
+                                    <p:inputText id="txtNombre" 
+                                                 value="#{controller.registro.nombre}" 
+                                                 required="true" />
+
+                                    <p:outputLabel for="txtMonto" value="Descuento Máximo:" />
+                                    <p:inputNumber id="txtMonto" 
+                                                   value="#{controller.registro.descuentoMaximo}" 
+                                                   symbol=" %" 
+                                                   symbolPosition="s" />
+
+                                    <p:outputLabel for="chkActivo" value="Estado Activo:" />
+                                    <p:selectBooleanCheckbox id="chkActivo" 
+                                                            value="#{controller.registro.activo}" />
+
+                                    <p:outputLabel for="txtObs" value="Observaciones:" />
+                                    <p:inputTextarea id="txtObs" 
+                                                     value="#{controller.registro.observaciones}" 
+                                                     rows="3" />
+                                </h:panelGrid>
+
+                                <f:facet name="footer">
+                                    <p:commandButton value="Guardar" 
+                                                     actionListener="#{controller.btnGuardarHandler}" 
+                                                     update=":frmPrincipal" 
+                                                     icon="pi pi-check" 
+                                                     styleClass="mr-2" />
+                                                     
+                                    <p:commandButton value="Cancelar" 
+                                                     actionListener="#{controller.btnCancelarHandler}" 
+                                                     update=":frmPrincipal" 
+                                                     process="@this"
+                                                     styleClass="ui-button-secondary" 
+                                                     icon="pi pi-times" />
+                                </f:facet>
+                            </p:panel>
+
+                        </h:panelGroup>
+
+                    </div>
+                </div>
+
+                <!-- PIE DE PÁGINA -->
+                <div class="col-12 mt-5 pt-3 border-top-1 surface-border text-color-secondary text-sm">
+                    Todos los derechos reservados 2026...
+                </div>
+
+            </div>
+
+        </h:form>
+    </h:body>
 </html>
