@@ -1,0 +1,47 @@
+<?xml version='1.0' encoding='UTF-8' ?>
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+                xmlns:ui="jakarta.faces.facelets"
+                xmlns:h="jakarta.faces.html"
+                xmlns:p="http://primefaces.org/ui"
+                template="/WEB-INF/plantillas/general.xhtml">
+
+    <ui:param name="nombreEntidad" value="Descuento" />
+    <ui:param name="controller" value="#{tipoDescuentoModel}" />
+
+    <ui:define name="titulo">Tipo de Descuento - Cafefe</ui:define>
+    <ui:define name="tituloHeader">Tipo de Descuento</ui:define>
+
+    <ui:define name="tabla">
+        <p:dataTable id="tblTipoDescuento" 
+                     value="#{tipoDescuentoModel.modelo}" 
+                     var="reg" 
+                     paginator="true" 
+                     rows="5"
+                     paginatorPosition="both"
+                     emptyMessage="No se encontraron registros"
+                     styleClass="p-datatable-striped p-datatable-sm">
+
+            <p:column headerText="ID" style="width: 25%;">
+                <h:outputText value="#{reg.idTipoDescuento}" />
+            </p:column>
+
+            <p:column headerText="Nombre">
+                <h:outputText value="#{reg.nombre}" />
+            </p:column>
+
+            <p:column headerText="Descuento Máximo">
+                <h:outputText value="#{reg.descuentoMaximo}" />
+            </p:column>
+
+            <p:column headerText="Estado">
+                <h:outputText value="#{reg.activo ? 'ACTIVO' : 'INACTIVO'}" />
+            </p:column>
+
+            <p:column headerText="Observaciones">
+                <h:outputText value="#{reg.observaciones}" />
+            </p:column>
+
+        </p:dataTable>
+    </ui:define>
+
+</ui:composition>

@@ -1,15 +1,20 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<!--
-Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
-Click nbfs://nbhost/SystemFileSystem/Templates/JSP_Servlet/XHtml.xhtml to edit this template
--->
-<!DOCTYPE html>
-<html xmlns="http://www.w3.org/1999/xhtml">
-    <head>
-        <title>TODO supply a title</title>
-        <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    </head>
-    <body>
-        <div>TODO write content</div>
-    </body>
-</html>
+<?xml version='1.0' encoding='UTF-8' ?>
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+                xmlns:h="http://jakarta.faces.html"
+                xmlns:p="http://primefaces.org/ui"
+                xmlns:ui="http://jakarta.faces.facelets">
+
+    <h:form id="frmBotones">
+        <p:panelGrid columns="5">
+<p:commandButton value="Nuevo #{nombreEntidad}" 
+                 actionListener="#{controller.btnNuevoHandler}" 
+                 update=":frmPrincipal:pnlDetalle" 
+                 oncomplete="PF('dlgTipoDescuento').show();" 
+                 icon="pi pi-plus" 
+                 styleClass="ui-button-primary" />            <p:commandButton value="Guardar" actionListener="#{empleadoModel.btnGuardarHandler}" update=":frmTabla :frmDetalle" />
+            <p:commandButton value="Modificar" actionListener="#{empleadoModel.btnModificarHandler}" update=":frmTabla :frmDetalle" />
+            <p:commandButton value="Eliminar" actionListener="#{empleadoModel.btnEliminarHandler}" update=":frmTabla :frmDetalle" />
+            <p:commandButton value="Cancelar" actionListener="#{empleadoModel.btnCancelarHandler}" update=":frmTabla :frmDetalle" />
+        </p:panelGrid>
+    </h:form>
+</ui:composition>
