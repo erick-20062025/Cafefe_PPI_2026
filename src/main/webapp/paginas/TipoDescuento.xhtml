@@ -12,14 +12,25 @@
     <ui:define name="tituloHeader">Tipo de Descuento</ui:define>
 
     <ui:define name="tabla">
-        <p:dataTable id="tblTipoDescuento" 
-                     value="#{tipoDescuentoModel.modelo}" 
-                     var="reg" 
-                     paginator="true" 
-                     rows="5"
-                     paginatorPosition="both"
-                     emptyMessage="No se encontraron registros"
-                     styleClass="p-datatable-striped p-datatable-sm">
+        <p:dataTable id="tblTipoDescuento"
+             value="#{tipoDescuentoModel.modelo}"
+             var="reg"
+             selection="#{tipoDescuentoModel.registro}"
+             rowKey="#{reg.idTipoDescuento}"
+             selectionMode="single"
+             paginator="true"
+             rows="5"
+             paginatorPosition="both"
+             emptyMessage="No se encontraron registros"
+             styleClass="p-datatable-striped p-datatable-sm">
+
+    <p:ajax event="rowSelect"
+            listener="#{tipoDescuentoModel.onRowSelect}"
+            update="@form" />
+
+    <p:ajax event="rowUnselect"
+            listener="#{tipoDescuentoModel.onRowUnselect}"
+            update="@form" />
 
             <p:column headerText="ID" style="width: 25%;">
                 <h:outputText value="#{reg.idTipoDescuento}" />
