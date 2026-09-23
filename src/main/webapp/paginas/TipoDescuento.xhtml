@@ -3,6 +3,7 @@
                 xmlns:ui="jakarta.faces.facelets"
                 xmlns:h="jakarta.faces.html"
                 xmlns:p="http://primefaces.org/ui"
+                xmlns:f="jakarta.faces.core"
                 template="/WEB-INF/plantillas/general.xhtml">
 
     <ui:param name="nombreEntidad" value="Descuento" />
@@ -54,5 +55,69 @@
 
         </p:dataTable>
     </ui:define>
+    <ui:define name="formulario">
+
+    <div class="formgrid grid">
+
+        <div class="field col-12 md:col-6">
+            <p:outputLabel for="txtNombre"
+                           value="Nombre"
+                           styleClass="font-semibold block mb-2" />
+
+            <p:inputText id="txtNombre"
+                         value="#{tipoDescuentoModel.registro.nombre}"
+                         required="true"
+                         requiredMessage="El campo Nombre es obligatorio"
+                         validatorMessage="El nombre debe contener al menos 2 caracteres"
+                         style="width: 100%;">
+                <f:validateLength minimum="2" />
+            </p:inputText>
+        </div>
+
+        <div class="field col-12 md:col-6">
+            <p:outputLabel for="txtMonto"
+                           value="Descuento máximo"
+                           styleClass="font-semibold block mb-2" />
+
+            <p:inputNumber id="txtMonto"
+                           value="#{tipoDescuentoModel.registro.descuentoMaximo}"
+                           symbol=" %"
+                           symbolPosition="s"
+                           required="true"
+                           requiredMessage="El descuento máximo es obligatorio"
+                           validatorMessage="El descuento debe estar entre 1 y 100"
+                           style="width: 100%;">
+                <f:validateLongRange minimum="1" maximum="100" />
+            </p:inputNumber>
+        </div>
+
+        <div class="field col-12">
+            <p:outputLabel for="chkActivo"
+                           value="Estado"
+                           styleClass="font-semibold block mb-2" />
+
+            <div class="flex align-items-center gap-2">
+                <p:selectBooleanCheckbox id="chkActivo"
+                                         value="#{tipoDescuentoModel.registro.activo}" />
+                <h:outputText value="Tipo de descuento activo" />
+            </div>
+        </div>
+
+        <div class="field col-12">
+            <p:outputLabel for="txtObs"
+                           value="Observaciones"
+                           styleClass="font-semibold block mb-2" />
+
+            <p:inputTextarea id="txtObs"
+                             value="#{tipoDescuentoModel.registro.observaciones}"
+                             rows="4"
+                             autoResize="false"
+                             style="width: 100%;"
+                             placeholder="Agregue información adicional..." />
+        </div>
+
+    </div>
+
+</ui:define>
 
 </ui:composition>

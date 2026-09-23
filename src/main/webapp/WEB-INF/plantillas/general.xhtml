@@ -15,11 +15,50 @@
 
         <link rel="stylesheet"
               href="https://unpkg.com/primeflex@3.3.1/primeflex.min.css" />
+        <style>
+            .cafefe-toast .ui-growl-item-container {
+                background: #d97706 !important;
+                border: 1px solid #b45309 !important;
+                border-radius: 10px !important;
+                box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18) !important;
+            }
+
+            .cafefe-toast .ui-growl-title,
+            .cafefe-toast .ui-growl-message,
+            .cafefe-toast .ui-growl-message p,
+            .cafefe-toast .ui-growl-icon-close {
+                color: white !important;
+            }
+
+            .cafefe-toast .ui-growl-item {
+                padding: 1rem !important;
+            }
+            .menu-superior {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+.boton-superior {
+    font-size: 0.9rem !important;
+    border-radius: 8px !important;
+    padding: 0.55rem 0.85rem !important;
+}
+
+.boton-superior:hover {
+    background-color: rgba(255, 255, 255, 0.15) !important;
+}
+        </style>
+        
     </h:head>
 
     <h:body>
 
         <h:form id="frmPrincipal">
+            <p:growl id="growl"
+                     showDetail="true"
+                     life="4000" />
 
             <div class="grid p-3">
 
@@ -40,11 +79,19 @@
                         </h1>
                     </div>
 
-                    <div>
-                        <span class="text-color-secondary">
-                            Menú superior
-                        </span>
-                    </div>
+                    <div class="menu-superior">
+
+    <p:commandButton value="Español"
+                     icon="pi pi-globe"
+                     type="button"
+                     styleClass="ui-button-flat boton-superior" />
+
+    <p:commandButton value="Iniciar sesión"
+                     icon="pi pi-user"
+                     type="button"
+                     styleClass="ui-button-flat boton-superior" />
+
+</div>
 
                 </div>
 
@@ -68,9 +115,7 @@
                                       layout="block"
                                       rendered="#{!controller.nuevo and !controller.editando}">
 
-                            <p:messages id="msgTabla"
-                                        showDetail="true"
-                                        closable="true" />
+
 
                             <ui:insert name="tabla" />
 
@@ -129,9 +174,7 @@
 
                             <p:panel header="Datos de #{nombreEntidad}">
 
-                                <p:messages id="msgFormulario"
-                                            showDetail="true"
-                                            closable="true" />
+
 
                                 <!--
                                     Cada página define aquí
@@ -201,7 +244,7 @@
                 <!-- PIE DE PÁGINA -->
                 <div class="col-12 mt-5 pt-3 border-top-1 surface-border text-color-secondary text-sm">
 
-                    Todos los derechos reservados 2026...
+                    © Todos los derechos reservados CAFEFE 2026
 
                 </div>
 
