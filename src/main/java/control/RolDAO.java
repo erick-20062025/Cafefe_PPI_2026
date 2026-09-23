@@ -4,10 +4,27 @@
  */
 package control;
 
+import entity.Rol;
+import jakarta.ejb.Stateless;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
+
 /**
  *
  * @author diegoli
  */
-public class RolDAO {
-    
+@Stateless
+public class RolDAO extends DefaultDAO<Rol> {
+
+    @PersistenceContext(unitName = "my_persistence_unit")
+    private EntityManager em;
+
+    public RolDAO() {
+        super(Rol.class);
+    }
+
+    @Override
+    protected EntityManager getEntityManager() {
+        return em;
+    }
 }
