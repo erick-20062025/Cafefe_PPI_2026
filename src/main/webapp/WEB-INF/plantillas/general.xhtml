@@ -46,7 +46,12 @@
                     <div class="col-12 md:col-10">
 
                         <!-- SECCIÓN 1: TABLA Y BOTÓN NUEVO (Se muestra cuando NO hay registro activo) -->
-                        <h:panelGroup id="pnlTablaContainer" layout="block" rendered="#{controller.registro == null}">
+                        <h:panelGroup id="pnlTablaContainer" 
+                                      layout="block" 
+                                      rendered="#{!controller.nuevo and !controller.editando}">
+                            <p:messages id="msgTabla"
+                                        showDetail="true"
+                                        closable="true" />
                             <ui:insert name="tabla" />
 
                             <div class="mt-3">
@@ -54,70 +59,125 @@
                                                  actionListener="#{controller.btnNuevoHandler}" 
                                                  update=":frmPrincipal" 
                                                  icon="pi pi-plus" 
-                                                 styleClass="ui-button-primary" />
+                                                 styleClass="ui-button-primary mr-2" />
+                                <p:commandButton value="Editar"
+                                                 actionListener="#{controller.btnModificarHandler}"
+                                                 update=":frmPrincipal"
+                                                 process="@this"
+                                                 icon="pi pi-pencil"
+                                                 styleClass="mr-2"
+                                                 rendered="#{controller.registro != null}" />
+
+                                <p:commandButton value="Eliminar"
+                                                 actionListener="#{controller.btnEliminarHandler}"
+                                                 update=":frmPrincipal"
+                                                 process="@this"
+                                                 icon="pi pi-trash"
+                                                 styleClass="ui-button-danger mr-2"
+                                                 rendered="#{controller.registro != null}">
+
+                                    <p:confirm header="Confirmar eliminación"
+                                               message="¿Está seguro de que desea eliminar este registro?"
+                                               icon="pi pi-exclamation-triangle" />
+
+                                </p:commandButton>
+
+                                <p:commandButton value="Cancelar"
+                                                 actionListener="#{controller.btnCancelarHandler}"
+                                                 update=":frmPrincipal"
+                                                 process="@this"
+                                                 icon="pi pi-times"
+                                                 styleClass="ui-button-secondary"
+                                                 rendered="#{controller.registro != null}" />
                             </div>
                         </h:panelGroup>
 
                         <!-- SECCIÓN 2: FORMULARIO DE EDICIÓN / NUEVO (Se muestra cuando SÍ hay registro activo) -->
-                        <h:panelGroup id="pnlFormularioContainer" layout="block" rendered="#{controller.registro != null}">
-    
-    <p:panel header="Datos de #{nombreEntidad}">
-        
-        <!-- MENSAJES DE ERROR/VALIDACIÓN -->
-        <p:messages id="msgFormulario" showDetail="true" closable="true" />
+                        <h:panelGroup id="pnlFormularioContainer" layout="block" rendered="#{controller.nuevo or controller.editando}">
 
-        <h:panelGrid columns="2" cellpadding="5" id="pnlDetalle">
-            <p:outputLabel for="txtNombre" value="Nombre:" />
-            <p:inputText id="txtNombre" 
-                         value="#{controller.registro.nombre}" 
-                         required="true"
-                         requiredMessage="El campo Nombre es obligatorio" />
+                            <p:panel header="Datos de #{nombreEntidad}">
 
-            <p:outputLabel for="txtMonto" value="Descuento Máximo:" />
-            <p:inputNumber id="txtMonto" 
-                           value="#{controller.registro.descuentoMaximo}" 
-                           symbol=" %" 
-                           symbolPosition="s" />
+                                <!-- MENSAJES DE ERROR/VALIDACIÓN -->
+                                <p:messages id="msgFormulario" showDetail="true" closable="true" />
 
-            <p:outputLabel for="chkActivo" value="Estado Activo:" />
-            <p:selectBooleanCheckbox id="chkActivo" 
-                                    value="#{controller.registro.activo}" />
+                                <h:panelGrid columns="2" cellpadding="5" id="pnlDetalle">
+                                    <p:outputLabel for="txtNombre" value="Nombre:" />
+                                    <p:inputText id="txtNombre" 
+                                                 value="#{controller.registro.nombre}" 
+                                                 required="true"
+                                                 requiredMessage="El campo Nombre es obligatorio" />
 
-            <p:outputLabel for="txtObs" value="Observaciones:" />
-            <p:inputTextarea id="txtObs" 
-                             value="#{controller.registro.observaciones}" 
-                             rows="3" />
-        </h:panelGrid>
+                                    <p:outputLabel for="txtMonto" value="Descuento Máximo:" />
+                                    <p:inputNumber id="txtMonto" 
+                                                   value="#{controller.registro.descuentoMaximo}" 
+                                                   symbol=" %" 
+                                                   symbolPosition="s" />
 
-        <f:facet name="footer">
-            <!-- BOTÓN GUARDAR CORREGIDO -->
-            <p:commandButton value="Guardar" 
-                             actionListener="#{controller.btnGuardarHandler}" 
-                             update=":frmPrincipal" 
-                             process="@form"
-                             icon="pi pi-check" 
-                             styleClass="mr-2" />
-                             
-            <p:commandButton value="Cancelar" 
-                             actionListener="#{controller.btnCancelarHandler}" 
-                             update=":frmPrincipal" 
-                             process="@this"
-                             styleClass="ui-button-secondary" 
-                             icon="pi pi-times" />
-        </f:facet>
-    </p:panel>
+                                    <p:outputLabel for="chkActivo" value="Estado Activo:" />
+                                    <p:selectBooleanCheckbox id="chkActivo" 
+                                                             value="#{controller.registro.activo}" />
 
-</h:panelGroup>
+                                    <p:outputLabel for="txtObs" value="Observaciones:" />
+                                    <p:inputTextarea id="txtObs" 
+                                                     value="#{controller.registro.observaciones}" 
+                                                     rows="3" />
+                                </h:panelGrid>
+
+                                <f:facet name="footer">
+                                    <!-- BOTÓN GUARDAR CORREGIDO -->
+                                    <p:commandButton value="Guardar"
+                                                     actionListener="#{controller.btnGuardarHandler}"
+                                                     update=":frmPrincipal"
+                                                     process="@form"
+                                                     icon="pi pi-check"
+                                                     styleClass="mr-2">
+
+                                        <p:confirm header="Confirmar modificación"
+                                                   message="¿Está seguro de que desea guardar los cambios realizados?"
+                                                   icon="pi pi-exclamation-triangle"
+                                                   disabled="#{controller.nuevo}" />
+
+                                    </p:commandButton>
+
+                                    <p:commandButton value="Cancelar" 
+                                                     actionListener="#{controller.btnCancelarHandler}" 
+                                                     update=":frmPrincipal" 
+                                                     process="@this"
+                                                     styleClass="ui-button-secondary" 
+                                                     icon="pi pi-times" />
+                                </f:facet>
+                            </p:panel>
+
+                        </h:panelGroup>
 
                     </div>
                 </div>
 
+
+                <p:confirmDialog global="true"
+                                 showEffect="fade"
+                                 hideEffect="fade"
+                                 responsive="true"
+                                 width="350">
+
+                    <p:commandButton value="No"
+                                     type="button"
+                                     styleClass="ui-confirmdialog-no ui-button-secondary"
+                                     icon="pi pi-times" />
+
+                    <p:commandButton value="Sí"
+                                     type="button"
+                                     styleClass="ui-confirmdialog-yes ui-button-danger"
+                                     icon="pi pi-check" />
+
+                </p:confirmDialog>
                 <!-- PIE DE PÁGINA -->
                 <div class="col-12 mt-5 pt-3 border-top-1 surface-border text-color-secondary text-sm">
                     Todos los derechos reservados 2026...
                 </div>
 
             </div>
+
 
         </h:form>
     </h:body>

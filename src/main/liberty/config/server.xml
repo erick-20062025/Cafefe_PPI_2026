@@ -1,0 +1,28 @@
+<server description="Open Liberty Server">
+
+    <featureManager>
+        <feature>jakartaee-10.0</feature>
+        <feature>faces-4.0</feature>
+        <feature>jdbc-4.2</feature>
+    </featureManager>
+
+    <!-- Definición de la librería del driver -->
+    <library id="PostgreSQLLib">
+        <fileset dir="${server.config.dir}/lib/postgres" includes="postgresql-42.5.4.jar"/>
+    </library>
+
+    <!-- Conector JDBC -->
+    <jdbcDriver id="PostgreSQLDriver" libraryRef="PostgreSQLLib"/>
+
+    <!-- DataSource apuntando a tu PostgreSQL local en Docker -->
+    <dataSource id="PostgreSQLDS" jndiName="jdbc/CafefeDS">
+        <jdbcDriver ref="PostgreSQLDriver"/>
+        <properties.postgresql
+            serverName="localhost"
+            portNumber="5432"
+            databaseName="programacion_internet"
+            user="postgres"
+            password="postgres"/>
+    </dataSource>
+
+</server>
