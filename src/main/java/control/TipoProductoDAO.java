@@ -4,10 +4,27 @@
  */
 package control;
 
+import entity.TipoProducto;
+import jakarta.ejb.Stateless;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
+
 /**
  *
  * @author diegoli
  */
-public class TipoProductoDAO {
-    
+@Stateless
+public class TipoProductoDAO extends DefaultDAO<TipoProducto> {
+
+    @PersistenceContext(unitName = "my_persistence_unit")
+    private EntityManager em;
+
+    public TipoProductoDAO() {
+        super(TipoProducto.class);
+    }
+
+    @Override
+    protected EntityManager getEntityManager() {
+        return em;
+    }
 }
