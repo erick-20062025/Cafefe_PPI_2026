@@ -16,6 +16,7 @@ import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import java.io.Serializable;
+import java.math.BigDecimal;
 import java.util.Collection;
 import java.util.UUID;
 
@@ -29,29 +30,43 @@ import java.util.UUID;
     @NamedQuery(name = "Producto.findAll", query = "SELECT p FROM Producto p"),
     @NamedQuery(name = "Producto.findByNombre", query = "SELECT p FROM Producto p WHERE p.nombre = :nombre"),
     @NamedQuery(name = "Producto.findByActivo", query = "SELECT p FROM Producto p WHERE p.activo = :activo"),
-    @NamedQuery(name = "Producto.findByComentarios", query = "SELECT p FROM Producto p WHERE p.comentarios = :comentarios")})
+    @NamedQuery(name = "Producto.findByComentarios", query = "SELECT p FROM Producto p WHERE p.comentarios = :comentarios")
+})
 public class Producto implements Serializable {
 
     private static final long serialVersionUID = 1L;
+
     @Id
     @Basic(optional = false)
     @NotNull
     @Column(name = "id_producto")
     private UUID idProducto;
+
     @Size(max = 155)
     @Column(name = "nombre")
     private String nombre;
+
     @Column(name = "activo")
     private Boolean activo;
+
     @Size(max = 2147483647)
     @Column(name = "comentarios")
     private String comentarios;
+
+    @Basic(optional = false)
+    @NotNull
+    @Column(name = "precio_sugerido")
+    private BigDecimal precioSugerido;
+
     @OneToMany(mappedBy = "idProducto")
     private Collection<ProductoCaracteristica> productoCaracteristicaCollection;
+
     @OneToMany(mappedBy = "idProducto")
     private Collection<OrdenProducto> ordenProductoCollection;
+
     @OneToMany(mappedBy = "idProducto")
     private Collection<DescuentoProducto> descuentoProductoCollection;
+
     @OneToMany(cascade = CascadeType.ALL, mappedBy = "producto")
     private Collection<ProductoTipoProducto> productoTipoProductoCollection;
 
@@ -92,6 +107,14 @@ public class Producto implements Serializable {
 
     public void setComentarios(String comentarios) {
         this.comentarios = comentarios;
+    }
+
+    public BigDecimal getPrecioSugerido() {
+        return precioSugerido;
+    }
+
+    public void setPrecioSugerido(BigDecimal precioSugerido) {
+        this.precioSugerido = precioSugerido;
     }
 
     public Collection<ProductoCaracteristica> getProductoCaracteristicaCollection() {
@@ -140,7 +163,8 @@ public class Producto implements Serializable {
             return false;
         }
         Producto other = (Producto) object;
-        if ((this.idProducto == null && other.idProducto != null) || (this.idProducto != null && !this.idProducto.equals(other.idProducto))) {
+        if ((this.idProducto == null && other.idProducto != null)
+                || (this.idProducto != null && !this.idProducto.equals(other.idProducto))) {
             return false;
         }
         return true;
@@ -150,5 +174,4 @@ public class Producto implements Serializable {
     public String toString() {
         return "entity.Producto[ idProducto=" + idProducto + " ]";
     }
-    
 }
