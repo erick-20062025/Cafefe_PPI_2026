@@ -30,7 +30,7 @@ public class RolModel extends AbstractModel<Rol> {
 
     @Override
     protected DAOInterface<Rol> getDAO() {
-            return (DAOInterface<Rol>) rolDAO;
+          return rolDAO;
     }
 
     @Override

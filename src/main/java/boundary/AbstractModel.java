@@ -3,6 +3,7 @@
  * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
  */
 package boundary;
+
 import control.DAOInterface;
 import jakarta.faces.application.FacesMessage;
 import jakarta.faces.context.FacesContext;
@@ -15,6 +16,8 @@ import java.util.List;
  * @author diegoli
  */
 public abstract class AbstractModel<T> implements Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     protected List<T> modelo;
     protected T registro;
@@ -33,9 +36,19 @@ public abstract class AbstractModel<T> implements Serializable {
      */
     protected abstract T crearNuevoRegistro();
 
+
+    /* =========================================================
+       CARGA DE DATOS
+       ========================================================= */
+
     public void cargarDatos() {
         this.modelo = getDAO().findAll();
     }
+
+
+    /* =========================================================
+       CRUD DE LA VISTA
+       ========================================================= */
 
     public void btnNuevoHandler(ActionEvent ae) {
 
@@ -44,6 +57,7 @@ public abstract class AbstractModel<T> implements Serializable {
         this.nuevo = true;
         this.editando = false;
     }
+
 
     public void btnGuardarHandler(ActionEvent ae) {
 
@@ -62,35 +76,24 @@ public abstract class AbstractModel<T> implements Serializable {
                 getDAO().modificar(this.registro);
             }
 
-            this.registro = null;
-            this.nuevo = false;
-            this.editando = false;
+            limpiarEstado();
 
             cargarDatos();
 
-            FacesContext.getCurrentInstance().addMessage(
-                    null,
-                    new FacesMessage(
-                            FacesMessage.SEVERITY_INFO,
-                            "Éxito",
-                            "Registro guardado correctamente"
-                    )
+            mostrarExito(
+                    "Registro guardado correctamente"
             );
 
         } catch (Exception e) {
 
             e.printStackTrace();
 
-            FacesContext.getCurrentInstance().addMessage(
-                    null,
-                    new FacesMessage(
-                            FacesMessage.SEVERITY_ERROR,
-                            "Error",
-                            "No se pudo guardar el registro"
-                    )
+            mostrarError(
+                    "No se pudo guardar el registro"
             );
         }
     }
+
 
     public void btnModificarHandler(ActionEvent ae) {
 
@@ -101,6 +104,7 @@ public abstract class AbstractModel<T> implements Serializable {
         }
     }
 
+
     public void btnEliminarHandler(ActionEvent ae) {
 
         try {
@@ -109,19 +113,12 @@ public abstract class AbstractModel<T> implements Serializable {
 
                 getDAO().eliminar(this.registro);
 
-                this.registro = null;
-                this.nuevo = false;
-                this.editando = false;
+                limpiarEstado();
 
                 cargarDatos();
 
-                FacesContext.getCurrentInstance().addMessage(
-                        null,
-                        new FacesMessage(
-                                FacesMessage.SEVERITY_INFO,
-                                "Éxito",
-                                "Registro eliminado correctamente"
-                        )
+                mostrarExito(
+                        "Registro eliminado correctamente"
                 );
             }
 
@@ -129,34 +126,114 @@ public abstract class AbstractModel<T> implements Serializable {
 
             e.printStackTrace();
 
-            FacesContext.getCurrentInstance().addMessage(
-                    null,
-                    new FacesMessage(
-                            FacesMessage.SEVERITY_ERROR,
-                            "Error",
-                            "No se pudo eliminar el registro"
-                    )
+            mostrarError(
+                    "No se pudo eliminar el registro"
             );
         }
     }
 
+
     public void btnCancelarHandler(ActionEvent ae) {
 
-        this.registro = null;
-        this.nuevo = false;
-        this.editando = false;
+        limpiarEstado();
     }
+
+
+    /* =========================================================
+       SELECCIÓN DE FILAS
+       ========================================================= */
 
     public void onRowSelect() {
+
         this.editando = false;
         this.nuevo = false;
     }
 
+
     public void onRowUnselect() {
-        this.registro = null;
-        this.editando = false;
-        this.nuevo = false;
+
+        limpiarEstado();
     }
+
+
+    /* =========================================================
+       MÉTODOS REUTILIZABLES
+       ========================================================= */
+
+    /**
+     * Limpia el registro seleccionado y devuelve
+     * el Model a su estado normal.
+     */
+    protected void limpiarEstado() {
+
+        this.registro = null;
+        this.nuevo = false;
+        this.editando = false;
+    }
+
+
+    /**
+     * Muestra un mensaje de éxito.
+     */
+    protected void mostrarExito(String detalle) {
+
+        mostrarMensaje(
+                FacesMessage.SEVERITY_INFO,
+                "Éxito",
+                detalle
+        );
+    }
+
+
+    /**
+     * Muestra un mensaje de advertencia.
+     */
+    protected void mostrarAdvertencia(String detalle) {
+
+        mostrarMensaje(
+                FacesMessage.SEVERITY_WARN,
+                "Advertencia",
+                detalle
+        );
+    }
+
+
+    /**
+     * Muestra un mensaje de error.
+     */
+    protected void mostrarError(String detalle) {
+
+        mostrarMensaje(
+                FacesMessage.SEVERITY_ERROR,
+                "Error",
+                detalle
+        );
+    }
+
+
+    /**
+     * Método común utilizado por todos los mensajes.
+     */
+    private void mostrarMensaje(
+            FacesMessage.Severity severity,
+            String titulo,
+            String detalle) {
+
+        FacesContext.getCurrentInstance()
+                .addMessage(
+                        null,
+                        new FacesMessage(
+                                severity,
+                                titulo,
+                                detalle
+                        )
+                );
+    }
+
+
+    /* =========================================================
+       GETTERS Y SETTERS
+       ========================================================= */
 
     public List<T> getModelo() {
         return modelo;

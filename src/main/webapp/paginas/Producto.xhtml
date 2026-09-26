@@ -1,0 +1,374 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html>
+
+<ui:composition
+    xmlns="http://www.w3.org/1999/xhtml"
+    xmlns:h="jakarta.faces.html"
+    xmlns:f="jakarta.faces.core"
+    xmlns:ui="jakarta.faces.facelets"
+    xmlns:p="http://primefaces.org/ui"
+    template="/WEB-INF/plantillas/general.xhtml">
+
+    <!-- Configuración de la plantilla -->
+    <ui:param
+        name="nombreEntidad"
+        value="Producto"/>
+
+    <ui:param
+        name="controller"
+        value="#{productoModel}"/>
+
+
+    <!-- ====================================================== -->
+    <!-- TABLA PRINCIPAL DE PRODUCTOS                           -->
+    <!-- ====================================================== -->
+
+    <ui:define name="tabla">
+
+        <p:dataTable
+            id="tablaProductos"
+            value="#{productoModel.modelo}"
+            var="producto"
+            selection="#{productoModel.registro}"
+            rowKey="#{producto.idProducto}"
+            selectionMode="single"
+            paginator="true"
+            rows="10"
+            emptyMessage="No hay productos registrados">
+
+            <p:ajax
+                event="rowSelect"
+                listener="#{productoModel.onRowSelect}"
+                update="@form"/>
+
+            <p:ajax
+                event="rowUnselect"
+                listener="#{productoModel.onRowUnselect}"
+                update="@form"/>
+
+
+            <!-- Nombre -->
+            <p:column
+                headerText="Nombre"
+                sortBy="#{producto.nombre}"
+                filterBy="#{producto.nombre}">
+
+                <h:outputText
+                    value="#{producto.nombre}"/>
+
+            </p:column>
+
+
+            <!-- Precio -->
+            <p:column
+                headerText="Precio sugerido">
+
+                <h:outputText
+                    value="#{producto.precioSugerido}">
+
+                    <f:convertNumber
+                        minFractionDigits="2"
+                        maxFractionDigits="2"/>
+
+                </h:outputText>
+
+            </p:column>
+
+
+            <!-- Estado -->
+            <p:column
+                headerText="Estado">
+
+                <h:outputText
+                    value="#{producto.activo ? 'Activo' : 'Inactivo'}"/>
+
+            </p:column>
+
+
+            <!-- Comentarios -->
+            <p:column
+                headerText="Comentarios">
+
+                <h:outputText
+                    value="#{producto.comentarios}"/>
+
+            </p:column>
+
+        </p:dataTable>
+
+    </ui:define>
+
+
+    <!-- ====================================================== -->
+    <!-- FORMULARIO                                             -->
+    <!-- ====================================================== -->
+
+    <ui:define name="formulario">
+
+        <p:tabView
+            id="tabProducto">
+
+
+            <!-- ================================================== -->
+            <!-- TAB 1: DATOS DEL PRODUCTO                          -->
+            <!-- ================================================== -->
+
+            <p:tab
+                title="Datos del producto">
+
+                <div class="formgrid grid">
+
+
+                    <!-- Nombre -->
+                    <div class="field col-12 md:col-6">
+
+                        <p:outputLabel
+                            for="txtNombre"
+                            value="Nombre"/>
+
+                        <p:inputText
+                            id="txtNombre"
+                            value="#{productoModel.registro.nombre}"
+                            required="true"
+                            requiredMessage="El nombre es obligatorio"
+                            maxlength="155"
+                            style="width: 100%;">
+
+                            <f:validateLength
+                                minimum="2"
+                                maximum="155"/>
+
+                        </p:inputText>
+                    </div>
+
+
+                    <!-- Precio sugerido -->
+                    <div class="field col-12 md:col-6">
+
+                        <p:outputLabel
+                            for="txtPrecio"
+                            value="Precio sugerido"/>
+
+                        <p:inputNumber
+                            id="txtPrecio"
+                            value="#{productoModel.registro.precioSugerido}"
+                            required="true"
+                            requiredMessage="El precio sugerido es obligatorio"
+                            decimalPlaces="2"
+                            decimalSeparator="."
+                            thousandSeparator=","
+                            style="width: 100%;"/>
+
+                    </div>
+
+
+                    <!-- Activo -->
+                    <div class="field col-12 md:col-6">
+
+                        <p:outputLabel
+                            for="chkActivo"
+                            value="Activo"/>
+
+                        <br/>
+
+                        <p:selectBooleanCheckbox
+                            id="chkActivo"
+                            value="#{productoModel.registro.activo}"/>
+
+                    </div>
+
+
+                    <!-- Comentarios -->
+                    <div class="field col-12">
+
+                        <p:outputLabel
+                            for="txtComentarios"
+                            value="Comentarios"/>
+
+                        <p:inputTextarea
+                            id="txtComentarios"
+                            value="#{productoModel.registro.comentarios}"
+                            rows="4"
+                            autoResize="false"
+                            style="width: 100%;"/>
+
+                    </div>
+
+                </div>
+
+            </p:tab>
+
+
+            <!-- ================================================== -->
+            <!-- TAB 2: TIPOS DE PRODUCTO                           -->
+            <!-- ================================================== -->
+
+            <p:tab
+                title="Tipos de producto"
+                disabled="#{not productoModel.puedeGestionarTipos}">
+
+
+                <!-- ============================================== -->
+                <!-- ASIGNACIÓN DE TIPO                             -->
+                <!-- ============================================== -->
+
+                <p:panel
+                    header="Asignar tipo de producto"
+                    styleClass="mb-3">
+
+                    <div class="formgrid grid">
+
+
+                        <!-- Combo de TipoProducto -->
+                        <div class="field col-12 md:col-6">
+
+                            <p:outputLabel
+                                for="cmbTipoProducto"
+                                value="Tipo de producto"/>
+
+                            <p:selectOneMenu
+                                id="cmbTipoProducto"
+                                value="#{productoTipoProductoModel.idTipoProductoSeleccionado}"
+                                style="width: 100%;">
+
+                                <f:selectItem
+                                    itemLabel="Seleccione un tipo"
+                                    itemValue="#{null}"
+                                    noSelectionOption="true"/>
+
+                                <f:selectItems
+                                    value="#{productoTipoProductoModel.tipoProductoList}"
+                                    var="tipo"
+                                    itemLabel="#{tipo.nombre}"
+                                    itemValue="#{tipo.idTipoProducto.toString()}"/>
+
+                            </p:selectOneMenu>
+
+                        </div>
+
+
+                        <!-- Acciones -->
+                        <div class="field col-12 md:col-6">
+
+                            <p:outputLabel
+                                value="Acciones"/>
+
+                            <div style="
+                                 display: flex;
+                                 gap: 0.5rem;
+                                 flex-wrap: wrap;
+                                 margin-top: 0.4rem;">
+
+
+                                <!-- Agregar tipo al producto -->
+                                <p:commandButton
+                                    value="Agregar"
+                                    icon="pi pi-plus"
+                                    action="#{productoTipoProductoModel.agregarTipo}"
+                                    process="cmbTipoProducto"
+                                    update="@form"/>
+
+
+                                <!-- Recargar tipos -->
+                                <p:commandButton
+                                    value="Actualizar tipos"
+                                    icon="pi pi-refresh"
+                                    action="#{productoTipoProductoModel.cargarTiposProducto}"
+                                    process="@this"
+                                    update="cmbTipoProducto"/>
+
+
+                                <!-- Abrir gestión de TipoProducto -->
+                                <p:button
+                                    value="Gestionar tipos"
+                                    icon="pi pi-external-link"
+                                    outcome="/paginas/TipoProducto.xhtml"
+                                    target="_blank"/>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </p:panel>
+
+
+                <!-- ============================================== -->
+                <!-- TIPOS ASIGNADOS AL PRODUCTO                    -->
+                <!-- ============================================== -->
+
+                <p:dataTable
+                    id="tablaTiposProducto"
+                    value="#{productoTipoProductoModel.modelo}"
+                    var="relacion"
+                    emptyMessage="Este producto no tiene tipos asignados">
+
+
+                    <!-- Tipo -->
+                    <p:column
+                        headerText="Tipo de producto">
+
+                        <h:outputText
+                            value="#{relacion.idTipoProducto.nombre}"/>
+
+                    </p:column>
+
+
+                    <!-- Estado -->
+                    <p:column
+                        headerText="Estado">
+
+                        <h:outputText
+                            value="#{relacion.idTipoProducto.activo
+                                     ? 'Activo'
+                                     : 'Inactivo'}"/>
+
+                    </p:column>
+
+
+                    <!-- Fecha -->
+                    <p:column
+                        headerText="Fecha de asignación">
+
+                        <h:outputText
+                            value="#{relacion.fechaCreacion}">
+
+                            <f:convertDateTime
+                                pattern="dd/MM/yyyy HH:mm"/>
+
+                        </h:outputText>
+
+                    </p:column>
+
+
+                    <!-- Acción para quitar la relación -->
+                    <p:column
+                        headerText="Acciones"
+                        style="width: 120px; text-align: center;">
+
+                        <p:commandButton
+                            icon="pi pi-trash"
+                            title="Quitar tipo"
+                            action="#{productoTipoProductoModel.quitarTipo(relacion)}"
+                            process="@this"
+                            update="@form">
+
+                            <p:confirm
+                                header="Confirmación"
+                                message="¿Desea quitar este tipo del producto?"
+                                icon="pi pi-exclamation-triangle"/>
+
+                        </p:commandButton>
+
+                    </p:column>
+
+                </p:dataTable>
+
+            </p:tab>
+
+        </p:tabView>
+
+    </ui:define>
+
+</ui:composition>
