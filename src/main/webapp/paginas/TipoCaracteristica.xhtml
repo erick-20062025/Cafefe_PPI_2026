@@ -1,0 +1,137 @@
+<?xml version='1.0' encoding='UTF-8' ?>
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+                xmlns:ui="jakarta.faces.facelets"
+                xmlns:h="jakarta.faces.html"
+                xmlns:p="http://primefaces.org/ui"
+                xmlns:f="jakarta.faces.core"
+                template="/WEB-INF/plantillas/general.xhtml">
+
+    <ui:param name="nombreEntidad" value="Tipo de Característica" />
+    <ui:param name="controller" value="#{tipoCaracteristicaModel}" />
+
+    <ui:define name="titulo">Tipo de Característica - Cafefe</ui:define>
+    <ui:define name="tituloHeader">Tipo de Característica</ui:define>
+
+    <ui:define name="tabla">
+
+        <p:dataTable id="tblTipoCaracteristica"
+                     value="#{tipoCaracteristicaModel.modelo}"
+                     var="reg"
+                     selection="#{tipoCaracteristicaModel.registro}"
+                     rowKey="#{reg.idTipoCaracteristica}"
+                     selectionMode="single"
+                     paginator="true"
+                     rows="5"
+                     paginatorPosition="both"
+                     emptyMessage="No se encontraron registros"
+                     styleClass="p-datatable-striped p-datatable-sm">
+
+            <p:ajax event="rowSelect"
+                    listener="#{tipoCaracteristicaModel.onRowSelect}"
+                    update="@form" />
+
+            <p:ajax event="rowUnselect"
+                    listener="#{tipoCaracteristicaModel.onRowUnselect}"
+                    update="@form" />
+
+            <p:column headerText="ID" style="width: 25%;">
+                <h:outputText value="#{reg.idTipoCaracteristica}" />
+            </p:column>
+
+            <p:column headerText="Nombre">
+                <h:outputText value="#{reg.nombre}" />
+            </p:column>
+
+            <p:column headerText="Expresión Regular">
+                <h:outputText value="#{reg.expresionRegular}" />
+            </p:column>
+
+            <p:column headerText="Estado">
+                <h:outputText value="#{reg.activo ? 'ACTIVO' : 'INACTIVO'}" />
+            </p:column>
+
+            <p:column headerText="Observaciones">
+                <h:outputText value="#{reg.observaciones}" />
+            </p:column>
+
+        </p:dataTable>
+
+    </ui:define>
+
+
+    <ui:define name="formulario">
+
+        <div class="formgrid grid">
+
+            <div class="field col-12 md:col-6">
+
+                <p:outputLabel for="txtNombre"
+                               value="Nombre"
+                               styleClass="font-semibold block mb-2" />
+
+                <p:inputText id="txtNombre"
+                             value="#{tipoCaracteristicaModel.registro.nombre}"
+                             required="true"
+                             requiredMessage="El campo Nombre es obligatorio"
+                             validatorMessage="El nombre debe contener al menos 2 caracteres"
+                             maxlength="155"
+                             style="width: 100%;">
+
+                    <f:validateLength minimum="2" maximum="155" />
+
+                </p:inputText>
+
+            </div>
+
+
+            <div class="field col-12 md:col-6">
+
+                <p:outputLabel for="txtExpresion"
+                               value="Expresión regular"
+                               styleClass="font-semibold block mb-2" />
+
+                <p:inputText id="txtExpresion"
+                             value="#{tipoCaracteristicaModel.registro.expresionRegular}"
+                             style="width: 100%;" />
+
+            </div>
+
+
+            <div class="field col-12">
+
+                <p:outputLabel for="chkActivo"
+                               value="Estado"
+                               styleClass="font-semibold block mb-2" />
+
+                <div class="flex align-items-center gap-2">
+
+                    <p:selectBooleanCheckbox id="chkActivo"
+                                             value="#{tipoCaracteristicaModel.registro.activo}" />
+
+                    <h:outputText value="Tipo de característica activo" />
+
+                </div>
+
+            </div>
+
+
+            <div class="field col-12">
+
+                <p:outputLabel for="txtObs"
+                               value="Observaciones"
+                               styleClass="font-semibold block mb-2" />
+
+                <p:inputTextarea id="txtObs"
+                                 value="#{tipoCaracteristicaModel.registro.observaciones}"
+                                 rows="4"
+                                 autoResize="false"
+                                 style="width: 100%;"
+                                 placeholder="Agregue información adicional..." />
+
+            </div>
+
+        </div>
+
+    </ui:define>
+
+</ui:composition>
