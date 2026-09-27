@@ -28,6 +28,9 @@ public class ProductoModel extends AbstractModel<Producto> {
     @Inject
     private ProductoTipoProductoModel productoTipoProductoModel;
 
+    @Inject
+    private ProductoCaracteristicaModel productoCaracteristicaModel;
+
     @PostConstruct
     public void init() {
         cargarDatos();
@@ -51,62 +54,94 @@ public class ProductoModel extends AbstractModel<Producto> {
 
     /*
      * Cuando se crea un producto nuevo todavía no permitimos
-     * administrar sus tipos hasta que el producto se guarde.
+     * administrar relaciones hasta que el producto sea guardado.
      */
     @Override
     public void btnNuevoHandler(ActionEvent ae) {
 
         super.btnNuevoHandler(ae);
 
-        productoTipoProductoModel.cargarProducto(null);
+        limpiarRelaciones();
     }
 
     /*
-     * Cuando seleccionamos un producto de la tabla,
-     * cargamos también sus tipos asociados.
+     * Cuando seleccionamos un producto,
+     * cargamos todas sus relaciones.
      */
     @Override
     public void onRowSelect() {
 
         super.onRowSelect();
 
-        productoTipoProductoModel.cargarProducto(this.registro);
+        cargarRelacionesProducto();
     }
 
     /*
-     * Si se quita la selección, limpiamos también
-     * el modelo de relaciones.
+     * Si se quita la selección,
+     * limpiamos también los modelos relacionados.
      */
     @Override
     public void onRowUnselect() {
 
         super.onRowUnselect();
 
-        productoTipoProductoModel.cargarProducto(null);
+        limpiarRelaciones();
     }
 
     /*
-     * Al cancelar limpiamos tanto Producto como
-     * ProductoTipoProducto.
+     * Al cancelar limpiamos Producto
+     * y todos sus modelos relacionados.
      */
     @Override
     public void btnCancelarHandler(ActionEvent ae) {
 
         super.btnCancelarHandler(ae);
 
-        productoTipoProductoModel.cargarProducto(null);
+        limpiarRelaciones();
     }
 
     /*
-     * Sirve para la vista.
-     *
-     * Solo permitimos administrar tipos cuando estamos
-     * trabajando con un Producto que ya existe.
+     * Carga todas las relaciones del producto seleccionado.
      */
-    public boolean isPuedeGestionarTipos() {
+    private void cargarRelacionesProducto() {
+
+        productoTipoProductoModel
+                .cargarProducto(this.registro);
+
+        productoCaracteristicaModel
+                .cargarProducto(this.registro);
+    }
+
+    /*
+     * Limpia todas las relaciones cuando
+     * no existe un producto seleccionado.
+     */
+    private void limpiarRelaciones() {
+
+        productoTipoProductoModel
+                .cargarProducto(null);
+
+        productoCaracteristicaModel
+                .cargarProducto(null);
+    }
+
+    /*
+     * Indica si ya podemos administrar
+     * relaciones del Producto.
+     */
+    public boolean isPuedeGestionarRelaciones() {
 
         return this.registro != null
                 && this.registro.getIdProducto() != null
                 && !this.nuevo;
+    }
+
+    /*
+     * Se conserva porque Producto.xhtml
+     * actualmente utiliza este nombre.
+     */
+    public boolean isPuedeGestionarTipos() {
+
+        return isPuedeGestionarRelaciones();
     }
 }

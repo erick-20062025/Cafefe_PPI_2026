@@ -18,6 +18,13 @@
         name="controller"
         value="#{productoModel}"/>
 
+    <ui:define name="titulo">
+        Productos - Cafefe
+    </ui:define>
+
+    <ui:define name="tituloHeader">
+        Productos
+    </ui:define>
 
     <!-- ====================================================== -->
     <!-- TABLA PRINCIPAL DE PRODUCTOS                           -->
@@ -139,6 +146,7 @@
                                 maximum="155"/>
 
                         </p:inputText>
+
                     </div>
 
 
@@ -200,170 +208,335 @@
 
 
             <!-- ================================================== -->
-            <!-- TAB 2: TIPOS DE PRODUCTO                           -->
+            <!-- TAB 2: RELACIONES                                  -->
             <!-- ================================================== -->
 
             <p:tab
-                title="Tipos de producto"
-                disabled="#{not productoModel.puedeGestionarTipos}">
+                title="Relaciones"
+                disabled="#{not productoModel.puedeGestionarRelaciones}">
 
 
-                <!-- ============================================== -->
-                <!-- ASIGNACIÓN DE TIPO                             -->
-                <!-- ============================================== -->
+                <!-- ================================================= -->
+                <!-- TIPOS DE PRODUCTO                                 -->
+                <!-- ================================================= -->
 
                 <p:panel
-                    header="Asignar tipo de producto"
-                    styleClass="mb-3">
-
-                    <div class="formgrid grid">
+                    header="Tipos de producto"
+                    styleClass="mb-4">
 
 
-                        <!-- Combo de TipoProducto -->
-                        <div class="field col-12 md:col-6">
+                    <!-- Asignación de TipoProducto -->
+                    <p:panel
+                        header="Asignar tipo de producto"
+                        styleClass="mb-3">
 
-                            <p:outputLabel
-                                for="cmbTipoProducto"
-                                value="Tipo de producto"/>
-
-                            <p:selectOneMenu
-                                id="cmbTipoProducto"
-                                value="#{productoTipoProductoModel.idTipoProductoSeleccionado}"
-                                style="width: 100%;">
-
-                                <f:selectItem
-                                    itemLabel="Seleccione un tipo"
-                                    itemValue="#{null}"
-                                    noSelectionOption="true"/>
-
-                                <f:selectItems
-                                    value="#{productoTipoProductoModel.tipoProductoList}"
-                                    var="tipo"
-                                    itemLabel="#{tipo.nombre}"
-                                    itemValue="#{tipo.idTipoProducto.toString()}"/>
-
-                            </p:selectOneMenu>
-
-                        </div>
+                        <div class="formgrid grid">
 
 
-                        <!-- Acciones -->
-                        <div class="field col-12 md:col-6">
+                            <!-- Combo TipoProducto -->
+                            <div class="field col-12 md:col-6">
 
-                            <p:outputLabel
-                                value="Acciones"/>
+                                <p:outputLabel
+                                    for="cmbTipoProducto"
+                                    value="Tipo de producto"/>
 
-                            <div style="
-                                 display: flex;
-                                 gap: 0.5rem;
-                                 flex-wrap: wrap;
-                                 margin-top: 0.4rem;">
+                                <p:selectOneMenu
+                                    id="cmbTipoProducto"
+                                    value="#{productoTipoProductoModel.idTipoProductoSeleccionado}"
+                                    style="width: 100%;">
 
+                                    <f:selectItem
+                                        itemLabel="Seleccione un tipo"
+                                        itemValue="#{null}"
+                                        noSelectionOption="true"/>
 
-                                <!-- Agregar tipo al producto -->
-                                <p:commandButton
-                                    value="Agregar"
-                                    icon="pi pi-plus"
-                                    action="#{productoTipoProductoModel.agregarTipo}"
-                                    process="cmbTipoProducto"
-                                    update="@form"/>
+                                    <f:selectItems
+                                        value="#{productoTipoProductoModel.tipoProductoList}"
+                                        var="tipo"
+                                        itemLabel="#{tipo.nombre}"
+                                        itemValue="#{tipo.idTipoProducto.toString()}"/>
 
+                                </p:selectOneMenu>
 
-                                <!-- Recargar tipos -->
-                                <p:commandButton
-                                    value="Actualizar tipos"
-                                    icon="pi pi-refresh"
-                                    action="#{productoTipoProductoModel.cargarTiposProducto}"
-                                    process="@this"
-                                    update="cmbTipoProducto"/>
+                            </div>
 
 
-                                <!-- Abrir gestión de TipoProducto -->
-                                <p:button
-                                    value="Gestionar tipos"
-                                    icon="pi pi-external-link"
-                                    outcome="/paginas/TipoProducto.xhtml"
-                                    target="_blank"/>
+                            <!-- Acciones TipoProducto -->
+                            <div class="field col-12 md:col-6">
+
+                                <p:outputLabel
+                                    value="Acciones"/>
+
+                                <div style="
+                                     display: flex;
+                                     gap: 0.5rem;
+                                     flex-wrap: wrap;
+                                     margin-top: 0.4rem;">
+
+                                    <p:commandButton
+                                        value="Agregar"
+                                        icon="pi pi-plus"
+                                        action="#{productoTipoProductoModel.agregarTipo}"
+                                        process="cmbTipoProducto"
+                                        update="@form"/>
+
+                                    <p:commandButton
+                                        value="Actualizar tipos"
+                                        icon="pi pi-refresh"
+                                        action="#{productoTipoProductoModel.cargarTiposProducto}"
+                                        process="@this"
+                                        update="cmbTipoProducto"/>
+
+                                    <p:button
+                                        value="Gestionar tipos"
+                                        icon="pi pi-external-link"
+                                        outcome="/paginas/TipoProducto.xhtml"
+                                        target="_blank"/>
+
+                                </div>
 
                             </div>
 
                         </div>
 
-                    </div>
+                    </p:panel>
+
+
+                    <!-- Tipos asignados -->
+                    <p:dataTable
+                        id="tablaTiposProducto"
+                        value="#{productoTipoProductoModel.modelo}"
+                        var="relacion"
+                        emptyMessage="Este producto no tiene tipos asignados">
+
+                        <p:column
+                            headerText="Tipo de producto">
+
+                            <h:outputText
+                                value="#{relacion.idTipoProducto.nombre}"/>
+
+                        </p:column>
+
+
+                        <p:column
+                            headerText="Estado">
+
+                            <h:outputText
+                                value="#{relacion.idTipoProducto.activo
+                                         ? 'Activo'
+                                         : 'Inactivo'}"/>
+
+                        </p:column>
+
+
+                        <p:column
+                            headerText="Fecha de asignación">
+
+                            <h:outputText
+                                value="#{relacion.fechaCreacion}">
+
+                                <f:convertDateTime
+                                    pattern="dd/MM/yyyy HH:mm"/>
+
+                            </h:outputText>
+
+                        </p:column>
+
+
+                        <p:column
+                            headerText="Acciones"
+                            style="width: 120px; text-align: center;">
+
+                            <p:commandButton
+                                icon="pi pi-trash"
+                                title="Quitar tipo"
+                                action="#{productoTipoProductoModel.quitarTipo(relacion)}"
+                                process="@this"
+                                update="@form">
+
+                                <p:confirm
+                                    header="Confirmación"
+                                    message="¿Desea quitar este tipo del producto?"
+                                    icon="pi pi-exclamation-triangle"/>
+
+                            </p:commandButton>
+
+                        </p:column>
+
+                    </p:dataTable>
 
                 </p:panel>
 
 
-                <!-- ============================================== -->
-                <!-- TIPOS ASIGNADOS AL PRODUCTO                    -->
-                <!-- ============================================== -->
+                <!-- ================================================= -->
+                <!-- CARACTERÍSTICAS DEL PRODUCTO                       -->
+                <!-- ================================================= -->
 
-                <p:dataTable
-                    id="tablaTiposProducto"
-                    value="#{productoTipoProductoModel.modelo}"
-                    var="relacion"
-                    emptyMessage="Este producto no tiene tipos asignados">
+                <p:panel
+                    header="Características del producto"
+                    styleClass="mb-3">
 
 
-                    <!-- Tipo -->
-                    <p:column
-                        headerText="Tipo de producto">
+                    <!-- Asignación de Característica -->
+                    <p:panel
+                        header="Asignar característica"
+                        styleClass="mb-3">
 
-                        <h:outputText
-                            value="#{relacion.idTipoProducto.nombre}"/>
-
-                    </p:column>
+                        <div class="formgrid grid">
 
 
-                    <!-- Estado -->
-                    <p:column
-                        headerText="Estado">
+                            <!-- Combo Característica -->
+                            <div class="field col-12 md:col-5">
 
-                        <h:outputText
-                            value="#{relacion.idTipoProducto.activo
-                                     ? 'Activo'
-                                     : 'Inactivo'}"/>
+                                <p:outputLabel
+                                    for="cmbCaracteristica"
+                                    value="Característica"/>
 
-                    </p:column>
+                                <p:selectOneMenu
+                                    id="cmbCaracteristica"
+                                    value="#{productoCaracteristicaModel.idCaracteristicaSeleccionada}"
+                                    style="width: 100%;">
+
+                                    <f:selectItem
+                                        itemLabel="Seleccione una característica"
+                                        itemValue="#{null}"
+                                        noSelectionOption="true"/>
+
+                                    <f:selectItems
+                                        value="#{productoCaracteristicaModel.caracteristicaList}"
+                                        var="caracteristica"
+                                        itemLabel="#{caracteristica.nombre}"
+                                        itemValue="#{caracteristica.idCaracteristica.toString()}"/>
+
+                                </p:selectOneMenu>
+
+                            </div>
 
 
-                    <!-- Fecha -->
-                    <p:column
-                        headerText="Fecha de asignación">
+                            <!-- Valor -->
+                            <div class="field col-12 md:col-3">
 
-                        <h:outputText
-                            value="#{relacion.fechaCreacion}">
+                                <p:outputLabel
+                                    for="txtValorCaracteristica"
+                                    value="Valor"/>
 
-                            <f:convertDateTime
-                                pattern="dd/MM/yyyy HH:mm"/>
+                                <p:inputText
+                                    id="txtValorCaracteristica"
+                                    value="#{productoCaracteristicaModel.valorCaracteristica}"
+                                    style="width: 100%;"/>
 
-                        </h:outputText>
-
-                    </p:column>
+                            </div>
 
 
-                    <!-- Acción para quitar la relación -->
-                    <p:column
-                        headerText="Acciones"
-                        style="width: 120px; text-align: center;">
+                            <!-- Acciones Característica -->
+                            <div class="field col-12 md:col-4">
 
-                        <p:commandButton
-                            icon="pi pi-trash"
-                            title="Quitar tipo"
-                            action="#{productoTipoProductoModel.quitarTipo(relacion)}"
-                            process="@this"
-                            update="@form">
+                                <p:outputLabel
+                                    value="Acciones"/>
 
-                            <p:confirm
-                                header="Confirmación"
-                                message="¿Desea quitar este tipo del producto?"
-                                icon="pi pi-exclamation-triangle"/>
+                                <div style="
+                                     display: flex;
+                                     gap: 0.5rem;
+                                     flex-wrap: wrap;
+                                     margin-top: 0.4rem;">
 
-                        </p:commandButton>
+                                    <p:commandButton
+                                        value="Agregar"
+                                        icon="pi pi-plus"
+                                        action="#{productoCaracteristicaModel.agregarCaracteristica}"
+                                        process="cmbCaracteristica txtValorCaracteristica"
+                                        update="@form"/>
 
-                    </p:column>
+                                    <p:commandButton
+                                        value="Actualizar"
+                                        icon="pi pi-refresh"
+                                        action="#{productoCaracteristicaModel.cargarCaracteristicas}"
+                                        process="@this"
+                                        update="cmbCaracteristica"/>
 
-                </p:dataTable>
+                                    <p:button
+                                        value="Gestionar características"
+                                        icon="pi pi-external-link"
+                                        outcome="/paginas/Caracteristica.xhtml"
+                                        target="_blank"/>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                    </p:panel>
+
+
+                    <!-- Características asignadas -->
+                    <p:dataTable
+                        id="tablaCaracteristicasProducto"
+                        value="#{productoCaracteristicaModel.modelo}"
+                        var="relacionCaracteristica"
+                        emptyMessage="Este producto no tiene características asignadas">
+
+                        <p:column
+                            headerText="Característica">
+
+                            <h:outputText
+                                value="#{relacionCaracteristica.idCaracteristica.nombre}"/>
+
+                        </p:column>
+
+
+                        <p:column
+                            headerText="Tipo">
+
+                            <h:outputText
+                                value="#{relacionCaracteristica.idCaracteristica.idTipoCaracteristica.nombre}"/>
+
+                        </p:column>
+
+
+                        <p:column
+                            headerText="Valor">
+
+                            <h:outputText
+                                value="#{relacionCaracteristica.valor}"/>
+
+                        </p:column>
+
+
+                        <p:column
+                            headerText="Estado">
+
+                            <h:outputText
+                                value="#{relacionCaracteristica.idCaracteristica.activo
+                                         ? 'Activo'
+                                         : 'Inactivo'}"/>
+
+                        </p:column>
+
+
+                        <p:column
+                            headerText="Acciones"
+                            style="width: 120px; text-align: center;">
+
+                            <p:commandButton
+                                icon="pi pi-trash"
+                                title="Quitar característica"
+                                action="#{productoCaracteristicaModel.quitarCaracteristica(relacionCaracteristica)}"
+                                process="@this"
+                                update="@form">
+
+                                <p:confirm
+                                    header="Confirmación"
+                                    message="¿Desea quitar esta característica del producto?"
+                                    icon="pi pi-exclamation-triangle"/>
+
+                            </p:commandButton>
+
+                        </p:column>
+
+                    </p:dataTable>
+
+                </p:panel>
 
             </p:tab>
 
