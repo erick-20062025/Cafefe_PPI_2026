@@ -34,23 +34,69 @@
                 padding: 1rem !important;
             }
             .menu-superior {
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    gap: 10px;
-}
+                display: flex;
+                align-items: center;
+                justify-content: flex-end;
+                gap: 10px;
+            }
 
-.boton-superior {
-    font-size: 0.9rem !important;
-    border-radius: 8px !important;
-    padding: 0.55rem 0.85rem !important;
-}
+            .boton-superior {
+                font-size: 0.9rem !important;
+                border-radius: 8px !important;
+                padding: 0.55rem 0.85rem !important;
+            }
 
-.boton-superior:hover {
-    background-color: rgba(255, 255, 255, 0.15) !important;
-}
+            .boton-superior:hover {
+                background-color: rgba(255, 255, 255, 0.15) !important;
+            }
+            .menu-lateral {
+                display: flex;
+                flex-direction: column;
+                gap: 6px;
+                padding-right: 1rem;
+            }
+
+            .menu-titulo {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                font-weight: bold;
+                color: #5d4037;
+                margin-bottom: 12px;
+            }
+
+            .menu-seccion {
+                font-size: 0.8rem;
+                font-weight: bold;
+                text-transform: uppercase;
+                color: #6b7280;
+                margin-top: 14px;
+                margin-bottom: 3px;
+                padding-left: 4px;
+            }
+
+            .boton-menu {
+                width: 100% !important;
+                justify-content: flex-start !important;
+                text-align: left !important;
+                background: transparent !important;
+                color: #4b5563 !important;
+                border: none !important;
+                box-shadow: none !important;
+                border-radius: 8px !important;
+            }
+
+            .boton-menu:hover {
+                background: #f3eee8 !important;
+                color: #3f6212 !important;
+            }
+
+            .boton-menu .ui-button-text {
+                text-align: left !important;
+                flex: 1;
+            }
         </style>
-        
+
     </h:head>
 
     <h:body>
@@ -81,17 +127,17 @@
 
                     <div class="menu-superior">
 
-    <p:commandButton value="Español"
-                     icon="pi pi-globe"
-                     type="button"
-                     styleClass="ui-button-flat boton-superior" />
+                        <p:commandButton value="Español"
+                                         icon="pi pi-globe"
+                                         type="button"
+                                         styleClass="ui-button-flat boton-superior" />
 
-    <p:commandButton value="Iniciar sesión"
-                     icon="pi pi-user"
-                     type="button"
-                     styleClass="ui-button-flat boton-superior" />
+                        <p:commandButton value="Iniciar sesión"
+                                         icon="pi pi-user"
+                                         type="button"
+                                         styleClass="ui-button-flat boton-superior" />
 
-</div>
+                    </div>
 
                 </div>
 
@@ -100,10 +146,81 @@
                 <div class="col-12 grid mt-3">
 
                     <!-- MENÚ LATERAL -->
+                    <!-- MENÚ LATERAL -->
                     <div class="col-12 md:col-2">
-                        <span class="font-bold text-color-secondary">
-                            Menú navegación
-                        </span>
+
+                        <div class="menu-lateral">
+
+                            <div class="menu-titulo">
+                                <i class="pi pi-bars"></i>
+                                <span>Menú navegación</span>
+                            </div>
+
+                            <!-- VENTAS -->
+                            <div class="menu-seccion">
+                                Ventas
+                            </div>
+
+                            <p:button value="Cajas"
+                                      outcome="/paginas/Caja.xhtml"
+                                      icon="pi pi-wallet"
+                                      styleClass="boton-menu" />
+
+
+                            <!-- CATÁLOGO -->
+                            <div class="menu-seccion">
+                                Catálogo
+                            </div>
+
+                            <p:button value="Productos"
+                                      outcome="/paginas/Producto.xhtml"
+                                      icon="pi pi-box"
+                                      styleClass="boton-menu" />
+
+                            <p:button value="Tipos de producto"
+                                      outcome="/paginas/TipoProducto.xhtml"
+                                      icon="pi pi-tags"
+                                      styleClass="boton-menu" />
+
+                            <p:button value="Características"
+                                      outcome="/paginas/Caracteristica.xhtml"
+                                      icon="pi pi-list"
+                                      styleClass="boton-menu" />
+
+                            <p:button value="Tipos de característica"
+                                      outcome="/paginas/TipoCaracteristica.xhtml"
+                                      icon="pi pi-sliders-h"
+                                      styleClass="boton-menu" />
+
+
+                            <!-- PROMOCIONES -->
+                            <div class="menu-seccion">
+                                Promociones
+                            </div>
+
+                            <p:button value="Descuentos"
+                                      outcome="/paginas/Descuento.xhtml"
+                                      icon="pi pi-percentage"
+                                      styleClass="boton-menu" />
+
+                            <p:button value="Tipos de descuento"
+                                      outcome="/paginas/TipoDescuento.xhtml"
+                                      icon="pi pi-ticket"
+                                      styleClass="boton-menu" />
+
+
+                            <!-- ADMINISTRACIÓN -->
+                            <div class="menu-seccion">
+                                Administración
+                            </div>
+
+                            <p:button value="Roles"
+                                      outcome="/paginas/Rol.xhtml"
+                                      icon="pi pi-users"
+                                      styleClass="boton-menu" />
+
+                        </div>
+
                     </div>
 
 
