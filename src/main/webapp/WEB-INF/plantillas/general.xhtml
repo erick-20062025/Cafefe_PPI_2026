@@ -98,6 +98,33 @@
         </style>
 
     </h:head>
+    <script type="text/javascript">
+    function toggleMenu() {
+
+        const contenido = document.getElementById('contenidoMenu');
+        const titulo = document.getElementById('tituloMenu');
+        const menu = document.getElementById('contenedorMenu');
+        const principal = document.getElementById('areaPrincipal');
+
+        const oculto = contenido.style.display === 'none';
+
+        if (oculto) {
+            contenido.style.display = '';
+            titulo.style.display = '';
+            menu.classList.remove('md:col-1');
+            menu.classList.add('md:col-2');
+            principal.classList.remove('md:col-11');
+            principal.classList.add('md:col-10');
+        } else {
+            contenido.style.display = 'none';
+            titulo.style.display = 'none';
+            menu.classList.remove('md:col-2');
+            menu.classList.add('md:col-1');
+            principal.classList.remove('md:col-10');
+            principal.classList.add('md:col-11');
+        }
+    }
+</script>
 
     <h:body>
 
@@ -146,86 +173,97 @@
                 <div class="col-12 grid mt-3">
 
                     <!-- MENÚ LATERAL -->
-                    <!-- MENÚ LATERAL -->
-                    <div class="col-12 md:col-2">
+                    <div id="contenedorMenu"
+                         class="col-12 md:col-2">
 
                         <div class="menu-lateral">
 
                             <div class="menu-titulo">
-                                <i class="pi pi-bars"></i>
-                                <span>Menú navegación</span>
+
+                                <p:commandButton
+                                    type="button"
+                                    icon="pi pi-bars"
+                                    title="Mostrar/Ocultar menú"
+                                    onclick="toggleMenu();"
+                                    styleClass="ui-button-flat ui-button-secondary" />
+
+                                <span id="tituloMenu">
+                                    Menú navegación
+                                </span>
+
                             </div>
 
-                            <!-- VENTAS -->
-                            <div class="menu-seccion">
-                                Ventas
+                            <div id="contenidoMenu">
+
+                                <p:button value="Cajas"
+                                          outcome="/paginas/Caja.xhtml"
+                                          icon="pi pi-wallet"
+                                          styleClass="boton-menu" />
+
+
+                                <!-- CATÁLOGO -->
+                                <div class="menu-seccion">
+                                    Catálogo
+                                </div>
+
+                                <p:button value="Productos"
+                                          outcome="/paginas/Producto.xhtml"
+                                          icon="pi pi-box"
+                                          styleClass="boton-menu" />
+
+                                <p:button value="Tipos de producto"
+                                          outcome="/paginas/TipoProducto.xhtml"
+                                          icon="pi pi-tags"
+                                          styleClass="boton-menu" />
+
+                                <p:button value="Características"
+                                          outcome="/paginas/Caracteristica.xhtml"
+                                          icon="pi pi-list"
+                                          styleClass="boton-menu" />
+
+                                <p:button value="Tipos de característica"
+                                          outcome="/paginas/TipoCaracteristica.xhtml"
+                                          icon="pi pi-sliders-h"
+                                          styleClass="boton-menu" />
+
+
+                                <!-- PROMOCIONES -->
+                                <div class="menu-seccion">
+                                    Promociones
+                                </div>
+
+                                <p:button value="Descuentos"
+                                          outcome="/paginas/Descuento.xhtml"
+                                          icon="pi pi-percentage"
+                                          styleClass="boton-menu" />
+
+                                <p:button value="Tipos de descuento"
+                                          outcome="/paginas/TipoDescuento.xhtml"
+                                          icon="pi pi-ticket"
+                                          styleClass="boton-menu" />
+
+
+                                <!-- ADMINISTRACIÓN -->
+                                <div class="menu-seccion">
+                                    Administración
+                                </div>
+                                <p:button value="Empleados"
+                                          outcome="/paginas/Empleado.xhtml"
+                                          icon="pi pi-id-card"
+                                          styleClass="boton-menu" />
+                                <p:button value="Roles"
+                                          outcome="/paginas/Rol.xhtml"
+                                          icon="pi pi-users"
+                                          styleClass="boton-menu" />
+
                             </div>
-
-                            <p:button value="Cajas"
-                                      outcome="/paginas/Caja.xhtml"
-                                      icon="pi pi-wallet"
-                                      styleClass="boton-menu" />
-
-
-                            <!-- CATÁLOGO -->
-                            <div class="menu-seccion">
-                                Catálogo
-                            </div>
-
-                            <p:button value="Productos"
-                                      outcome="/paginas/Producto.xhtml"
-                                      icon="pi pi-box"
-                                      styleClass="boton-menu" />
-
-                            <p:button value="Tipos de producto"
-                                      outcome="/paginas/TipoProducto.xhtml"
-                                      icon="pi pi-tags"
-                                      styleClass="boton-menu" />
-
-                            <p:button value="Características"
-                                      outcome="/paginas/Caracteristica.xhtml"
-                                      icon="pi pi-list"
-                                      styleClass="boton-menu" />
-
-                            <p:button value="Tipos de característica"
-                                      outcome="/paginas/TipoCaracteristica.xhtml"
-                                      icon="pi pi-sliders-h"
-                                      styleClass="boton-menu" />
-
-
-                            <!-- PROMOCIONES -->
-                            <div class="menu-seccion">
-                                Promociones
-                            </div>
-
-                            <p:button value="Descuentos"
-                                      outcome="/paginas/Descuento.xhtml"
-                                      icon="pi pi-percentage"
-                                      styleClass="boton-menu" />
-
-                            <p:button value="Tipos de descuento"
-                                      outcome="/paginas/TipoDescuento.xhtml"
-                                      icon="pi pi-ticket"
-                                      styleClass="boton-menu" />
-
-
-                            <!-- ADMINISTRACIÓN -->
-                            <div class="menu-seccion">
-                                Administración
-                            </div>
-
-                            <p:button value="Roles"
-                                      outcome="/paginas/Rol.xhtml"
-                                      icon="pi pi-users"
-                                      styleClass="boton-menu" />
 
                         </div>
-
                     </div>
 
-
                     <!-- ÁREA PRINCIPAL -->
-                    <div class="col-12 md:col-10">
+                    <div id="areaPrincipal"
+                         class="col-12 md:col-10">
 
                         <!-- TABLA -->
                         <h:panelGroup id="pnlTablaContainer"

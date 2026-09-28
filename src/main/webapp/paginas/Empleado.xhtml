@@ -9,55 +9,83 @@
     <ui:param name="nombreEntidad" value="Empleado" />
     <ui:param name="controller" value="#{empleadoModel}" />
 
-    <ui:define name="titulo">Empleados - Cafefe</ui:define>
-    <ui:define name="tituloHeader">Empleados</ui:define>
+    <ui:define name="titulo">
+        Empleados - Cafefe
+    </ui:define>
+
+    <ui:define name="tituloHeader">
+        Empleados
+    </ui:define>
 
 
-    <!-- =====================================================
-         TABLA DE EMPLEADOS
-         ===================================================== -->
+    <!-- ====================================================== -->
+    <!-- TABLA PRINCIPAL DE EMPLEADOS                           -->
+    <!-- ====================================================== -->
 
     <ui:define name="tabla">
 
-        <p:dataTable id="tblEmpleado"
-                     value="#{empleadoModel.modelo}"
-                     var="reg"
-                     selection="#{empleadoModel.registro}"
-                     rowKey="#{reg.idEmpleado}"
-                     selectionMode="single"
-                     paginator="true"
-                     rows="5"
-                     paginatorPosition="both"
-                     emptyMessage="No se encontraron empleados"
-                     styleClass="p-datatable-striped p-datatable-sm">
+        <p:dataTable
+            id="tblEmpleado"
+            value="#{empleadoModel.modelo}"
+            var="reg"
+            selection="#{empleadoModel.registro}"
+            rowKey="#{reg.idEmpleado}"
+            selectionMode="single"
+            paginator="true"
+            rows="5"
+            paginatorPosition="both"
+            emptyMessage="No se encontraron empleados"
+            styleClass="p-datatable-striped p-datatable-sm">
 
-            <p:ajax event="rowSelect"
-                    listener="#{empleadoModel.onRowSelect}"
-                    update="@form" />
+            <p:ajax
+                event="rowSelect"
+                listener="#{empleadoModel.onRowSelect}"
+                update="@form" />
 
-            <p:ajax event="rowUnselect"
-                    listener="#{empleadoModel.onRowUnselect}"
-                    update="@form" />
+            <p:ajax
+                event="rowUnselect"
+                listener="#{empleadoModel.onRowUnselect}"
+                update="@form" />
 
-            <p:column headerText="ID"
-                      style="width: 25%;">
-                <h:outputText value="#{reg.idEmpleado}" />
+            <p:column
+                headerText="ID"
+                style="width: 25%;">
+
+                <h:outputText
+                    value="#{reg.idEmpleado}" />
+
             </p:column>
 
-            <p:column headerText="Nombre">
+            <p:column headerText="Nombre"
+                      sortBy="#{reg.nombre}"
+                      filterBy="#{reg.nombre}">
+
                 <h:outputText value="#{reg.nombre}" />
+
             </p:column>
 
-            <p:column headerText="Apellido">
+            <p:column headerText="Apellido"
+                      sortBy="#{reg.apellido}"
+                      filterBy="#{reg.apellido}">
+
                 <h:outputText value="#{reg.apellido}" />
+
+            </p:column>     
+
+            <p:column
+                headerText="Estado">
+
+                <h:outputText
+                    value="#{reg.activo ? 'ACTIVO' : 'INACTIVO'}" />
+
             </p:column>
 
-            <p:column headerText="Estado">
-                <h:outputText value="#{reg.activo ? 'ACTIVO' : 'INACTIVO'}" />
-            </p:column>
+            <p:column
+                headerText="Comentarios">
 
-            <p:column headerText="Comentarios">
-                <h:outputText value="#{reg.comentarios}" />
+                <h:outputText
+                    value="#{reg.comentarios}" />
+
             </p:column>
 
         </p:dataTable>
@@ -65,94 +93,271 @@
     </ui:define>
 
 
-    <!-- =====================================================
-         FORMULARIO DE EMPLEADO
-         ===================================================== -->
+    <!-- ====================================================== -->
+    <!-- FORMULARIO                                             -->
+    <!-- ====================================================== -->
 
     <ui:define name="formulario">
 
-        <div class="formgrid grid">
-
-            <!-- Nombre -->
-            <div class="field col-12 md:col-6">
-
-                <p:outputLabel for="txtNombre"
-                               value="Nombre"
-                               styleClass="font-semibold block mb-2" />
-
-                <p:inputText id="txtNombre"
-                             value="#{empleadoModel.registro.nombre}"
-                             required="true"
-                             requiredMessage="El campo Nombre es obligatorio"
-                             validatorMessage="El nombre debe contener al menos 2 caracteres"
-                             maxlength="255"
-                             style="width: 100%;">
-
-                    <f:validateLength minimum="2" maximum="255" />
-
-                </p:inputText>
-
-            </div>
+        <p:tabView id="tabEmpleado">
 
 
-            <!-- Apellido -->
-            <div class="field col-12 md:col-6">
+            <!-- ================================================== -->
+            <!-- TAB 1: DATOS DEL EMPLEADO                          -->
+            <!-- ================================================== -->
 
-                <p:outputLabel for="txtApellido"
-                               value="Apellido"
-                               styleClass="font-semibold block mb-2" />
+            <p:tab title="Datos del empleado">
 
-                <p:inputText id="txtApellido"
-                             value="#{empleadoModel.registro.apellido}"
-                             required="true"
-                             requiredMessage="El campo Apellido es obligatorio"
-                             validatorMessage="El apellido debe contener al menos 2 caracteres"
-                             maxlength="255"
-                             style="width: 100%;">
-
-                    <f:validateLength minimum="2" maximum="255" />
-
-                </p:inputText>
-
-            </div>
+                <div class="formgrid grid">
 
 
-            <!-- Estado -->
-            <div class="field col-12">
+                    <!-- Nombre -->
+                    <div class="field col-12 md:col-6">
 
-                <p:outputLabel for="chkActivo"
-                               value="Estado"
-                               styleClass="font-semibold block mb-2" />
+                        <p:outputLabel
+                            for="txtNombre"
+                            value="Nombre"
+                            styleClass="font-semibold block mb-2" />
 
-                <div class="flex align-items-center gap-2">
+                        <p:inputText
+                            id="txtNombre"
+                            value="#{empleadoModel.registro.nombre}"
+                            required="true"
+                            requiredMessage="El campo Nombre es obligatorio"
+                            validatorMessage="El nombre debe contener al menos 2 caracteres"
+                            maxlength="255"
+                            style="width: 100%;">
 
-                    <p:selectBooleanCheckbox id="chkActivo"
-                                             value="#{empleadoModel.registro.activo}" />
+                            <f:validateLength
+                                minimum="2"
+                                maximum="255" />
 
-                    <h:outputText value="Empleado activo" />
+                        </p:inputText>
+
+                    </div>
+
+
+                    <!-- Apellido -->
+                    <div class="field col-12 md:col-6">
+
+                        <p:outputLabel
+                            for="txtApellido"
+                            value="Apellido"
+                            styleClass="font-semibold block mb-2" />
+
+                        <p:inputText
+                            id="txtApellido"
+                            value="#{empleadoModel.registro.apellido}"
+                            required="true"
+                            requiredMessage="El campo Apellido es obligatorio"
+                            validatorMessage="El apellido debe contener al menos 2 caracteres"
+                            maxlength="255"
+                            style="width: 100%;">
+
+                            <f:validateLength
+                                minimum="2"
+                                maximum="255" />
+
+                        </p:inputText>
+
+                    </div>
+
+
+                    <!-- Estado -->
+                    <div class="field col-12">
+
+                        <p:outputLabel
+                            for="chkActivo"
+                            value="Estado"
+                            styleClass="font-semibold block mb-2" />
+
+                        <div class="flex align-items-center gap-2">
+
+                            <p:selectBooleanCheckbox
+                                id="chkActivo"
+                                value="#{empleadoModel.registro.activo}" />
+
+                            <h:outputText
+                                value="Empleado activo" />
+
+                        </div>
+
+                    </div>
+
+
+                    <!-- Comentarios -->
+                    <div class="field col-12">
+
+                        <p:outputLabel
+                            for="txtComentarios"
+                            value="Comentarios"
+                            styleClass="font-semibold block mb-2" />
+
+                        <p:inputTextarea
+                            id="txtComentarios"
+                            value="#{empleadoModel.registro.comentarios}"
+                            rows="4"
+                            autoResize="false"
+                            style="width: 100%;"
+                            placeholder="Agregue información adicional..." />
+
+                    </div>
 
                 </div>
 
-            </div>
+            </p:tab>
 
 
-            <!-- Comentarios -->
-            <div class="field col-12">
+            <!-- ================================================== -->
+            <!-- TAB 2: RELACIONES                                  -->
+            <!-- ================================================== -->
 
-                <p:outputLabel for="txtComentarios"
-                               value="Comentarios"
-                               styleClass="font-semibold block mb-2" />
+            <p:tab
+                title="Relaciones"
+                disabled="#{not empleadoModel.puedeGestionarRelaciones}">
 
-                <p:inputTextarea id="txtComentarios"
-                                 value="#{empleadoModel.registro.comentarios}"
-                                 rows="4"
-                                 autoResize="false"
-                                 style="width: 100%;"
-                                 placeholder="Agregue información adicional..." />
 
-            </div>
+                <!-- ================================================= -->
+                <!-- ROLES DEL EMPLEADO                                 -->
+                <!-- ================================================= -->
 
-        </div>
+                <p:panel
+                    header="Roles del empleado"
+                    styleClass="mb-4">
+
+
+                    <!-- Asignación de Rol -->
+                    <p:panel
+                        header="Asignar rol"
+                        styleClass="mb-3">
+
+                        <div class="formgrid grid">
+
+
+                            <!-- Combo Rol -->
+                            <div class="field col-12 md:col-6">
+
+                                <p:outputLabel
+                                    for="cmbRol"
+                                    value="Rol" />
+
+                                <p:selectOneMenu
+                                    id="cmbRol"
+                                    value="#{empleadoRolModel.idRolSeleccionado}"
+                                    style="width: 100%;">
+
+                                    <f:selectItem
+                                        itemLabel="Seleccione un rol"
+                                        itemValue="#{null}"
+                                        noSelectionOption="true" />
+
+                                    <f:selectItems
+                                        value="#{empleadoRolModel.rolList}"
+                                        var="rol"
+                                        itemLabel="#{rol.nombre}"
+                                        itemValue="#{rol.idRol.toString()}" />
+
+                                </p:selectOneMenu>
+
+                            </div>
+
+
+                            <!-- Acciones Rol -->
+                            <div class="field col-12 md:col-6">
+
+                                <p:outputLabel
+                                    value="Acciones" />
+
+                                <div style="
+                                     display: flex;
+                                     gap: 0.5rem;
+                                     flex-wrap: wrap;
+                                     margin-top: 0.4rem;">
+
+                                    <p:commandButton
+                                        value="Agregar"
+                                        icon="pi pi-plus"
+                                        action="#{empleadoRolModel.agregarRol}"
+                                        process="cmbRol"
+                                        update="@form" />
+
+                                    <p:commandButton
+                                        value="Actualizar roles"
+                                        icon="pi pi-refresh"
+                                        action="#{empleadoRolModel.cargarRoles}"
+                                        process="@this"
+                                        update="cmbRol" />
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                    </p:panel>
+
+
+                    <!-- Roles asignados -->
+                    <p:dataTable
+                        id="tablaRolesEmpleado"
+                        value="#{empleadoRolModel.modelo}"
+                        var="relacion"
+                        emptyMessage="Este empleado no tiene roles asignados">
+
+                        <p:column
+                            headerText="Rol">
+
+                            <h:outputText
+                                value="#{relacion.idRol.nombre}" />
+
+                        </p:column>
+
+
+                        <p:column
+                            headerText="Estado">
+
+                            <h:outputText
+                                value="#{relacion.activo ? 'Activo' : 'Inactivo'}" />
+
+                        </p:column>
+
+
+                        <p:column
+                            headerText="Observaciones">
+
+                            <h:outputText
+                                value="#{relacion.observaciones}" />
+
+                        </p:column>
+
+
+                        <p:column
+                            headerText="Acciones"
+                            style="width: 120px; text-align: center;">
+
+                            <p:commandButton
+                                icon="pi pi-trash"
+                                title="Quitar rol"
+                                action="#{empleadoRolModel.quitarRol(relacion)}"
+                                process="@this"
+                                update="@form">
+
+                                <p:confirm
+                                    header="Confirmación"
+                                    message="¿Desea quitar este rol del empleado?"
+                                    icon="pi pi-exclamation-triangle" />
+
+                            </p:commandButton>
+
+                        </p:column>
+
+                    </p:dataTable>
+
+                </p:panel>
+
+            </p:tab>
+
+        </p:tabView>
 
     </ui:define>
 
