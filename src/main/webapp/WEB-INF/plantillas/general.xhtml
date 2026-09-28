@@ -99,32 +99,32 @@
 
     </h:head>
     <script type="text/javascript">
-    function toggleMenu() {
+        function toggleMenu() {
 
-        const contenido = document.getElementById('contenidoMenu');
-        const titulo = document.getElementById('tituloMenu');
-        const menu = document.getElementById('contenedorMenu');
-        const principal = document.getElementById('areaPrincipal');
+            const contenido = document.getElementById('contenidoMenu');
+            const titulo = document.getElementById('tituloMenu');
+            const menu = document.getElementById('contenedorMenu');
+            const principal = document.getElementById('areaPrincipal');
 
-        const oculto = contenido.style.display === 'none';
+            const oculto = contenido.style.display === 'none';
 
-        if (oculto) {
-            contenido.style.display = '';
-            titulo.style.display = '';
-            menu.classList.remove('md:col-1');
-            menu.classList.add('md:col-2');
-            principal.classList.remove('md:col-11');
-            principal.classList.add('md:col-10');
-        } else {
-            contenido.style.display = 'none';
-            titulo.style.display = 'none';
-            menu.classList.remove('md:col-2');
-            menu.classList.add('md:col-1');
-            principal.classList.remove('md:col-10');
-            principal.classList.add('md:col-11');
+            if (oculto) {
+                contenido.style.display = '';
+                titulo.style.display = '';
+                menu.classList.remove('md:col-1');
+                menu.classList.add('md:col-2');
+                principal.classList.remove('md:col-11');
+                principal.classList.add('md:col-10');
+            } else {
+                contenido.style.display = 'none';
+                titulo.style.display = 'none';
+                menu.classList.remove('md:col-2');
+                menu.classList.add('md:col-1');
+                principal.classList.remove('md:col-10');
+                principal.classList.add('md:col-11');
+            }
         }
-    }
-</script>
+    </script>
 
     <h:body>
 
@@ -204,6 +204,10 @@
                                           outcome="/paginas/Orden.xhtml"
                                           icon="pi pi-shopping-cart"
                                           styleClass="boton-menu" />
+                                <p:button value="Facturas"
+                                          outcome="/paginas/Factura.xhtml"
+                                          icon="pi pi-file"
+                                          styleClass="boton-menu" />
 
 
                                 <!-- CATÁLOGO -->
@@ -273,7 +277,7 @@
                         <!-- TABLA -->
                         <h:panelGroup id="pnlTablaContainer"
                                       layout="block"
-                                      rendered="#{!controller.nuevo and !controller.editando}">
+                                      rendered="#{!controller.nuevo and !controller.editando and !controller.consultando}">
 
 
 
@@ -297,7 +301,7 @@
                                     process="@this"
                                     icon="pi pi-pencil"
                                     styleClass="mr-2"
-                                    rendered="#{controller.registro != null}" />
+                                    rendered="#{controller.puedeEditar}" />
 
                                 <p:commandButton
                                     value="Eliminar"
@@ -306,7 +310,7 @@
                                     process="@this"
                                     icon="pi pi-trash"
                                     styleClass="ui-button-danger mr-2"
-                                    rendered="#{controller.registro != null}">
+                                    rendered="#{controller.puedeEliminar}">
 
                                     <p:confirm
                                         header="Confirmar eliminación"
@@ -332,7 +336,7 @@
                         <!-- FORMULARIO NUEVO / EDICIÓN -->
                         <h:panelGroup id="pnlFormularioContainer"
                                       layout="block"
-                                      rendered="#{controller.nuevo or controller.editando}">
+                                      rendered="#{controller.nuevo or controller.editando or controller.consultando}">
 
                             <p:panel header="Datos de #{nombreEntidad}">
 

@@ -1,0 +1,452 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html>
+
+<ui:composition
+    xmlns="http://www.w3.org/1999/xhtml"
+    xmlns:h="jakarta.faces.html"
+    xmlns:f="jakarta.faces.core"
+    xmlns:ui="jakarta.faces.facelets"
+    xmlns:p="http://primefaces.org/ui"
+    template="/WEB-INF/plantillas/general.xhtml">
+
+    <ui:param
+        name="nombreEntidad"
+        value="Factura"/>
+
+    <ui:param
+        name="controller"
+        value="#{facturaModel}"/>
+
+    <ui:define name="titulo">
+        Facturas - Cafefe
+    </ui:define>
+
+    <ui:define name="tituloHeader">
+        Facturas
+    </ui:define>
+
+
+    <!-- LISTADO DE FACTURAS -->
+
+    <ui:define name="tabla">
+
+        <p:dataTable
+            id="tablaFacturas"
+            value="#{facturaModel.modelo}"
+            var="factura"
+            selection="#{facturaModel.registro}"
+            rowKey="#{factura.idFactura}"
+            selectionMode="single"
+            paginator="true"
+            rows="10"
+            emptyMessage="No hay facturas registradas">
+
+            <p:ajax
+                event="rowSelect"
+                listener="#{facturaModel.onRowSelect}"
+                update="@form"/>
+
+            <p:ajax
+                event="rowUnselect"
+                listener="#{facturaModel.onRowUnselect}"
+                update="@form"/>
+
+            <p:column
+                headerText="Cliente"
+                sortBy="#{factura.cliente}"
+                filterBy="#{factura.cliente}">
+
+                <h:outputText value="#{factura.cliente}"/>
+
+            </p:column>
+
+            <p:column
+                headerText="Fecha"
+                sortBy="#{factura.fechaFacturacion}">
+
+                <h:outputText value="#{factura.fechaFacturacion}">
+                    <f:convertDateTime
+                        pattern="dd/MM/yyyy HH:mm"
+                        timeZone="America/El_Salvador"/>
+                </h:outputText>
+
+            </p:column>
+
+            <p:column headerText="Estado">
+                <h:outputText value="#{factura.estado}"/>
+            </p:column>
+
+            <p:column headerText="Caja">
+                <h:outputText value="#{factura.idCaja.nombre}"/>
+            </p:column>
+
+            <p:column headerText="Empleado">
+                <h:outputText
+                    value="#{factura.idEmpleadoRol.idEmpleado.nombre} #{factura.idEmpleadoRol.idEmpleado.apellido}"/>
+            </p:column>
+
+            <p:column headerText="Rol">
+                <h:outputText
+                    value="#{factura.idEmpleadoRol.idRol.nombre}"/>
+            </p:column>
+
+        </p:dataTable>
+
+    </ui:define>
+
+
+    <!-- FORMULARIO -->
+
+    <ui:define name="formulario">
+
+        <p:outputPanel id="datosFactura">
+
+            <div class="formgrid grid">
+
+                <!-- CLIENTE -->
+
+                <div class="field col-12 md:col-6">
+
+                    <p:outputLabel
+                        for="txtCliente"
+                        value="Cliente"/>
+
+                    <p:inputText
+                        id="txtCliente"
+                        value="#{facturaModel.registro.cliente}"
+                        maxlength="155"
+                        style="width: 100%;"/>
+
+                </div>
+
+
+                <!-- ESTADO -->
+
+                <div class="field col-12 md:col-6">
+
+
+
+                </div>
+
+
+                <!-- FECHA -->
+
+                <div class="field col-12 md:col-6">
+
+                    <p:outputLabel value="Fecha de facturación"/>
+
+                    <br/>
+
+                    <h:outputText
+                        value="#{facturaModel.registro.fechaFacturacion}">
+
+                        <f:convertDateTime
+                            pattern="dd/MM/yyyy HH:mm"
+                            timeZone="America/El_Salvador"/>
+
+                    </h:outputText>
+
+                </div>
+
+
+                <!-- CAJA -->
+
+                <div class="field col-12 md:col-6">
+
+                    <p:outputLabel
+                        for="cmbCaja"
+                        value="Caja"/>
+
+                    <p:selectOneMenu
+                        id="cmbCaja"
+                        value="#{facturaModel.idCajaSeleccionada}"
+                        required="true"
+                        requiredMessage="Debe seleccionar una caja"
+                        style="width: 100%;">
+
+                        <f:selectItem
+                            itemLabel="Seleccione una caja"
+                            itemValue="#{null}"
+                            noSelectionOption="true"/>
+
+                        <f:selectItems
+                            value="#{facturaModel.cajas}"
+                            var="caja"
+                            itemLabel="#{caja.nombre}"
+                            itemValue="#{caja.idCaja.toString()}"/>
+
+                    </p:selectOneMenu>
+
+                </div>
+
+
+                <!-- EMPLEADO / ROL -->
+
+                <div class="field col-12 md:col-6">
+
+                    <p:outputLabel
+                        for="cmbEmpleadoRol"
+                        value="Empleado y rol"/>
+
+                    <p:selectOneMenu
+                        id="cmbEmpleadoRol"
+                        value="#{facturaModel.idEmpleadoRolSeleccionado}"
+                        required="true"
+                        requiredMessage="Debe seleccionar un empleado y su rol"
+                        style="width: 100%;">
+
+                        <f:selectItem
+                            itemLabel="Seleccione un empleado"
+                            itemValue="#{null}"
+                            noSelectionOption="true"/>
+
+                        <f:selectItems
+                            value="#{facturaModel.empleadosRol}"
+                            var="empleadoRol"
+                            itemLabel="#{empleadoRol.idEmpleado.nombre} #{empleadoRol.idEmpleado.apellido} - #{empleadoRol.idRol.nombre}"
+                            itemValue="#{empleadoRol.idEmpleadoRol.toString()}"/>
+
+                    </p:selectOneMenu>
+
+                </div>
+
+
+                <!-- OBSERVACIONES -->
+
+                <div class="field col-12">
+
+                    <p:outputLabel
+                        for="txtObservaciones"
+                        value="Observaciones"/>
+
+                    <p:inputTextarea
+                        id="txtObservaciones"
+                        value="#{facturaModel.registro.observaciones}"
+                        rows="4"
+                        autoResize="false"
+                        style="width: 100%;"/>
+
+                </div>
+            </div>
+        </p:outputPanel>
+        <!-- PRODUCTOS DE ÓRDENES -->
+
+        <p:panel
+            header="Agregar producto de una orden"
+            styleClass="mt-4 mb-4">
+
+            <div class="formgrid grid">
+
+                <!-- ORDEN -->
+
+                <div class="field col-12 md:col-6">
+
+                    <p:outputLabel
+                        for="cmbOrden"
+                        value="Orden"/>
+
+                    <p:selectOneMenu
+                        id="cmbOrden"
+                        value="#{facturaModel.idOrdenSeleccionada}"
+                        style="width: 100%;">
+
+                        <f:selectItem
+                            itemLabel="Seleccione una orden"
+                            itemValue="#{null}"
+                            noSelectionOption="true"/>
+
+                        <f:selectItems
+                            value="#{facturaModel.ordenesDisponibles}"
+                            var="orden"
+                            itemLabel="#{orden.fechaCreacion} - #{orden.idEmpleadoRol.idEmpleado.nombre} #{orden.idEmpleadoRol.idEmpleado.apellido}"
+                            itemValue="#{orden.idOrden.toString()}"/>
+
+                        <p:ajax
+                            process="@this"
+                            update="cmbOrdenProducto txtPrecioProducto txtObservacionesProducto"/>
+
+                    </p:selectOneMenu>
+
+                </div>
+
+
+                <!-- PRODUCTO DE LA ORDEN -->
+
+                <div class="field col-12 md:col-6">
+
+                    <p:outputLabel
+                        for="cmbOrdenProducto"
+                        value="Producto"/>
+
+                    <p:selectOneMenu
+                        id="cmbOrdenProducto"
+                        value="#{facturaModel.idOrdenProductoSeleccionado}"
+                        style="width: 100%;">
+
+                        <f:selectItem
+                            itemLabel="Seleccione un producto"
+                            itemValue="#{null}"
+                            noSelectionOption="true"/>
+
+                        <f:selectItems
+                            value="#{facturaModel.productosOrden}"
+                            var="ordenProducto"
+                            itemLabel="#{ordenProducto.idProducto.nombre}"
+                            itemValue="#{ordenProducto.idOrdenProducto.toString()}"/>
+
+                        <p:ajax
+                            process="@this"
+                            update="txtPrecioProducto txtObservacionesProducto"/>
+
+                    </p:selectOneMenu>
+
+                </div>
+
+
+                <!-- PRECIO -->
+
+                <div class="field col-12 md:col-4">
+
+                    <p:outputLabel
+                        for="txtPrecioProducto"
+                        value="Precio"/>
+
+                    <p:inputNumber
+                        id="txtPrecioProducto"
+                        value="#{facturaModel.precioProducto}"
+                        decimalPlaces="2"
+                        style="width: 100%;"/>
+
+                </div>
+
+
+                <!-- OBSERVACIONES DEL PRODUCTO -->
+
+                <div class="field col-12 md:col-8">
+
+                    <p:outputLabel
+                        for="txtObservacionesProducto"
+                        value="Observaciones del producto"/>
+
+                    <p:inputText
+                        id="txtObservacionesProducto"
+                        value="#{facturaModel.observacionesProducto}"
+                        maxlength="500"
+                        style="width: 100%;"/>
+
+                </div>
+
+
+                <!-- AGREGAR -->
+
+                <div class="field col-12">
+
+                    <p:commandButton
+                        value="Agregar producto"
+                        icon="pi pi-plus"
+                        action="#{facturaModel.agregarProducto}"
+                        process="datosFactura cmbOrden cmbOrdenProducto txtPrecioProducto txtObservacionesProducto"
+                        update="@form"
+                        styleClass="ui-button-success"/>
+
+                </div>
+
+            </div>
+
+        </p:panel>
+
+
+        <!-- PRODUCTOS AGREGADOS A LA FACTURA -->
+
+        <p:panel header="Productos de la factura">
+
+            <p:dataTable
+                id="tablaProductosFactura"
+                value="#{facturaModel.productosFactura}"
+                var="detalle"
+                emptyMessage="Aún no se han agregado productos">
+
+                <p:column headerText="Orden">
+                    <h:outputText
+                        value="#{detalle.idOrdenProducto.idOrden.fechaCreacion}">
+                        <f:convertDateTime
+                            pattern="dd/MM/yyyy HH:mm"
+                            timeZone="America/El_Salvador"/>
+                    </h:outputText>
+                </p:column>
+
+                <p:column headerText="Producto">
+                    <h:outputText
+                        value="#{detalle.idOrdenProducto.idProducto.nombre}"/>
+                </p:column>
+
+                <p:column
+                    headerText="Precio"
+                    style="width: 140px;">
+
+                    <h:outputText value="#{detalle.precio}">
+                        <f:convertNumber
+                            minFractionDigits="2"
+                            maxFractionDigits="2"/>
+                    </h:outputText>
+
+                </p:column>
+
+                <p:column headerText="Observaciones">
+                    <h:outputText value="#{detalle.observaciones}"/>
+                </p:column>
+
+                <p:column
+                    headerText="Acciones"
+                    style="width: 100px; text-align: center;">
+
+                    <p:commandButton
+                        icon="pi pi-trash"
+                        title="Quitar producto"
+                        action="#{facturaModel.quitarProducto(detalle)}"
+                        process="@this"
+                        update="@form"
+                        styleClass="ui-button-danger">
+
+                        <p:confirm
+                            header="Quitar producto"
+                            message="¿Desea quitar este producto de la factura?"
+                            icon="pi pi-exclamation-triangle"/>
+
+                    </p:commandButton>
+
+                </p:column>
+
+            </p:dataTable>
+
+        </p:panel>
+    </ui:define>
+    <ui:define name="accionesListadoEspeciales">
+
+        <p:commandButton
+            value="Confirmar pago"
+            icon="pi pi-check-circle"
+            action="#{facturaModel.confirmarPagada}"
+            process="@this"
+            update=":frmPrincipal"
+            rendered="#{facturaModel.facturaPendiente}"
+            styleClass="ui-button-success mr-2">
+
+            <p:confirm
+                header="Confirmar pago"
+                message="¿Está seguro de que desea confirmar esta factura como pagada? Después de confirmarla no podrá modificarse."
+                icon="pi pi-exclamation-triangle"/>
+
+        </p:commandButton>
+        <p:commandButton
+            value="Ver factura"
+            icon="pi pi-eye"
+            action="#{facturaModel.verFactura}"
+            process="@this"
+            update=":frmPrincipal"
+            rendered="#{facturaModel.facturaPagada}"
+            styleClass="ui-button-secondary mr-2"/>
+
+    </ui:define>
+
+</ui:composition>

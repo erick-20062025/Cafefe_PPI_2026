@@ -24,6 +24,7 @@ public abstract class AbstractModel<T> implements Serializable {
 
     protected boolean editando;
     protected boolean nuevo;
+    protected boolean consultando;
 
     /*
      * Cada Model hijo debe indicar qué DAO utilizar.
@@ -56,6 +57,7 @@ public abstract class AbstractModel<T> implements Serializable {
 
         this.nuevo = true;
         this.editando = false;
+        this.consultando = false;
     }
 
 
@@ -101,6 +103,7 @@ public abstract class AbstractModel<T> implements Serializable {
 
             this.editando = true;
             this.nuevo = false;
+            this.consultando = false;
         }
     }
 
@@ -147,6 +150,7 @@ public abstract class AbstractModel<T> implements Serializable {
 
         this.editando = false;
         this.nuevo = false;
+        this.consultando = false;
     }
 
 
@@ -169,6 +173,7 @@ public abstract class AbstractModel<T> implements Serializable {
         this.registro = null;
         this.nuevo = false;
         this.editando = false;
+        this.consultando = false;
     }
 
 
@@ -229,6 +234,13 @@ public abstract class AbstractModel<T> implements Serializable {
                         )
                 );
     }
+    public boolean isPuedeEditar() {
+    return this.registro != null;
+}
+
+public boolean isPuedeEliminar() {
+    return this.registro != null;
+}
 
 
     /* =========================================================
@@ -258,4 +270,7 @@ public abstract class AbstractModel<T> implements Serializable {
     public boolean isNuevo() {
         return nuevo;
     }
+    public boolean isConsultando() {
+    return consultando;
+}
 }
