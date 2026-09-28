@@ -99,9 +99,8 @@ public class EmpleadoRolModel
         EmpleadoRol relacion = new EmpleadoRol();
 
         relacion.setIdEmpleadoRol(UUID.randomUUID());
-        relacion.setIdEmpleado(
-                empleado.getIdEmpleado()
-        );
+        relacion.setIdEmpleado(empleado);
+        relacion.setIdEmpleado(empleado);
         relacion.setIdRol(rol);
         relacion.setActivo(true);
 

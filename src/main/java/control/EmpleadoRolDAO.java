@@ -27,7 +27,7 @@ public class EmpleadoRolDAO extends DefaultDAO<EmpleadoRol> {
         return em.createQuery(
                 "SELECT e "
                 + "FROM EmpleadoRol e "
-                + "WHERE e.idEmpleado = :idEmpleado",
+                + "WHERE e.idEmpleado.idEmpleado = :idEmpleado",
                 EmpleadoRol.class
         )
                 .setParameter("idEmpleado", idEmpleado)
@@ -39,7 +39,7 @@ public class EmpleadoRolDAO extends DefaultDAO<EmpleadoRol> {
         return em.createQuery(
                 "SELECT COUNT(e) "
                 + "FROM EmpleadoRol e "
-                + "WHERE e.idEmpleado = :idEmpleado",
+                + "WHERE e.idEmpleado.idEmpleado = :idEmpleado",
                 Long.class
         )
                 .setParameter("idEmpleado", idEmpleado)
@@ -53,7 +53,7 @@ public class EmpleadoRolDAO extends DefaultDAO<EmpleadoRol> {
         Long cantidad = em.createQuery(
                 "SELECT COUNT(e) "
                 + "FROM EmpleadoRol e "
-                + "WHERE e.idEmpleado = :idEmpleado "
+                + "WHERE e.idEmpleado.idEmpleado = :idEmpleado "
                 + "AND e.idRol.idRol = :idRol",
                 Long.class
         )
