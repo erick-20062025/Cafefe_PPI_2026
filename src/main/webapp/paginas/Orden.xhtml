@@ -1,0 +1,446 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html>
+
+<ui:composition
+    xmlns="http://www.w3.org/1999/xhtml"
+    xmlns:h="jakarta.faces.html"
+    xmlns:f="jakarta.faces.core"
+    xmlns:ui="jakarta.faces.facelets"
+    xmlns:p="http://primefaces.org/ui"
+    template="/WEB-INF/plantillas/general.xhtml">
+
+    <ui:param
+        name="nombreEntidad"
+        value="Orden"/>
+
+    <ui:param
+        name="controller"
+        value="#{ordenModel}"/>
+
+    <ui:define name="titulo">
+        Órdenes - Cafefe
+    </ui:define>
+
+    <ui:define name="tituloHeader">
+        Órdenes
+    </ui:define>
+
+
+    <!-- LISTADO DE ÓRDENES -->
+
+    <ui:define name="tabla">
+
+        <p:dataTable
+            id="tablaOrdenes"
+            value="#{ordenModel.modelo}"
+            var="orden"
+            selection="#{ordenModel.ordenSeleccionadaConsulta}"
+            rowKey="#{orden.idOrden}"
+            selectionMode="single"
+            paginator="true"
+            rows="10"
+            emptyMessage="No hay órdenes registradas">
+
+            <p:ajax
+                event="rowSelect"
+                update=":frmPrincipal:btnVerOrden"/>
+
+            <p:ajax
+                event="rowUnselect"
+                update=":frmPrincipal:btnVerOrden"/>
+
+            <p:column
+                headerText="Fecha"
+                sortBy="#{orden.fechaCreacion}">
+
+                <h:outputText value="#{orden.fechaCreacion}">
+                    <f:convertDateTime
+                        pattern="dd/MM/yyyy HH:mm"
+                        timeZone="America/El_Salvador"/>
+                </h:outputText>
+
+            </p:column>
+
+            <p:column headerText="Empleado">
+                <h:outputText
+                    value="#{orden.idEmpleadoRol.idEmpleado.nombre} #{orden.idEmpleadoRol.idEmpleado.apellido}"/>
+            </p:column>
+
+            <p:column headerText="Rol">
+                <h:outputText
+                    value="#{orden.idEmpleadoRol.idRol.nombre}"/>
+            </p:column>
+
+        </p:dataTable>
+
+
+        <!-- DIÁLOGO DE CONSULTA -->
+
+        <p:dialog
+            id="dlgDetalleOrden"
+            widgetVar="dlgDetalleOrdenWV"
+            header="Detalle de la orden"
+            modal="true"
+            responsive="true"
+            width="750"
+            closable="true"
+            resizable="false">
+
+            <h:panelGroup
+                rendered="#{ordenModel.ordenSeleccionadaConsulta != null}">
+
+                <div class="formgrid grid mb-3">
+
+                    <div class="field col-12 md:col-4">
+
+                        <strong>Fecha</strong>
+                        <br/>
+
+                        <h:outputText
+                            value="#{ordenModel.ordenSeleccionadaConsulta.fechaCreacion}">
+
+                            <f:convertDateTime
+                                pattern="dd/MM/yyyy HH:mm"
+                                timeZone="America/El_Salvador"/>
+
+                        </h:outputText>
+
+                    </div>
+
+                    <div class="field col-12 md:col-4">
+
+                        <strong>Empleado</strong>
+                        <br/>
+
+                        <h:outputText
+                            value="#{ordenModel.ordenSeleccionadaConsulta.idEmpleadoRol.idEmpleado.nombre} #{ordenModel.ordenSeleccionadaConsulta.idEmpleadoRol.idEmpleado.apellido}"/>
+
+                    </div>
+
+                    <div class="field col-12 md:col-4">
+
+                        <strong>Rol</strong>
+                        <br/>
+
+                        <h:outputText
+                            value="#{ordenModel.ordenSeleccionadaConsulta.idEmpleadoRol.idRol.nombre}"/>
+
+                    </div>
+
+                </div>
+
+
+                <p:dataTable
+                    value="#{ordenModel.productosConsulta}"
+                    var="detalle"
+                    emptyMessage="La orden no tiene productos registrados">
+
+                    <p:column headerText="Producto">
+                        <h:outputText
+                            value="#{detalle.idProducto.nombre}"/>
+                    </p:column>
+
+                    <p:column
+                        headerText="Precio"
+                        style="width: 140px;">
+
+                        <h:outputText value="#{detalle.precio}">
+                            <f:convertNumber
+                                minFractionDigits="2"
+                                maxFractionDigits="2"/>
+                        </h:outputText>
+
+                    </p:column>
+
+                    <p:column headerText="Observaciones">
+                        <h:outputText
+                            value="#{detalle.observaciones}"/>
+                    </p:column>
+
+                </p:dataTable>
+
+
+                <div class="flex justify-content-end mt-3">
+
+                    <h:outputText
+                        value="Total: "
+                        style="font-weight: bold; margin-right: 0.5rem;"/>
+
+                    <h:outputText
+                        value="#{ordenModel.totalConsulta}"
+                        style="font-weight: bold;">
+
+                        <f:convertNumber
+                            minFractionDigits="2"
+                            maxFractionDigits="2"/>
+
+                    </h:outputText>
+
+                </div>
+
+            </h:panelGroup>
+
+
+            <f:facet name="footer">
+
+                <p:commandButton
+                    value="Cerrar"
+                    type="button"
+                    icon="pi pi-times"
+                    onclick="PF('dlgDetalleOrdenWV').hide();"
+                    styleClass="ui-button-secondary"/>
+
+            </f:facet>
+
+        </p:dialog>
+
+    </ui:define>
+
+
+    <!-- ACCIONES ESPECIALES -->
+
+    <ui:define name="accionesListadoEspeciales">
+
+        <p:commandButton
+            id="btnVerOrden"
+            value="Ver orden"
+            icon="pi pi-eye"
+            action="#{ordenModel.verOrden}"
+            process="@this"
+            update=":frmPrincipal:dlgDetalleOrden"
+            disabled="#{ordenModel.ordenSeleccionadaConsulta == null}"
+            oncomplete="PF('dlgDetalleOrdenWV').show();"
+            styleClass="ui-button-secondary mr-2"/>
+
+    </ui:define>
+
+
+    <!-- CREACIÓN DE ORDEN -->
+
+    <ui:define name="formulario">
+
+        <p:panel
+            header="Datos generales"
+            styleClass="mb-4">
+
+            <div class="formgrid grid">
+
+                <div class="field col-12 md:col-6">
+
+                    <p:outputLabel
+                        for="cmbEmpleadoRol"
+                        value="Empleado y rol"/>
+
+                    <p:selectOneMenu
+                        id="cmbEmpleadoRol"
+                        value="#{ordenModel.idEmpleadoRolSeleccionado}"
+                        required="true"
+                        requiredMessage="Debe seleccionar un empleado y su rol"
+                        style="width: 100%;">
+
+                        <f:selectItem
+                            itemLabel="Seleccione un empleado"
+                            itemValue="#{null}"
+                            noSelectionOption="true"/>
+
+                        <f:selectItems
+                            value="#{ordenModel.empleadosRol}"
+                            var="empleadoRol"
+                            itemLabel="#{empleadoRol.idEmpleado.nombre} #{empleadoRol.idEmpleado.apellido} - #{empleadoRol.idRol.nombre}"
+                            itemValue="#{empleadoRol.idEmpleadoRol.toString()}"/>
+
+                    </p:selectOneMenu>
+
+                </div>
+
+
+                <div class="field col-12 md:col-6">
+
+                    <p:outputLabel value="Fecha de creación"/>
+
+                    <br/>
+
+                    <h:outputText value="#{ordenModel.registro.fechaCreacion}">
+
+                        <f:convertDateTime
+                            pattern="dd/MM/yyyy HH:mm"
+                            timeZone="America/El_Salvador"/>
+
+                    </h:outputText>
+
+                </div>
+
+            </div>
+
+        </p:panel>
+
+
+        <!-- AGREGAR PRODUCTO -->
+
+        <p:panel
+            header="Agregar producto"
+            styleClass="mb-4">
+
+            <div class="formgrid grid">
+
+                <div class="field col-12 md:col-5">
+
+                    <p:outputLabel
+                        for="cmbProducto"
+                        value="Producto"/>
+
+                    <p:selectOneMenu
+                        id="cmbProducto"
+                        value="#{ordenModel.idProductoSeleccionado}"
+                        style="width: 100%;">
+
+                        <f:selectItem
+                            itemLabel="Seleccione un producto"
+                            itemValue="#{null}"
+                            noSelectionOption="true"/>
+
+                        <f:selectItems
+                            value="#{ordenModel.productosDisponibles}"
+                            var="producto"
+                            itemLabel="#{producto.nombre}"
+                            itemValue="#{producto.idProducto.toString()}"/>
+
+                        <p:ajax
+                            process="@this"
+                            update="txtPrecioProducto"/>
+
+                    </p:selectOneMenu>
+
+                </div>
+
+
+                <div class="field col-12 md:col-3">
+
+                    <p:outputLabel
+                        for="txtPrecioProducto"
+                        value="Precio"/>
+
+                    <p:inputNumber
+                        id="txtPrecioProducto"
+                        value="#{ordenModel.precioProducto}"
+                        decimalPlaces="2"
+                        readonly="true"
+                        style="width: 100%;"/>
+
+                </div>
+
+
+                <div class="field col-12 md:col-4">
+
+                    <p:outputLabel
+                        for="txtObservacionesProducto"
+                        value="Observaciones"/>
+
+                    <p:inputText
+                        id="txtObservacionesProducto"
+                        value="#{ordenModel.observacionesProducto}"
+                        maxlength="500"
+                        placeholder="Ej. sin azúcar"
+                        style="width: 100%;"/>
+
+                </div>
+
+
+                <div class="field col-12">
+
+                    <p:commandButton
+                        value="Agregar producto"
+                        icon="pi pi-plus"
+                        action="#{ordenModel.agregarProducto}"
+                        process="cmbEmpleadoRol cmbProducto txtPrecioProducto txtObservacionesProducto"
+                        update="@form"
+                        styleClass="ui-button-success"/>
+
+                </div>
+
+            </div>
+
+        </p:panel>
+
+
+        <!-- PRODUCTOS DE LA ORDEN -->
+
+        <p:panel header="Productos de la orden">
+
+            <p:dataTable
+                id="tablaProductosOrden"
+                value="#{ordenModel.productosOrden}"
+                var="detalle"
+                emptyMessage="Aún no se han agregado productos">
+
+                <p:column headerText="Producto">
+                    <h:outputText
+                        value="#{detalle.idProducto.nombre}"/>
+                </p:column>
+
+                <p:column
+                    headerText="Precio"
+                    style="width: 140px;">
+
+                    <h:outputText value="#{detalle.precio}">
+
+                        <f:convertNumber
+                            minFractionDigits="2"
+                            maxFractionDigits="2"/>
+
+                    </h:outputText>
+
+                </p:column>
+
+                <p:column headerText="Observaciones">
+                    <h:outputText
+                        value="#{detalle.observaciones}"/>
+                </p:column>
+
+                <p:column
+                    headerText="Acciones"
+                    style="width: 100px; text-align: center;">
+
+                    <p:commandButton
+                        icon="pi pi-trash"
+                        title="Quitar producto"
+                        action="#{ordenModel.quitarProducto(detalle)}"
+                        process="@this"
+                        update="@form"
+                        styleClass="ui-button-danger">
+
+                        <p:confirm
+                            header="Quitar producto"
+                            message="¿Desea quitar este producto de la orden?"
+                            icon="pi pi-exclamation-triangle"/>
+
+                    </p:commandButton>
+
+                </p:column>
+
+            </p:dataTable>
+
+
+            <div class="flex justify-content-end mt-3">
+
+                <h:outputText
+                    value="Total: "
+                    style="font-weight: bold; font-size: 1.1rem; margin-right: 0.5rem;"/>
+
+                <h:outputText
+                    value="#{ordenModel.totalOrden}"
+                    style="font-weight: bold; font-size: 1.1rem;">
+
+                    <f:convertNumber
+                        minFractionDigits="2"
+                        maxFractionDigits="2"/>
+
+                </h:outputText>
+
+            </div>
+
+        </p:panel>
+
+    </ui:define>
+
+</ui:composition>

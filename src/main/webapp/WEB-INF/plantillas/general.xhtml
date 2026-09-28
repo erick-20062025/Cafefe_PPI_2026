@@ -200,6 +200,11 @@
                                           icon="pi pi-wallet"
                                           styleClass="boton-menu" />
 
+                                <p:button value="Órdenes"
+                                          outcome="/paginas/Orden.xhtml"
+                                          icon="pi pi-shopping-cart"
+                                          styleClass="boton-menu" />
+
 
                                 <!-- CATÁLOGO -->
                                 <div class="menu-seccion">
@@ -282,6 +287,8 @@
                                     update=":frmPrincipal"
                                     icon="pi pi-plus"
                                     styleClass="ui-button-primary mr-2" />
+
+                                <ui:insert name="accionesListadoEspeciales" />
 
                                 <p:commandButton
                                     value="Editar"
