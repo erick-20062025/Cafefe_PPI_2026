@@ -1,13 +1,22 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package control;
 
-/**
- *
- * @author diegoli
- */
-public class EmpleadoDAO {
-    
+import entity.Empleado;
+import jakarta.ejb.Stateless;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
+
+@Stateless
+public class EmpleadoDAO extends DefaultDAO<Empleado> {
+
+    @PersistenceContext(unitName = "my_persistence_unit")
+    private EntityManager em;
+
+    public EmpleadoDAO() {
+        super(Empleado.class);
+    }
+
+    @Override
+    protected EntityManager getEntityManager() {
+        return em;
+    }
 }

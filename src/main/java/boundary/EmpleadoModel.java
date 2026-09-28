@@ -1,72 +1,121 @@
 package boundary;
 
+import control.DAOInterface;
+import control.EmpleadoDAO;
 import entity.Empleado;
 import jakarta.annotation.PostConstruct;
+import jakarta.faces.event.ActionEvent;
 import jakarta.faces.view.ViewScoped;
+import jakarta.inject.Inject;
 import jakarta.inject.Named;
-import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.UUID;
 
 @Named("empleadoModel")
 @ViewScoped
-public class EmpleadoModel implements Serializable {
+public class EmpleadoModel extends AbstractModel<Empleado> {
 
-    private List<Empleado> modelo;
-    private Empleado registro;
+    @Inject
+    private EmpleadoDAO empleadoDAO;
+
+    @Inject
+    private EmpleadoRolModel empleadoRolModel;
 
     @PostConstruct
     public void init() {
-        this.modelo = new ArrayList<>();
-        btnNuevoHandler();
+        cargarDatos();
     }
 
-    public void btnNuevoHandler() {
-        this.registro = new Empleado();
-        this.registro.setIdEmpleado(UUID.randomUUID());
+    @Override
+    protected DAOInterface<Empleado> getDAO() {
+        return empleadoDAO;
     }
 
-    public void btnGuardarHandler() {
-        if (registro != null && !modelo.contains(registro)) {
-            modelo.add(registro);
-        }
-        btnNuevoHandler();
+    @Override
+    protected Empleado crearNuevoRegistro() {
+
+        Empleado empleado = new Empleado();
+
+        empleado.setIdEmpleado(UUID.randomUUID());
+        empleado.setActivo(true);
+
+        return empleado;
     }
 
-    public void btnModificarHandler() {
-        // Lógica de actualización
+    /*
+     * Cuando se crea un empleado nuevo todavía no permitimos
+     * administrar roles hasta que el empleado sea guardado.
+     */
+    @Override
+    public void btnNuevoHandler(ActionEvent ae) {
+
+        super.btnNuevoHandler(ae);
+
+        limpiarRelaciones();
     }
 
-    public void btnEliminarHandler() {
-        if (registro != null) {
-            modelo.remove(registro);
-            btnNuevoHandler();
-        }
+    /*
+     * Cuando seleccionamos un empleado,
+     * cargamos sus roles.
+     */
+    @Override
+    public void onRowSelect() {
+
+        super.onRowSelect();
+
+        cargarRelacionesEmpleado();
     }
 
-    public void btnCancelarHandler() {
-        btnNuevoHandler();
+    /*
+     * Si se quita la selección,
+     * limpiamos también el modelo de roles.
+     */
+    @Override
+    public void onRowUnselect() {
+
+        super.onRowUnselect();
+
+        limpiarRelaciones();
     }
 
-    public void seleccionarRegistro() {
-        // Selección desde la tabla
+    /*
+     * Al cancelar limpiamos Empleado
+     * y sus relaciones.
+     */
+    @Override
+    public void btnCancelarHandler(ActionEvent ae) {
+
+        super.btnCancelarHandler(ae);
+
+        limpiarRelaciones();
     }
 
-    // Getters y Setters
-    public List<Empleado> getModelo() {
-        return modelo;
+    /*
+     * Carga las relaciones del empleado seleccionado.
+     */
+    private void cargarRelacionesEmpleado() {
+
+        empleadoRolModel
+                .cargarEmpleado(this.registro);
     }
 
-    public void setModelo(List<Empleado> modelo) {
-        this.modelo = modelo;
+    /*
+     * Limpia las relaciones cuando
+     * no existe un empleado seleccionado.
+     */
+    private void limpiarRelaciones() {
+
+        empleadoRolModel
+                .cargarEmpleado(null);
     }
 
-    public Empleado getRegistro() {
-        return registro;
-    }
+    /*
+     * Indica si ya podemos administrar
+     * las relaciones del Empleado.
+     */
+    public boolean isPuedeGestionarRelaciones() {
 
-    public void setRegistro(Empleado registro) {
-        this.registro = registro;
+        return this.registro != null
+                && this.registro.getIdEmpleado() != null
+                && !this.nuevo;
     }
 }

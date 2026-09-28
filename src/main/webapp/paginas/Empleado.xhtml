@@ -1,73 +1,364 @@
 <?xml version='1.0' encoding='UTF-8' ?>
 <ui:composition xmlns="http://www.w3.org/1999/xhtml"
-                xmlns:h="http://jakarta.faces.html"
-                xmlns:f="http://jakarta.faces.core"
+                xmlns:ui="jakarta.faces.facelets"
+                xmlns:h="jakarta.faces.html"
                 xmlns:p="http://primefaces.org/ui"
-                xmlns:ui="http://jakarta.faces.facelets"
-                xmlns:b="http://xmlns.jcp.org/jsf/composite/botones"
+                xmlns:f="jakarta.faces.core"
                 template="/WEB-INF/plantillas/general.xhtml">
 
-    <ui:define name="leyenda">
-        Empleado
+    <ui:param name="nombreEntidad" value="Empleado" />
+    <ui:param name="controller" value="#{empleadoModel}" />
+
+    <ui:define name="titulo">
+        Empleados - Cafefe
     </ui:define>
 
-    <!-- Usar el componente del Ing en la sección de botones -->
-    <ui:define name="botones">
-    <ui:include src="/WEB-INF/resources/botones/botones-arriba.xhtml" />
-</ui:define>
+    <ui:define name="tituloHeader">
+        Empleados
+    </ui:define>
 
-    <ui:define name="contenido">
-        <p:panelGrid id="pnlPestañas" columns="1" style="width:100%">
-            <h:form id="frmTabla">
-                <p:dataTable value="#{empleadoModel.modelo}" var="r" 
-                             paginator="true" rows="10"
-                             selectionMode="single" 
-                             selection="#{empleadoModel.registro}" 
-                             rowKey="#{r.idEmpleado}">
 
-                    <p:ajax event="rowSelect" update=":frmDetalle" listener="#{empleadoModel.seleccionarRegistro}" />
+    <!-- ====================================================== -->
+    <!-- TABLA PRINCIPAL DE EMPLEADOS                           -->
+    <!-- ====================================================== -->
 
-                    <p:column headerText="ID">
-                        <h:outputText value="#{r.idEmpleado}" />
-                    </p:column>
-                    <p:column headerText="Nombre">
-                        <h:outputText value="#{r.nombre}" />
-                    </p:column>
-                    <p:column headerText="Apellido">
-                        <h:outputText value="#{r.apellido}" />
-                    </p:column>
-                    <p:column headerText="Estado">
-                        <h:outputText value="#{r.activo ? 'ACTIVO' : 'INACTIVO'}" />
-                    </p:column>
-                    <p:column headerText="Comentarios">
-                        <h:outputText value="#{r.comentarios}" />
-                    </p:column>
-                </p:dataTable>
-            </h:form>
+    <ui:define name="tabla">
 
-            <h:panelGroup id="pnlDetalle">
-                <h:form id="frmDetalle">
-                    <p:messages id="messages" globalOnly="false" showDetail="true" showSummary="true" />
+        <p:dataTable
+            id="tblEmpleado"
+            value="#{empleadoModel.modelo}"
+            var="reg"
+            selection="#{empleadoModel.registro}"
+            rowKey="#{reg.idEmpleado}"
+            selectionMode="single"
+            paginator="true"
+            rows="5"
+            paginatorPosition="both"
+            emptyMessage="No se encontraron empleados"
+            styleClass="p-datatable-striped p-datatable-sm">
 
-                    <p:panelGrid columns="2">
-                        <p:outputLabel for="txtId" value="ID:" />
-                        <p:inputText id="txtId" value="#{empleadoModel.registro.idEmpleado}" readonly="true" size="36" />
+            <p:ajax
+                event="rowSelect"
+                listener="#{empleadoModel.onRowSelect}"
+                update="@form" />
 
-                        <p:outputLabel for="txtNombre" value="Nombre:" />
-                        <p:inputText id="txtNombre" value="#{empleadoModel.registro.nombre}" required="true" />
+            <p:ajax
+                event="rowUnselect"
+                listener="#{empleadoModel.onRowUnselect}"
+                update="@form" />
 
-                        <p:outputLabel for="txtApellido" value="Apellido:" />
-                        <p:inputText id="txtApellido" value="#{empleadoModel.registro.apellido}" required="true" />
+            <p:column
+                headerText="ID"
+                style="width: 25%;">
 
-                        <p:outputLabel for="chkActivo" value="Activo:" />
-                        <p:toggleSwitch id="chkActivo" value="#{empleadoModel.registro.activo}" />
+                <h:outputText
+                    value="#{reg.idEmpleado}" />
 
-                        <p:outputLabel for="txtComentarios" value="Observaciones:" />
-                        <p:inputTextarea id="txtComentarios" rows="3" cols="30" value="#{empleadoModel.registro.comentarios}" />
-                    </p:panelGrid>
-                </h:form>
-            </h:panelGroup>
-        </p:panelGrid>
+            </p:column>
+
+            <p:column headerText="Nombre"
+                      sortBy="#{reg.nombre}"
+                      filterBy="#{reg.nombre}">
+
+                <h:outputText value="#{reg.nombre}" />
+
+            </p:column>
+
+            <p:column headerText="Apellido"
+                      sortBy="#{reg.apellido}"
+                      filterBy="#{reg.apellido}">
+
+                <h:outputText value="#{reg.apellido}" />
+
+            </p:column>     
+
+            <p:column
+                headerText="Estado">
+
+                <h:outputText
+                    value="#{reg.activo ? 'ACTIVO' : 'INACTIVO'}" />
+
+            </p:column>
+
+            <p:column
+                headerText="Comentarios">
+
+                <h:outputText
+                    value="#{reg.comentarios}" />
+
+            </p:column>
+
+        </p:dataTable>
+
+    </ui:define>
+
+
+    <!-- ====================================================== -->
+    <!-- FORMULARIO                                             -->
+    <!-- ====================================================== -->
+
+    <ui:define name="formulario">
+
+        <p:tabView id="tabEmpleado">
+
+
+            <!-- ================================================== -->
+            <!-- TAB 1: DATOS DEL EMPLEADO                          -->
+            <!-- ================================================== -->
+
+            <p:tab title="Datos del empleado">
+
+                <div class="formgrid grid">
+
+
+                    <!-- Nombre -->
+                    <div class="field col-12 md:col-6">
+
+                        <p:outputLabel
+                            for="txtNombre"
+                            value="Nombre"
+                            styleClass="font-semibold block mb-2" />
+
+                        <p:inputText
+                            id="txtNombre"
+                            value="#{empleadoModel.registro.nombre}"
+                            required="true"
+                            requiredMessage="El campo Nombre es obligatorio"
+                            validatorMessage="El nombre debe contener al menos 2 caracteres"
+                            maxlength="255"
+                            style="width: 100%;">
+
+                            <f:validateLength
+                                minimum="2"
+                                maximum="255" />
+
+                        </p:inputText>
+
+                    </div>
+
+
+                    <!-- Apellido -->
+                    <div class="field col-12 md:col-6">
+
+                        <p:outputLabel
+                            for="txtApellido"
+                            value="Apellido"
+                            styleClass="font-semibold block mb-2" />
+
+                        <p:inputText
+                            id="txtApellido"
+                            value="#{empleadoModel.registro.apellido}"
+                            required="true"
+                            requiredMessage="El campo Apellido es obligatorio"
+                            validatorMessage="El apellido debe contener al menos 2 caracteres"
+                            maxlength="255"
+                            style="width: 100%;">
+
+                            <f:validateLength
+                                minimum="2"
+                                maximum="255" />
+
+                        </p:inputText>
+
+                    </div>
+
+
+                    <!-- Estado -->
+                    <div class="field col-12">
+
+                        <p:outputLabel
+                            for="chkActivo"
+                            value="Estado"
+                            styleClass="font-semibold block mb-2" />
+
+                        <div class="flex align-items-center gap-2">
+
+                            <p:selectBooleanCheckbox
+                                id="chkActivo"
+                                value="#{empleadoModel.registro.activo}" />
+
+                            <h:outputText
+                                value="Empleado activo" />
+
+                        </div>
+
+                    </div>
+
+
+                    <!-- Comentarios -->
+                    <div class="field col-12">
+
+                        <p:outputLabel
+                            for="txtComentarios"
+                            value="Comentarios"
+                            styleClass="font-semibold block mb-2" />
+
+                        <p:inputTextarea
+                            id="txtComentarios"
+                            value="#{empleadoModel.registro.comentarios}"
+                            rows="4"
+                            autoResize="false"
+                            style="width: 100%;"
+                            placeholder="Agregue información adicional..." />
+
+                    </div>
+
+                </div>
+
+            </p:tab>
+
+
+            <!-- ================================================== -->
+            <!-- TAB 2: RELACIONES                                  -->
+            <!-- ================================================== -->
+
+            <p:tab
+                title="Relaciones"
+                disabled="#{not empleadoModel.puedeGestionarRelaciones}">
+
+
+                <!-- ================================================= -->
+                <!-- ROLES DEL EMPLEADO                                 -->
+                <!-- ================================================= -->
+
+                <p:panel
+                    header="Roles del empleado"
+                    styleClass="mb-4">
+
+
+                    <!-- Asignación de Rol -->
+                    <p:panel
+                        header="Asignar rol"
+                        styleClass="mb-3">
+
+                        <div class="formgrid grid">
+
+
+                            <!-- Combo Rol -->
+                            <div class="field col-12 md:col-6">
+
+                                <p:outputLabel
+                                    for="cmbRol"
+                                    value="Rol" />
+
+                                <p:selectOneMenu
+                                    id="cmbRol"
+                                    value="#{empleadoRolModel.idRolSeleccionado}"
+                                    style="width: 100%;">
+
+                                    <f:selectItem
+                                        itemLabel="Seleccione un rol"
+                                        itemValue="#{null}"
+                                        noSelectionOption="true" />
+
+                                    <f:selectItems
+                                        value="#{empleadoRolModel.rolList}"
+                                        var="rol"
+                                        itemLabel="#{rol.nombre}"
+                                        itemValue="#{rol.idRol.toString()}" />
+
+                                </p:selectOneMenu>
+
+                            </div>
+
+
+                            <!-- Acciones Rol -->
+                            <div class="field col-12 md:col-6">
+
+                                <p:outputLabel
+                                    value="Acciones" />
+
+                                <div style="
+                                     display: flex;
+                                     gap: 0.5rem;
+                                     flex-wrap: wrap;
+                                     margin-top: 0.4rem;">
+
+                                    <p:commandButton
+                                        value="Agregar"
+                                        icon="pi pi-plus"
+                                        action="#{empleadoRolModel.agregarRol}"
+                                        process="cmbRol"
+                                        update="@form" />
+
+                                    <p:commandButton
+                                        value="Actualizar roles"
+                                        icon="pi pi-refresh"
+                                        action="#{empleadoRolModel.cargarRoles}"
+                                        process="@this"
+                                        update="cmbRol" />
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                    </p:panel>
+
+
+                    <!-- Roles asignados -->
+                    <p:dataTable
+                        id="tablaRolesEmpleado"
+                        value="#{empleadoRolModel.modelo}"
+                        var="relacion"
+                        emptyMessage="Este empleado no tiene roles asignados">
+
+                        <p:column
+                            headerText="Rol">
+
+                            <h:outputText
+                                value="#{relacion.idRol.nombre}" />
+
+                        </p:column>
+
+
+                        <p:column
+                            headerText="Estado">
+
+                            <h:outputText
+                                value="#{relacion.activo ? 'Activo' : 'Inactivo'}" />
+
+                        </p:column>
+
+
+                        <p:column
+                            headerText="Observaciones">
+
+                            <h:outputText
+                                value="#{relacion.observaciones}" />
+
+                        </p:column>
+
+
+                        <p:column
+                            headerText="Acciones"
+                            style="width: 120px; text-align: center;">
+
+                            <p:commandButton
+                                icon="pi pi-trash"
+                                title="Quitar rol"
+                                action="#{empleadoRolModel.quitarRol(relacion)}"
+                                process="@this"
+                                update="@form">
+
+                                <p:confirm
+                                    header="Confirmación"
+                                    message="¿Desea quitar este rol del empleado?"
+                                    icon="pi pi-exclamation-triangle" />
+
+                            </p:commandButton>
+
+                        </p:column>
+
+                    </p:dataTable>
+
+                </p:panel>
+
+            </p:tab>
+
+        </p:tabView>
+
     </ui:define>
 
 </ui:composition>
