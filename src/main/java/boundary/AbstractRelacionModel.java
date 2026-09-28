@@ -12,6 +12,7 @@ import java.util.List;
  * Producto -> ProductoTipoProducto -> TipoProducto
  * Empleado -> EmpleadoRol -> Rol
  * Producto -> ProductoCaracteristica -> Caracteristica
+ * Descuento -> DescuentoProducto -> Producto
  *
  * R = entidad que representa la relación
  * P = entidad principal
@@ -35,11 +36,6 @@ public abstract class AbstractRelacionModel<R, P, O>
 
     /*
      * Opciones disponibles para asociar.
-     *
-     * Ejemplos:
-     * TipoProducto
-     * Rol
-     * Caracteristica
      */
     protected List<O> opcionesDisponibles
             = Collections.emptyList();
@@ -85,7 +81,11 @@ public abstract class AbstractRelacionModel<R, P, O>
 
 
     /**
-     * Comprueba si la relación ya existe.
+     * Comprueba si una relación entre el principal
+     * y la opción ya existe.
+     *
+     * Solo se utiliza cuando la relación
+     * no permite duplicados.
      */
     protected abstract boolean existeRelacion(
             P principal,
@@ -100,6 +100,34 @@ public abstract class AbstractRelacionModel<R, P, O>
             P principal,
             O opcion
     );
+
+
+    /* =========================================================
+       CONFIGURACIÓN DE LA RELACIÓN
+       ========================================================= */
+
+    /**
+     * Indica si una misma opción puede asociarse
+     * más de una vez al mismo principal.
+     *
+     * Por defecto NO se permiten duplicados.
+     *
+     * Ejemplos:
+     *
+     * ProductoTipoProducto:
+     * Producto + TipoProducto no debe repetirse.
+     *
+     * ProductoCaracteristica:
+     * Producto + Caracteristica no debe repetirse.
+     *
+     * DescuentoProducto:
+     * puede sobrescribir este método y devolver true,
+     * porque un producto puede aparecer varias veces
+     * con diferentes fechas, valores u observaciones.
+     */
+    protected boolean permiteRelacionDuplicada() {
+        return false;
+    }
 
 
     /* =========================================================
@@ -240,11 +268,17 @@ public abstract class AbstractRelacionModel<R, P, O>
             }
 
             /*
-             * Evita relaciones duplicadas.
+             * Las relaciones normales no permiten
+             * duplicados.
+             *
+             * Algunas relaciones pueden sobrescribir
+             * permiteRelacionDuplicada() cuando su
+             * lógica de negocio sí lo permita.
              */
-            if (existeRelacion(
-                    principal,
-                    opcion)) {
+            if (!permiteRelacionDuplicada()
+                    && existeRelacion(
+                            principal,
+                            opcion)) {
 
                 mostrarAdvertencia(
                         "La relación ya existe"

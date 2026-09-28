@@ -1,61 +1,108 @@
 <?xml version='1.0' encoding='UTF-8' ?>
-<ui:composition xmlns="http://www.w3.org/1999/xhtml"
-                xmlns:ui="jakarta.faces.facelets"
-                xmlns:h="jakarta.faces.html"
-                xmlns:p="http://primefaces.org/ui"
-                xmlns:f="jakarta.faces.core"
-                template="/WEB-INF/plantillas/general.xhtml">
 
-    <ui:param name="nombreEntidad" value="Descuento" />
-    <ui:param name="controller" value="#{descuentoModel}" />
+<ui:composition
+    xmlns="http://www.w3.org/1999/xhtml"
+    xmlns:ui="jakarta.faces.facelets"
+    xmlns:h="jakarta.faces.html"
+    xmlns:p="http://primefaces.org/ui"
+    xmlns:f="jakarta.faces.core"
+    template="/WEB-INF/plantillas/general.xhtml">
 
-    <ui:define name="titulo">Descuentos - Cafefe</ui:define>
-    <ui:define name="tituloHeader">Descuentos</ui:define>
+    <ui:param
+        name="nombreEntidad"
+        value="Descuento"/>
+
+    <ui:param
+        name="controller"
+        value="#{descuentoModel}"/>
+
+    <ui:define name="titulo">
+        Descuentos - Cafefe
+    </ui:define>
+
+    <ui:define name="tituloHeader">
+        Descuentos
+    </ui:define>
+
+
+    <!-- ====================================================== -->
+    <!-- TABLA PRINCIPAL                                       -->
+    <!-- ====================================================== -->
 
     <ui:define name="tabla">
 
-        <p:dataTable id="tblDescuento"
-                     value="#{descuentoModel.modelo}"
-                     var="reg"
-                     selection="#{descuentoModel.registro}"
-                     rowKey="#{reg.idDescuento}"
-                     selectionMode="single"
-                     paginator="true"
-                     rows="5"
-                     paginatorPosition="both"
-                     emptyMessage="No se encontraron registros"
-                     styleClass="p-datatable-striped p-datatable-sm">
+        <p:dataTable
+            id="tblDescuento"
+            value="#{descuentoModel.modelo}"
+            var="reg"
+            selection="#{descuentoModel.registro}"
+            rowKey="#{reg.idDescuento}"
+            selectionMode="single"
+            paginator="true"
+            rows="5"
+            paginatorPosition="both"
+            emptyMessage="No se encontraron registros"
+            styleClass="p-datatable-striped p-datatable-sm">
 
-            <p:ajax event="rowSelect"
-                    listener="#{descuentoModel.onRowSelect}"
-                    update="@form" />
+            <p:ajax
+                event="rowSelect"
+                listener="#{descuentoModel.onRowSelect}"
+                update="@form"/>
 
-            <p:ajax event="rowUnselect"
-                    listener="#{descuentoModel.onRowUnselect}"
-                    update="@form" />
+            <p:ajax
+                event="rowUnselect"
+                listener="#{descuentoModel.onRowUnselect}"
+                update="@form"/>
 
-            <p:column headerText="ID" style="width: 25%;">
-                <h:outputText value="#{reg.idDescuento}" />
+            <p:column
+                headerText="ID"
+                style="width: 25%;">
+
+                <h:outputText
+                    value="#{reg.idDescuento}"/>
+
             </p:column>
 
-            <p:column headerText="Nombre">
-                <h:outputText value="#{reg.nombre}" />
+            <p:column
+                headerText="Nombre">
+
+                <h:outputText
+                    value="#{reg.nombre}"/>
+
             </p:column>
 
-            <p:column headerText="Fecha desde">
-                <h:outputText value="#{reg.fechaDesde}">
-                    <f:convertDateTime pattern="dd/MM/yyyy" />
+            <p:column
+                headerText="Fecha desde">
+
+                <h:outputText
+                    value="#{reg.fechaDesde}">
+
+                    <f:convertDateTime
+                        pattern="dd/MM/yyyy"/>
+
                 </h:outputText>
+
             </p:column>
 
-            <p:column headerText="Fecha hasta">
-                <h:outputText value="#{reg.fechaHasta}">
-                    <f:convertDateTime pattern="dd/MM/yyyy" />
+            <p:column
+                headerText="Fecha hasta">
+
+                <h:outputText
+                    value="#{reg.fechaHasta}">
+
+                    <f:convertDateTime
+                        pattern="dd/MM/yyyy"/>
+
                 </h:outputText>
+
             </p:column>
 
-            <p:column headerText="Observaciones">
-                <h:outputText value="#{reg.observaciones}" />
+            <p:column
+                headerText="Observaciones">
+
+                <h:outputText
+                    value="#{reg.observaciones}"/>
+
             </p:column>
 
         </p:dataTable>
@@ -63,114 +110,410 @@
     </ui:define>
 
 
+    <!-- ====================================================== -->
+    <!-- FORMULARIO                                             -->
+    <!-- ====================================================== -->
+
     <ui:define name="formulario">
 
-        <div class="formgrid grid">
-
-            <div class="field col-12 md:col-6">
-
-                <p:outputLabel for="txtNombre"
-                               value="Nombre"
-                               styleClass="font-semibold block mb-2" />
-
-                <p:inputText id="txtNombre"
-                             value="#{descuentoModel.registro.nombre}"
-                             required="true"
-                             requiredMessage="El campo Nombre es obligatorio"
-                             validatorMessage="El nombre debe contener al menos 2 caracteres"
-                             maxlength="155"
-                             style="width: 100%;">
-
-                    <f:validateLength minimum="2" maximum="155" />
-
-                </p:inputText>
-
-            </div>
+        <p:tabView
+            id="tabDescuento">
 
 
-            <div class="field col-12 md:col-6">
+            <!-- ================================================== -->
+            <!-- TAB 1: DATOS DEL DESCUENTO                         -->
+            <!-- ================================================== -->
 
-                <p:outputLabel for="cmbTipoDescuento"
-                               value="Tipo de descuento"
-                               styleClass="font-semibold block mb-2" />
+            <p:tab
+                title="Datos del descuento">
 
-                <p:selectOneMenu id="cmbTipoDescuento"
-                                 value="#{descuentoModel.idTipoDescuentoSeleccionado}"
-                                 required="true"
-                                 requiredMessage="Debe seleccionar un tipo de descuento"
-                                 style="width: 100%;">
-
-                    <f:selectItem itemLabel="Seleccione un tipo"
-                                  itemValue=""
-                                  noSelectionOption="true" />
-
-                    <f:selectItems value="#{descuentoModel.tiposDescuento}"
-                                   var="tipo"
-                                   itemLabel="#{tipo.nombre}"
-                                   itemValue="#{tipo.idTipoDescuento.toString()}" />
-
-                </p:selectOneMenu>
-
-            </div>
+                <div class="formgrid grid">
 
 
-            <div class="field col-12 md:col-6">
+                    <!-- Nombre -->
+                    <div class="field col-12 md:col-6">
 
-                <p:outputLabel for="fechaDesde"
-                               value="Fecha desde"
-                               styleClass="font-semibold block mb-2" />
+                        <p:outputLabel
+                            for="txtNombre"
+                            value="Nombre"
+                            styleClass="font-semibold block mb-2"/>
 
-                <p:datePicker id="fechaDesde"
-                              value="#{descuentoModel.registro.fechaDesde}"
-                              pattern="dd/MM/yyyy"
-                              showIcon="true"
-                              required="true"
-                              requiredMessage="La fecha desde es obligatoria"
-                              style="width: 100%;">
+                        <p:inputText
+                            id="txtNombre"
+                            value="#{descuentoModel.registro.nombre}"
+                            required="true"
+                            requiredMessage="El campo Nombre es obligatorio"
+                            validatorMessage="El nombre debe contener al menos 2 caracteres"
+                            maxlength="155"
+                            style="width: 100%;">
 
-                    <p:ajax event="dateSelect"
-                            listener="#{descuentoModel.actualizarFechaHasta}"
-                            update="fechaHasta" />
+                            <f:validateLength
+                                minimum="2"
+                                maximum="155"/>
 
-                </p:datePicker>
+                        </p:inputText>
 
-            </div>
+                    </div>
 
 
-            <div class="field col-12 md:col-6">
+                    <!-- Tipo de descuento -->
+                    <div class="field col-12 md:col-6">
 
-                <p:outputLabel for="fechaHasta"
-                               value="Fecha hasta"
-                               styleClass="font-semibold block mb-2" />
+                        <p:outputLabel
+                            for="cmbTipoDescuento"
+                            value="Tipo de descuento"
+                            styleClass="font-semibold block mb-2"/>
 
-                <p:datePicker id="fechaHasta"
-                              value="#{descuentoModel.registro.fechaHasta}"
-                              pattern="dd/MM/yyyy"
-                              showIcon="true"
-                              required="true"
-                              requiredMessage="La fecha hasta es obligatoria"
-                              disabled="#{empty descuentoModel.registro.fechaDesde}"
-                              mindate="#{descuentoModel.registro.fechaDesde}"
-                              style="width: 100%;" />   
+                        <p:selectOneMenu
+                            id="cmbTipoDescuento"
+                            value="#{descuentoModel.idTipoDescuentoSeleccionado}"
+                            required="true"
+                            requiredMessage="Debe seleccionar un tipo de descuento"
+                            style="width: 100%;">
 
-            </div>
+                            <f:selectItem
+                                itemLabel="Seleccione un tipo"
+                                itemValue=""
+                                noSelectionOption="true"/>
 
-            <div class="field col-12">
+                            <f:selectItems
+                                value="#{descuentoModel.tiposDescuento}"
+                                var="tipo"
+                                itemLabel="#{tipo.nombre}"
+                                itemValue="#{tipo.idTipoDescuento.toString()}"/>
 
-                <p:outputLabel for="txtObs"
-                               value="Observaciones"
-                               styleClass="font-semibold block mb-2" />
+                        </p:selectOneMenu>
 
-                <p:inputTextarea id="txtObs"
-                                 value="#{descuentoModel.registro.observaciones}"
-                                 rows="4"
-                                 autoResize="false"
-                                 style="width: 100%;"
-                                 placeholder="Agregue información adicional..." />
+                    </div>
 
-            </div>
 
-        </div>
+                    <!-- Fecha desde -->
+                    <div class="field col-12 md:col-6">
+
+                        <p:outputLabel
+                            for="fechaDesde"
+                            value="Fecha desde"
+                            styleClass="font-semibold block mb-2"/>
+
+                        <p:datePicker
+                            id="fechaDesde"
+                            value="#{descuentoModel.registro.fechaDesde}"
+                            pattern="dd/MM/yyyy"
+                            showIcon="true"
+                            required="true"
+                            requiredMessage="La fecha desde es obligatoria"
+                            style="width: 100%;">
+
+                            <p:ajax
+                                event="dateSelect"
+                                listener="#{descuentoModel.actualizarFechaHasta}"
+                                update="fechaHasta"/>
+
+                        </p:datePicker>
+
+                    </div>
+
+
+                    <!-- Fecha hasta -->
+                    <div class="field col-12 md:col-6">
+
+                        <p:outputLabel
+                            for="fechaHasta"
+                            value="Fecha hasta"
+                            styleClass="font-semibold block mb-2"/>
+
+                        <p:datePicker
+                            id="fechaHasta"
+                            value="#{descuentoModel.registro.fechaHasta}"
+                            pattern="dd/MM/yyyy"
+                            showIcon="true"
+                            required="true"
+                            requiredMessage="La fecha hasta es obligatoria"
+                            disabled="#{empty descuentoModel.registro.fechaDesde}"
+                            mindate="#{descuentoModel.registro.fechaDesde}"
+                            style="width: 100%;"/>
+
+                    </div>
+
+
+                    <!-- Observaciones -->
+                    <div class="field col-12">
+
+                        <p:outputLabel
+                            for="txtObs"
+                            value="Observaciones"
+                            styleClass="font-semibold block mb-2"/>
+
+                        <p:inputTextarea
+                            id="txtObs"
+                            value="#{descuentoModel.registro.observaciones}"
+                            rows="4"
+                            autoResize="false"
+                            style="width: 100%;"
+                            placeholder="Agregue información adicional..."/>
+
+                    </div>
+
+                </div>
+
+            </p:tab>
+
+
+            <!-- ================================================== -->
+            <!-- TAB 2: PRODUCTOS APLICABLES                        -->
+            <!-- ================================================== -->
+
+            <p:tab
+                title="Productos aplicables"
+                disabled="#{not descuentoModel.puedeGestionarProductos}">
+
+                <p:panel
+                    header="Asignar producto al descuento"
+                    styleClass="mb-4">
+
+                    <div class="formgrid grid">
+
+
+                        <!-- Producto -->
+                        <div class="field col-12 md:col-6">
+
+                            <p:outputLabel
+                                for="cmbProductoDescuento"
+                                value="Producto"
+                                styleClass="font-semibold block mb-2"/>
+
+                            <p:selectOneMenu
+                                id="cmbProductoDescuento"
+                                value="#{descuentoProductoModel.idProductoSeleccionado}"
+                                style="width: 100%;">
+
+                                <f:selectItem
+                                    itemLabel="Seleccione un producto"
+                                    itemValue="#{null}"
+                                    noSelectionOption="true"/>
+
+                                <f:selectItems
+                                    value="#{descuentoProductoModel.productoList}"
+                                    var="producto"
+                                    itemLabel="#{producto.nombre}"
+                                    itemValue="#{producto.idProducto.toString()}"/>
+
+                            </p:selectOneMenu>
+
+                        </div>
+
+
+                        <!-- Descuento aplicado -->
+                        <div class="field col-12 md:col-6">
+
+                            <p:outputLabel
+                                for="txtValorDescuento"
+                                value="Descuento aplicado"
+                                styleClass="font-semibold block mb-2"/>
+
+                            <p:inputNumber
+                                id="txtValorDescuento"
+                                value="#{descuentoProductoModel.valor}"
+                                decimalPlaces="0"
+                                minValue="1"
+                                symbol=" %"
+                                symbolPosition="s"
+                                style="width: 100%;"/>
+
+                            <h:outputText
+                                value="Máximo permitido: #{descuentoProductoModel.descuentoMaximo} %"
+                                rendered="#{not empty descuentoProductoModel.descuentoMaximo}"
+                                style="display: block;
+                                       margin-top: 0.4rem;
+                                       font-size: 0.9rem;"/>
+
+                        </div>
+
+
+                        <!-- Fecha desde -->
+                        <div class="field col-12 md:col-6">
+
+                            <p:outputLabel
+                                for="fechaProductoDesde"
+                                value="Fecha desde"
+                                styleClass="font-semibold block mb-2"/>
+
+                            <p:datePicker
+                                id="fechaProductoDesde"
+                                value="#{descuentoProductoModel.fechaDesde}"
+                                pattern="dd/MM/yyyy"
+                                showIcon="true"
+                                required="true"
+                                requiredMessage="La fecha desde es obligatoria"
+                                style="width: 100%;"/>
+
+                        </div>
+
+
+                        <!-- Fecha hasta -->
+                        <div class="field col-12 md:col-6">
+
+                            <p:outputLabel
+                                for="fechaProductoHasta"
+                                value="Fecha hasta"
+                                styleClass="font-semibold block mb-2"/>
+
+                            <p:datePicker
+                                id="fechaProductoHasta"
+                                value="#{descuentoProductoModel.fechaHasta}"
+                                pattern="dd/MM/yyyy"
+                                showIcon="true"
+                                required="true"
+                                requiredMessage="La fecha hasta es obligatoria"
+                                mindate="#{descuentoProductoModel.fechaDesde}"
+                                style="width: 100%;"/>
+
+                        </div>
+
+
+                        <!-- Observaciones -->
+                        <div class="field col-12">
+
+                            <p:outputLabel
+                                for="txtObsProducto"
+                                value="Observaciones"
+                                styleClass="font-semibold block mb-2"/>
+
+                            <p:inputTextarea
+                                id="txtObsProducto"
+                                value="#{descuentoProductoModel.observaciones}"
+                                rows="3"
+                                autoResize="false"
+                                style="width: 100%;"
+                                placeholder="Agregue información adicional..."/>
+
+                        </div>
+
+
+                        <!-- Acciones -->
+                        <div class="field col-12">
+
+                            <div style="
+                                 display: flex;
+                                 gap: 0.5rem;
+                                 flex-wrap: wrap;
+                                 margin-top: 0.5rem;">
+
+                                <p:commandButton
+                                    value="Agregar producto"
+                                    icon="pi pi-plus"
+                                    action="#{descuentoProductoModel.agregarProducto}"
+                                    process="@this cmbProductoDescuento txtValorDescuento fechaProductoDesde fechaProductoHasta txtObsProducto"
+                                    update="@form"/>
+
+                                <p:commandButton
+                                    value="Actualizar productos"
+                                    icon="pi pi-refresh"
+                                    action="#{descuentoProductoModel.cargarProductos}"
+                                    process="@this"
+                                    update="cmbProductoDescuento"/>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </p:panel>
+
+
+                <!-- ================================================= -->
+                <!-- PRODUCTOS ASOCIADOS                               -->
+                <!-- ================================================= -->
+
+                <p:dataTable
+                    id="tablaProductosDescuento"
+                    value="#{descuentoProductoModel.modelo}"
+                    var="relacion"
+                    emptyMessage="Este descuento no tiene productos asociados"
+                    paginator="true"
+                    rows="10">
+
+                    <p:column
+                        headerText="Producto">
+
+                        <h:outputText
+                            value="#{relacion.idProducto.nombre}"/>
+
+                    </p:column>
+
+
+                    <p:column
+                        headerText="Descuento aplicado">
+
+                        <h:outputText
+                            value="#{relacion.valor} %"/>
+
+                    </p:column>
+
+
+                    <p:column
+                        headerText="Fecha desde">
+
+                        <h:outputText
+                            value="#{relacion.fechaDesde}">
+
+                            <f:convertDateTime
+                                pattern="dd/MM/yyyy"/>
+
+                        </h:outputText>
+
+                    </p:column>
+
+
+                    <p:column
+                        headerText="Fecha hasta">
+
+                        <h:outputText
+                            value="#{relacion.fechaHasta}">
+
+                            <f:convertDateTime
+                                pattern="dd/MM/yyyy"/>
+
+                        </h:outputText>
+
+                    </p:column>
+
+
+                    <p:column
+                        headerText="Observaciones">
+
+                        <h:outputText
+                            value="#{relacion.observaciones}"/>
+
+                    </p:column>
+
+
+                    <p:column
+                        headerText="Acciones"
+                        style="width: 120px; text-align: center;">
+
+                        <p:commandButton
+                            icon="pi pi-trash"
+                            title="Quitar producto"
+                            action="#{descuentoProductoModel.quitarProducto(relacion)}"
+                            process="@this"
+                            update="@form">
+
+                            <p:confirm
+                                header="Confirmación"
+                                message="¿Desea quitar este producto del descuento?"
+                                icon="pi pi-exclamation-triangle"/>
+
+                        </p:commandButton>
+
+                    </p:column>
+
+                </p:dataTable>
+
+            </p:tab>
+
+        </p:tabView>
 
     </ui:define>
 
