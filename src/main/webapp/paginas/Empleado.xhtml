@@ -99,7 +99,9 @@
 
     <ui:define name="formulario">
 
-        <p:tabView id="tabEmpleado">
+        <p:tabView
+            id="tabEmpleado"
+            activeIndex="#{empleadoModel.indiceTab}">
 
 
             <!-- ================================================== -->
@@ -109,11 +111,23 @@
             <p:tab title="Datos del empleado">
 
                 <div class="formgrid grid">
+                    <div class="field col-12">
 
+                        <p:outputLabel
+                            for="txtIdEmpleado"
+                            value="ID"
+                            styleClass="font-semibold block mb-2" />
+
+                        <p:inputText
+                            id="txtIdEmpleado"
+                            value="#{empleadoModel.registro.idEmpleado}"
+                            disabled="true"
+                            style="width: 100%;" />
+
+                    </div>
 
                     <!-- Nombre -->
                     <div class="field col-12 md:col-6">
-
                         <p:outputLabel
                             for="txtNombre"
                             value="Nombre"
@@ -196,7 +210,7 @@
                         <p:inputTextarea
                             id="txtComentarios"
                             value="#{empleadoModel.registro.comentarios}"
-                            rows="4"
+                            rows="3"
                             autoResize="false"
                             style="width: 100%;"
                             placeholder="Agregue información adicional..." />
@@ -213,7 +227,7 @@
             <!-- ================================================== -->
 
             <p:tab
-                title="Relaciones"
+                title="Asignar roles"
                 disabled="#{not empleadoModel.puedeGestionarRelaciones}">
 
 
@@ -255,7 +269,8 @@
                                         value="#{empleadoRolModel.rolList}"
                                         var="rol"
                                         itemLabel="#{rol.nombre}"
-                                        itemValue="#{rol.idRol.toString()}" />
+                                        itemValue="#{rol.idRol.toString()}"
+                                        itemDisabled="#{not rol.activo}" />
 
                                 </p:selectOneMenu>
 

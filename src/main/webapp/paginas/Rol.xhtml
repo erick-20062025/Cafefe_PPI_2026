@@ -4,7 +4,8 @@
                 xmlns:ui="jakarta.faces.facelets"
                 xmlns:h="jakarta.faces.html"
                 xmlns:p="http://primefaces.org/ui"
-                template="/WEB-INF/plantillas/general.xhtml">
+                template="/WEB-INF/plantillas/general.xhtml"
+                xmlns:f="jakarta.faces.core">
 
     <ui:param name="nombreEntidad" value="Rol" />
     <ui:param name="controller" value="#{rolModel}" />
@@ -67,6 +68,16 @@
         <p:panelGrid columns="2"
                      styleClass="ui-fluid"
                      style="width: 100%;">
+            <p:outputLabel
+                for="txtIdRol"
+                value="ID"
+                styleClass="font-semibold block mb-2" />
+
+            <p:inputText
+                id="txtIdRol"
+                value="#{rolModel.registro.idRol}"
+                disabled="true"
+                style="width: 100%;" />
 
             <p:outputLabel for="txtNombre"
                            value="Nombre:" />
@@ -74,7 +85,10 @@
             <p:inputText id="txtNombre"
                          value="#{rolModel.registro.nombre}"
                          required="true"
-                         requiredMessage="El campo Nombre es obligatorio" />
+                         requiredMessage="El campo Nombre es obligatorio"
+                         validatorMessage="El campo Nombre debe tener al menos 2 caracteres">
+                <f:validateLength minimum="2" />
+            </p:inputText>
 
 
             <p:outputLabel for="chkActivo"

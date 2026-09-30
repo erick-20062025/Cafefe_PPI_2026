@@ -19,6 +19,7 @@ public class EmpleadoModel extends AbstractModel<Empleado> {
 
     @Inject
     private EmpleadoRolModel empleadoRolModel;
+    private int indiceTab;
 
     @PostConstruct
     public void init() {
@@ -49,7 +50,7 @@ public class EmpleadoModel extends AbstractModel<Empleado> {
     public void btnNuevoHandler(ActionEvent ae) {
 
         super.btnNuevoHandler(ae);
-
+        this.indiceTab = 0;
         limpiarRelaciones();
     }
 
@@ -61,7 +62,7 @@ public class EmpleadoModel extends AbstractModel<Empleado> {
     public void onRowSelect() {
 
         super.onRowSelect();
-
+        this.indiceTab = 0;
         cargarRelacionesEmpleado();
     }
 
@@ -73,7 +74,7 @@ public class EmpleadoModel extends AbstractModel<Empleado> {
     public void onRowUnselect() {
 
         super.onRowUnselect();
-
+        this.indiceTab = 0;
         limpiarRelaciones();
     }
 
@@ -85,8 +86,20 @@ public class EmpleadoModel extends AbstractModel<Empleado> {
     public void btnCancelarHandler(ActionEvent ae) {
 
         super.btnCancelarHandler(ae);
-
+        this.indiceTab = 0;
         limpiarRelaciones();
+    }
+
+    @Override
+    public void btnGuardarHandler(ActionEvent ae) {
+
+        super.btnGuardarHandler(ae);
+
+        this.indiceTab = 0;
+
+        if (this.registro == null) {
+            limpiarRelaciones();
+        }
     }
 
     /*
@@ -117,5 +130,13 @@ public class EmpleadoModel extends AbstractModel<Empleado> {
         return this.registro != null
                 && this.registro.getIdEmpleado() != null
                 && !this.nuevo;
+    }
+
+    public int getIndiceTab() {
+        return indiceTab;
+    }
+
+    public void setIndiceTab(int indiceTab) {
+        this.indiceTab = indiceTab;
     }
 }

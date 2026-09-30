@@ -17,9 +17,7 @@ import java.util.UUID;
 @ViewScoped
 public class EmpleadoRolModel
         extends AbstractRelacionModel<
-                EmpleadoRol,
-                Empleado,
-                Rol> {
+                EmpleadoRol, Empleado, Rol> {
 
     private static final long serialVersionUID = 1L;
 
@@ -106,10 +104,26 @@ public class EmpleadoRolModel
         return relacion;
     }
 
+    protected boolean opcionValida(Rol rol) {
+
+        if (rol == null) {
+            mostrarAdvertencia("Debe seleccionar un rol");
+            return false;
+        }
+
+        if (!rol.getActivo()) {
+            mostrarAdvertencia(
+                    "No se puede asignar un rol inactivo"
+            );
+            return false;
+        }
+
+        return true;
+    }
+
     /*
      * Métodos utilizados desde Empleado.xhtml
      */
-
     public void cargarRoles() {
         cargarOpciones();
     }
@@ -119,8 +133,30 @@ public class EmpleadoRolModel
     }
 
     public void agregarRol() {
-        agregarRelacion();
+
+    String idRol = getIdOpcionSeleccionada();
+
+    if (idRol == null || idRol.isBlank()) {
+        mostrarAdvertencia("Debe seleccionar un rol");
+        return;
     }
+
+    Rol rol = buscarOpcion(idRol);
+
+    if (rol == null) {
+        mostrarError("El rol seleccionado no existe");
+        return;
+    }
+
+    if (!Boolean.TRUE.equals(rol.getActivo())) {
+        mostrarAdvertencia(
+                "No se puede asignar un rol inactivo"
+        );
+        return;
+    }
+
+    agregarRelacion();
+}
 
     public void quitarRol(EmpleadoRol relacion) {
         quitarRelacion(relacion);
@@ -129,7 +165,6 @@ public class EmpleadoRolModel
     /*
      * Propiedades utilizadas desde la vista
      */
-
     public Empleado getEmpleado() {
         return getPrincipal();
     }
