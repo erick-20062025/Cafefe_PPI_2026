@@ -56,7 +56,7 @@
 
             <p:column
                 headerText="ID"
-                style="width: 25%;">
+                style="width: 22%;">
 
                 <h:outputText
                     value="#{reg.idDescuento}"/>
@@ -68,6 +68,14 @@
 
                 <h:outputText
                     value="#{reg.nombre}"/>
+
+            </p:column>
+
+            <p:column
+                headerText="Tipo de descuento">
+
+                <h:outputText
+                    value="#{descuentoModel.obtenerNombreTipoDescuento(reg.idTipoDescuento)}"/>
 
             </p:column>
 
@@ -88,7 +96,12 @@
                 headerText="Fecha hasta">
 
                 <h:outputText
-                    value="#{reg.fechaHasta}">
+                    value="Sin límite"
+                    rendered="#{empty reg.fechaHasta}"/>
+
+                <h:outputText
+                    value="#{reg.fechaHasta}"
+                    rendered="#{not empty reg.fechaHasta}">
 
                     <f:convertDateTime
                         pattern="dd/MM/yyyy"/>
@@ -121,7 +134,7 @@
 
 
             <!-- ================================================== -->
-            <!-- TAB 1: DATOS DEL DESCUENTO                         -->
+            <!-- DATOS DEL DESCUENTO                                -->
             <!-- ================================================== -->
 
             <p:tab
@@ -129,8 +142,6 @@
 
                 <div class="formgrid grid">
 
-
-                    <!-- Nombre -->
                     <div class="field col-12 md:col-6">
 
                         <p:outputLabel
@@ -156,7 +167,6 @@
                     </div>
 
 
-                    <!-- Tipo de descuento -->
                     <div class="field col-12 md:col-6">
 
                         <p:outputLabel
@@ -169,6 +179,7 @@
                             value="#{descuentoModel.idTipoDescuentoSeleccionado}"
                             required="true"
                             requiredMessage="Debe seleccionar un tipo de descuento"
+                            disabled="#{descuentoModel.editando}"
                             style="width: 100%;">
 
                             <f:selectItem
@@ -179,15 +190,24 @@
                             <f:selectItems
                                 value="#{descuentoModel.tiposDescuento}"
                                 var="tipo"
-                                itemLabel="#{tipo.nombre}"
-                                itemValue="#{tipo.idTipoDescuento.toString()}"/>
+                                itemLabel="#{descuentoModel.obtenerEtiquetaTipoDescuento(tipo)}"
+                                itemValue="#{tipo.idTipoDescuento.toString()}"
+                                itemDisabled="#{not tipo.activo}"/>
 
                         </p:selectOneMenu>
+
+                        <h:outputText
+                            value="El tipo de descuento no puede modificarse después de crear el descuento."
+                            rendered="#{descuentoModel.editando}"
+                            style="
+                                display: block;
+                                margin-top: 0.4rem;
+                                font-size: 0.85rem;
+                                color: #6c757d;"/>
 
                     </div>
 
 
-                    <!-- Fecha desde -->
                     <div class="field col-12 md:col-6">
 
                         <p:outputLabel
@@ -202,11 +222,11 @@
                             showIcon="true"
                             required="true"
                             requiredMessage="La fecha desde es obligatoria"
+                            mindate="#{descuentoModel.nuevo ? descuentoModel.fechaMinima : null}"
                             style="width: 100%;">
 
                             <p:ajax
                                 event="dateSelect"
-                                listener="#{descuentoModel.actualizarFechaHasta}"
                                 update="fechaHasta"/>
 
                         </p:datePicker>
@@ -214,12 +234,11 @@
                     </div>
 
 
-                    <!-- Fecha hasta -->
                     <div class="field col-12 md:col-6">
 
                         <p:outputLabel
                             for="fechaHasta"
-                            value="Fecha hasta"
+                            value="Fecha hasta (opcional)"
                             styleClass="font-semibold block mb-2"/>
 
                         <p:datePicker
@@ -227,16 +246,22 @@
                             value="#{descuentoModel.registro.fechaHasta}"
                             pattern="dd/MM/yyyy"
                             showIcon="true"
-                            required="true"
-                            requiredMessage="La fecha hasta es obligatoria"
                             disabled="#{empty descuentoModel.registro.fechaDesde}"
                             mindate="#{descuentoModel.registro.fechaDesde}"
+                            placeholder="Sin fecha = rango abierto"
                             style="width: 100%;"/>
+
+                        <h:outputText
+                            value="Déjela vacía si el descuento no tiene fecha de finalización."
+                            style="
+                                display: block;
+                                margin-top: 0.4rem;
+                                font-size: 0.85rem;
+                                color: #6c757d;"/>
 
                     </div>
 
 
-                    <!-- Observaciones -->
                     <div class="field col-12">
 
                         <p:outputLabel
@@ -260,7 +285,7 @@
 
 
             <!-- ================================================== -->
-            <!-- TAB 2: PRODUCTOS APLICABLES                        -->
+            <!-- PRODUCTOS APLICABLES                               -->
             <!-- ================================================== -->
 
             <p:tab
@@ -289,21 +314,22 @@
 
                                 <f:selectItem
                                     itemLabel="Seleccione un producto"
-                                    itemValue="#{null}"
+                                    itemValue=""
                                     noSelectionOption="true"/>
 
                                 <f:selectItems
                                     value="#{descuentoProductoModel.productoList}"
                                     var="producto"
-                                    itemLabel="#{producto.nombre}"
-                                    itemValue="#{producto.idProducto.toString()}"/>
+                                    itemLabel="#{descuentoProductoModel.obtenerEtiquetaProducto(producto)}"
+                                    itemValue="#{producto.idProducto.toString()}"
+                                    itemDisabled="#{not producto.activo}"/>
 
                             </p:selectOneMenu>
 
                         </div>
 
 
-                        <!-- Descuento aplicado -->
+                        <!-- Porcentaje -->
                         <div class="field col-12 md:col-6">
 
                             <p:outputLabel
@@ -315,7 +341,6 @@
                                 id="txtValorDescuento"
                                 value="#{descuentoProductoModel.valor}"
                                 decimalPlaces="0"
-                                minValue="1"
                                 symbol=" %"
                                 symbolPosition="s"
                                 style="width: 100%;"/>
@@ -323,9 +348,10 @@
                             <h:outputText
                                 value="Máximo permitido: #{descuentoProductoModel.descuentoMaximo} %"
                                 rendered="#{not empty descuentoProductoModel.descuentoMaximo}"
-                                style="display: block;
-                                       margin-top: 0.4rem;
-                                       font-size: 0.9rem;"/>
+                                style="
+                                    display: block;
+                                    margin-top: 0.4rem;
+                                    font-size: 0.9rem;"/>
 
                         </div>
 
@@ -345,7 +371,15 @@
                                 showIcon="true"
                                 required="true"
                                 requiredMessage="La fecha desde es obligatoria"
-                                style="width: 100%;"/>
+                                mindate="#{descuentoProductoModel.fechaMinimaPermitida}"
+                                maxdate="#{descuentoProductoModel.fechaMaximaPermitida}"
+                                style="width: 100%;">
+
+                                <p:ajax
+                                    event="dateSelect"
+                                    update="fechaProductoHasta"/>
+
+                            </p:datePicker>
 
                         </div>
 
@@ -355,7 +389,9 @@
 
                             <p:outputLabel
                                 for="fechaProductoHasta"
-                                value="Fecha hasta"
+                                value="#{descuentoProductoModel.rangoAbierto
+                                         ? 'Fecha hasta (opcional)'
+                                         : 'Fecha hasta'}"
                                 styleClass="font-semibold block mb-2"/>
 
                             <p:datePicker
@@ -363,10 +399,24 @@
                                 value="#{descuentoProductoModel.fechaHasta}"
                                 pattern="dd/MM/yyyy"
                                 showIcon="true"
-                                required="true"
-                                requiredMessage="La fecha hasta es obligatoria"
+                                required="#{not descuentoProductoModel.rangoAbierto}"
+                                requiredMessage="La fecha hasta es obligatoria para este descuento"
+                                disabled="#{empty descuentoProductoModel.fechaDesde}"
                                 mindate="#{descuentoProductoModel.fechaDesde}"
+                                maxdate="#{descuentoProductoModel.fechaMaximaPermitida}"
+                                placeholder="#{descuentoProductoModel.rangoAbierto
+                                               ? 'Sin fecha = rango abierto'
+                                               : 'Seleccione fecha final'}"
                                 style="width: 100%;"/>
+
+                            <h:outputText
+                                value="Este descuento permite un rango sin fecha de finalización."
+                                rendered="#{descuentoProductoModel.rangoAbierto}"
+                                style="
+                                    display: block;
+                                    margin-top: 0.4rem;
+                                    font-size: 0.85rem;
+                                    color: #6c757d;"/>
 
                         </div>
 
@@ -390,7 +440,6 @@
                         </div>
 
 
-                        <!-- Acciones -->
                         <div class="field col-12">
 
                             <div style="
@@ -470,7 +519,12 @@
                         headerText="Fecha hasta">
 
                         <h:outputText
-                            value="#{relacion.fechaHasta}">
+                            value="Sin límite"
+                            rendered="#{empty relacion.fechaHasta}"/>
+
+                        <h:outputText
+                            value="#{relacion.fechaHasta}"
+                            rendered="#{not empty relacion.fechaHasta}">
 
                             <f:convertDateTime
                                 pattern="dd/MM/yyyy"/>

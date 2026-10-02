@@ -12,6 +12,7 @@ import jakarta.annotation.PostConstruct;
 import jakarta.faces.view.ViewScoped;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 import java.util.UUID;
@@ -37,10 +38,6 @@ public class DescuentoProductoModel
     private Integer valor;
     private String observaciones;
 
-    /*
-     * Máximo permitido según el TipoDescuento
-     * seleccionado en el descuento principal.
-     */
     private Integer descuentoMaximo;
 
     @PostConstruct
@@ -101,25 +98,37 @@ public class DescuentoProductoModel
     }
 
     /*
-     * En DescuentoProducto permitimos repetir
-     * un mismo producto porque cada asociación
-     * puede tener distintas fechas y porcentaje.
+     * No se permite repetir la misma combinación:
+     *
+     * Descuento + Producto
      */
     @Override
     protected boolean permiteRelacionDuplicada() {
-        return true;
+        return false;
     }
 
-    /*
-     * No se utiliza cuando permiteRelacionDuplicada()
-     * devuelve true.
-     */
     @Override
     protected boolean existeRelacion(
             Descuento descuento,
             Producto producto) {
 
-        return false;
+        if (descuento == null
+                || producto == null
+                || producto.getIdProducto() == null
+                || modelo == null) {
+
+            return false;
+        }
+
+        return modelo.stream()
+                .anyMatch(relacion
+                        -> relacion != null
+                        && relacion.getIdProducto() != null
+                        && producto.getIdProducto().equals(
+                                relacion.getIdProducto()
+                                        .getIdProducto()
+                        )
+                );
     }
 
     @Override
@@ -145,12 +154,9 @@ public class DescuentoProductoModel
     }
 
     /*
-     * Cuando cambia el descuento principal:
-     *
-     * - carga sus productos asociados;
-     * - copia las fechas generales como valores iniciales;
-     * - obtiene el descuento máximo permitido
-     *   desde TipoDescuento.
+     * =========================================================
+     * CARGAR DESCUENTO
+     * =========================================================
      */
     @Override
     public void cargarPrincipal(
@@ -181,15 +187,11 @@ public class DescuentoProductoModel
         }
     }
 
-    /*
-     * Obtiene el máximo permitido del TipoDescuento
-     * asociado al descuento actual.
-     */
     private void cargarDescuentoMaximo(
             Descuento descuento) {
 
-        if (descuento.getIdTipoDescuento()
-                == null) {
+        if (descuento == null
+                || descuento.getIdTipoDescuento() == null) {
 
             descuentoMaximo = null;
             return;
@@ -211,9 +213,11 @@ public class DescuentoProductoModel
         }
     }
 
-    /* =========================================================
-       MÉTODOS PARA LA VISTA
-       ========================================================= */
+    /*
+     * =========================================================
+     * MÉTODOS PARA LA VISTA
+     * =========================================================
+     */
 
     public void cargarDescuento(
             Descuento descuento) {
@@ -226,11 +230,80 @@ public class DescuentoProductoModel
     }
 
     /*
-     * Antes de utilizar agregarRelacion()
-     * validamos los datos particulares
-     * de DescuentoProducto.
+     * Muestra claramente cuáles productos
+     * están inactivos.
+     */
+    public String obtenerEtiquetaProducto(
+            Producto producto) {
+
+        if (producto == null) {
+            return "";
+        }
+
+        String nombre = producto.getNombre();
+
+        if (!Boolean.TRUE.equals(
+                producto.getActivo())) {
+
+            return nombre + " (INACTIVO)";
+        }
+
+        return nombre;
+    }
+
+    /*
+     * =========================================================
+     * AGREGAR PRODUCTO
+     * =========================================================
      */
     public void agregarProducto() {
+
+        if (!principalValido(principal)) {
+
+            mostrarAdvertencia(
+                    "Debe seleccionar un descuento"
+            );
+
+            return;
+        }
+
+        if (idOpcionSeleccionada == null
+                || idOpcionSeleccionada.isBlank()) {
+
+            mostrarAdvertencia(
+                    "Debe seleccionar un producto"
+            );
+
+            return;
+        }
+
+        Producto producto
+                = buscarOpcion(
+                        idOpcionSeleccionada
+                );
+
+        if (producto == null) {
+
+            mostrarAdvertencia(
+                    "El producto seleccionado no existe"
+            );
+
+            return;
+        }
+
+        /*
+         * Un producto inactivo no puede recibir
+         * nuevas asociaciones de descuento.
+         */
+        if (!Boolean.TRUE.equals(
+                producto.getActivo())) {
+
+            mostrarAdvertencia(
+                    "El producto seleccionado está inactivo"
+            );
+
+            return;
+        }
 
         if (valor == null) {
 
@@ -250,8 +323,16 @@ public class DescuentoProductoModel
             return;
         }
 
-        if (descuentoMaximo != null
-                && valor > descuentoMaximo) {
+        if (descuentoMaximo == null) {
+
+            mostrarAdvertencia(
+                    "No se pudo determinar el límite del tipo de descuento"
+            );
+
+            return;
+        }
+
+        if (valor > descuentoMaximo) {
 
             mostrarAdvertencia(
                     "El descuento aplicado no puede superar "
@@ -261,17 +342,43 @@ public class DescuentoProductoModel
             return;
         }
 
-        if (fechaDesde == null
-                || fechaHasta == null) {
+        if (fechaDesde == null) {
 
             mostrarAdvertencia(
-                    "Debe indicar las fechas del descuento"
+                    "Debe indicar la fecha desde"
             );
 
             return;
         }
 
-        if (fechaHasta.before(fechaDesde)) {
+        /*
+         * No puede iniciar antes del descuento principal.
+         */
+        if (principal.getFechaDesde() != null
+                && normalizarFecha(fechaDesde)
+                        .before(
+                                normalizarFecha(
+                                        principal.getFechaDesde()
+                                )
+                        )) {
+
+            mostrarAdvertencia(
+                    "La fecha desde no puede ser anterior "
+                    + "a la fecha inicial del descuento"
+            );
+
+            return;
+        }
+
+        /*
+         * Si hay fecha final, debe ser igual
+         * o posterior a fechaDesde.
+         */
+        if (fechaHasta != null
+                && normalizarFecha(fechaHasta)
+                        .before(
+                                normalizarFecha(fechaDesde)
+                        )) {
 
             mostrarAdvertencia(
                     "La fecha hasta no puede ser anterior a la fecha desde"
@@ -280,14 +387,135 @@ public class DescuentoProductoModel
             return;
         }
 
+        /*
+         * DESCUENTO CERRADO
+         */
+        if (principal.getFechaHasta() != null) {
+
+            if (fechaHasta == null) {
+
+                mostrarAdvertencia(
+                        "Este descuento tiene fecha de finalización; "
+                        + "debe indicar una fecha hasta"
+                );
+
+                return;
+            }
+
+            if (normalizarFecha(fechaHasta)
+                    .after(
+                            normalizarFecha(
+                                    principal.getFechaHasta()
+                            )
+                    )) {
+
+                mostrarAdvertencia(
+                        "La fecha hasta no puede superar "
+                        + "la fecha final del descuento"
+                );
+
+                return;
+            }
+
+            if (normalizarFecha(fechaDesde)
+                    .after(
+                            normalizarFecha(
+                                    principal.getFechaHasta()
+                            )
+                    )) {
+
+                mostrarAdvertencia(
+                        "La fecha desde está fuera "
+                        + "del rango del descuento"
+                );
+
+                return;
+            }
+        }
+
+        /*
+         * Si el descuento principal es abierto,
+         * fechaHasta puede quedar null.
+         */
+
         agregarRelacion();
     }
 
+    /*
+     * Elimina solamente la asociación.
+     */
     public void quitarProducto(
             DescuentoProducto relacion) {
 
         quitarRelacion(relacion);
     }
+
+    /*
+     * =========================================================
+     * FECHAS PARA LA VISTA
+     * =========================================================
+     */
+
+    public Date getFechaMinimaPermitida() {
+
+        if (principal == null) {
+            return null;
+        }
+
+        return principal.getFechaDesde();
+    }
+
+    public Date getFechaMaximaPermitida() {
+
+        if (principal == null) {
+            return null;
+        }
+
+        return principal.getFechaHasta();
+    }
+
+    public boolean isRangoAbierto() {
+
+        return principal != null
+                && principal.getFechaHasta() == null;
+    }
+
+    private Date normalizarFecha(
+            Date fecha) {
+
+        Calendar calendario
+                = Calendar.getInstance();
+
+        calendario.setTime(fecha);
+
+        calendario.set(
+                Calendar.HOUR_OF_DAY,
+                0
+        );
+
+        calendario.set(
+                Calendar.MINUTE,
+                0
+        );
+
+        calendario.set(
+                Calendar.SECOND,
+                0
+        );
+
+        calendario.set(
+                Calendar.MILLISECOND,
+                0
+        );
+
+        return calendario.getTime();
+    }
+
+    /*
+     * =========================================================
+     * GETTERS Y SETTERS
+     * =========================================================
+     */
 
     public List<Producto> getProductoList() {
         return getOpcionesDisponibles();
@@ -304,11 +532,6 @@ public class DescuentoProductoModel
                 idProductoSeleccionado
         );
     }
-
-
-    /* =========================================================
-       GETTERS Y SETTERS
-       ========================================================= */
 
     public Date getFechaDesde() {
         return fechaDesde;

@@ -6,32 +6,33 @@
                 xmlns:f="jakarta.faces.core"
                 template="/WEB-INF/plantillas/general.xhtml">
 
-    <ui:param name="nombreEntidad" value="Descuento" />
+    <ui:param name="nombreEntidad" value="Tipo de descuento" />
     <ui:param name="controller" value="#{tipoDescuentoModel}" />
 
     <ui:define name="titulo">Tipo de Descuento - Cafefe</ui:define>
     <ui:define name="tituloHeader">Tipo de Descuento</ui:define>
 
     <ui:define name="tabla">
+
         <p:dataTable id="tblTipoDescuento"
-             value="#{tipoDescuentoModel.modelo}"
-             var="reg"
-             selection="#{tipoDescuentoModel.registro}"
-             rowKey="#{reg.idTipoDescuento}"
-             selectionMode="single"
-             paginator="true"
-             rows="5"
-             paginatorPosition="both"
-             emptyMessage="No se encontraron registros"
-             styleClass="p-datatable-striped p-datatable-sm">
+                     value="#{tipoDescuentoModel.modelo}"
+                     var="reg"
+                     selection="#{tipoDescuentoModel.registro}"
+                     rowKey="#{reg.idTipoDescuento}"
+                     selectionMode="single"
+                     paginator="true"
+                     rows="5"
+                     paginatorPosition="both"
+                     emptyMessage="No se encontraron registros"
+                     styleClass="p-datatable-striped p-datatable-sm">
 
-    <p:ajax event="rowSelect"
-            listener="#{tipoDescuentoModel.onRowSelect}"
-            update="@form" />
+            <p:ajax event="rowSelect"
+                    listener="#{tipoDescuentoModel.onRowSelect}"
+                    update="@form" />
 
-    <p:ajax event="rowUnselect"
-            listener="#{tipoDescuentoModel.onRowUnselect}"
-            update="@form" />
+            <p:ajax event="rowUnselect"
+                    listener="#{tipoDescuentoModel.onRowUnselect}"
+                    update="@form" />
 
             <p:column headerText="ID" style="width: 25%;">
                 <h:outputText value="#{reg.idTipoDescuento}" />
@@ -54,70 +55,87 @@
             </p:column>
 
         </p:dataTable>
+
     </ui:define>
+
     <ui:define name="formulario">
 
-    <div class="formgrid grid">
+        <div class="formgrid grid">
 
-        <div class="field col-12 md:col-6">
-            <p:outputLabel for="txtNombre"
-                           value="Nombre"
-                           styleClass="font-semibold block mb-2" />
+            <div class="field col-12 md:col-6">
 
-            <p:inputText id="txtNombre"
-                         value="#{tipoDescuentoModel.registro.nombre}"
-                         required="true"
-                         requiredMessage="El campo Nombre es obligatorio"
-                         validatorMessage="El nombre debe contener al menos 2 caracteres"
-                         style="width: 100%;">
-                <f:validateLength minimum="2" />
-            </p:inputText>
-        </div>
+                <p:outputLabel for="txtNombre"
+                               value="Nombre"
+                               styleClass="font-semibold block mb-2" />
 
-        <div class="field col-12 md:col-6">
-            <p:outputLabel for="txtMonto"
-                           value="Descuento máximo"
-                           styleClass="font-semibold block mb-2" />
+                <p:inputText id="txtNombre"
+                             value="#{tipoDescuentoModel.registro.nombre}"
+                             required="true"
+                             requiredMessage="El campo Nombre es obligatorio"
+                             validatorMessage="El nombre debe contener al menos 2 caracteres"
+                             style="width: 100%;">
 
-            <p:inputNumber id="txtMonto"
-                           value="#{tipoDescuentoModel.registro.descuentoMaximo}"
-                           symbol=" %"
-                           symbolPosition="s"
-                           required="true"
-                           requiredMessage="El descuento máximo es obligatorio"
-                           validatorMessage="El descuento debe estar entre 1 y 100"
-                           style="width: 100%;">
-                <f:validateLongRange minimum="1" maximum="100" />
-            </p:inputNumber>
-        </div>
+                    <f:validateLength minimum="2" />
 
-        <div class="field col-12">
-            <p:outputLabel for="chkActivo"
-                           value="Estado"
-                           styleClass="font-semibold block mb-2" />
+                </p:inputText>
 
-            <div class="flex align-items-center gap-2">
-                <p:selectBooleanCheckbox id="chkActivo"
-                                         value="#{tipoDescuentoModel.registro.activo}" />
-                <h:outputText value="Tipo de descuento activo" />
             </div>
+
+            <div class="field col-12 md:col-6">
+
+                <p:outputLabel for="txtMonto"
+                               value="Descuento máximo"
+                               styleClass="font-semibold block mb-2" />
+
+                <p:inputNumber id="txtMonto"
+                               value="#{tipoDescuentoModel.registro.descuentoMaximo}"
+                               symbol=" %"
+                               symbolPosition="s"
+                               required="true"
+                               requiredMessage="El descuento máximo es obligatorio"
+                               validatorMessage="El descuento debe estar entre 1 y 100"
+                               style="width: 100%;">
+
+                    <f:validateLongRange minimum="1" maximum="100" />
+
+                </p:inputNumber>
+
+            </div>
+
+            <div class="field col-12">
+
+                <p:outputLabel for="chkActivo"
+                               value="Estado"
+                               styleClass="font-semibold block mb-2" />
+
+                <div class="flex align-items-center gap-2">
+
+                    <p:selectBooleanCheckbox id="chkActivo"
+                                             value="#{tipoDescuentoModel.registro.activo}" />
+
+                    <h:outputText value="Tipo de descuento activo" />
+
+                </div>
+
+            </div>
+
+            <div class="field col-12">
+
+                <p:outputLabel for="txtObs"
+                               value="Observaciones"
+                               styleClass="font-semibold block mb-2" />
+
+                <p:inputTextarea id="txtObs"
+                                 value="#{tipoDescuentoModel.registro.observaciones}"
+                                 rows="4"
+                                 autoResize="false"
+                                 style="width: 100%;"
+                                 placeholder="Agregue información adicional..." />
+
+            </div>
+
         </div>
 
-        <div class="field col-12">
-            <p:outputLabel for="txtObs"
-                           value="Observaciones"
-                           styleClass="font-semibold block mb-2" />
-
-            <p:inputTextarea id="txtObs"
-                             value="#{tipoDescuentoModel.registro.observaciones}"
-                             rows="4"
-                             autoResize="false"
-                             style="width: 100%;"
-                             placeholder="Agregue información adicional..." />
-        </div>
-
-    </div>
-
-</ui:define>
+    </ui:define>
 
 </ui:composition>
