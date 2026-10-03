@@ -26,7 +26,9 @@
     </ui:define>
 
 
-    <!-- LISTADO DE ÓRDENES -->
+    <!-- ===================================================== -->
+    <!-- LISTADO DE ÓRDENES                                    -->
+    <!-- ===================================================== -->
 
     <ui:define name="tabla">
 
@@ -34,7 +36,7 @@
             id="tablaOrdenes"
             value="#{ordenModel.modelo}"
             var="orden"
-            selection="#{ordenModel.ordenSeleccionadaConsulta}"
+            selection="#{ordenModel.registro}"
             rowKey="#{orden.idOrden}"
             selectionMode="single"
             paginator="true"
@@ -43,38 +45,52 @@
 
             <p:ajax
                 event="rowSelect"
-                update=":frmPrincipal:btnVerOrden"/>
+                listener="#{ordenModel.onRowSelect}"
+                update="@form"/>
 
             <p:ajax
                 event="rowUnselect"
-                update=":frmPrincipal:btnVerOrden"/>
+                listener="#{ordenModel.onRowUnselect}"
+                update="@form"/>
+
 
             <p:column
                 headerText="Fecha"
                 sortBy="#{orden.fechaCreacion}">
 
-                <h:outputText value="#{orden.fechaCreacion}">
+                <h:outputText
+                    value="#{orden.fechaCreacion}">
+
                     <f:convertDateTime
-                        pattern="dd/MM/yyyy HH:mm"
+                        pattern="dd/MM/yyyy"
                         timeZone="America/El_Salvador"/>
+
                 </h:outputText>
 
             </p:column>
 
+
             <p:column headerText="Empleado">
+
                 <h:outputText
                     value="#{orden.idEmpleadoRol.idEmpleado.nombre} #{orden.idEmpleadoRol.idEmpleado.apellido}"/>
+
             </p:column>
 
+
             <p:column headerText="Rol">
+
                 <h:outputText
                     value="#{orden.idEmpleadoRol.idRol.nombre}"/>
+
             </p:column>
 
         </p:dataTable>
 
 
-        <!-- DIÁLOGO DE CONSULTA -->
+        <!-- ================================================= -->
+        <!-- MODAL: VER ORDEN                                  -->
+        <!-- ================================================= -->
 
         <p:dialog
             id="dlgDetalleOrden"
@@ -82,103 +98,131 @@
             header="Detalle de la orden"
             modal="true"
             responsive="true"
-            width="750"
+            width="900"
             closable="true"
             resizable="false">
 
-            <h:panelGroup
-                rendered="#{ordenModel.ordenSeleccionadaConsulta != null}">
+            <div style="max-height: 70vh; overflow-y: auto; padding-right: 0.5rem;">
 
-                <div class="formgrid grid mb-3">
+                <h:panelGroup
+                    rendered="#{ordenModel.ordenSeleccionadaConsulta != null}">
 
-                    <div class="field col-12 md:col-4">
+                    <div class="formgrid grid mb-3">
 
-                        <strong>Fecha</strong>
-                        <br/>
+                        <div class="field col-12 md:col-4">
 
-                        <h:outputText
-                            value="#{ordenModel.ordenSeleccionadaConsulta.fechaCreacion}">
+                            <strong>Fecha</strong>
+                            <br/>
 
-                            <f:convertDateTime
-                                pattern="dd/MM/yyyy HH:mm"
-                                timeZone="America/El_Salvador"/>
+                            <h:outputText
+                                value="#{ordenModel.ordenSeleccionadaConsulta.fechaCreacion}">
 
-                        </h:outputText>
+                                <f:convertDateTime
+                                    pattern="dd/MM/yyyy"
+                                    timeZone="America/El_Salvador"/>
+
+                            </h:outputText>
+
+                        </div>
+
+
+                        <div class="field col-12 md:col-4">
+
+                            <strong>Empleado</strong>
+                            <br/>
+
+                            <h:outputText
+                                value="#{ordenModel.ordenSeleccionadaConsulta.idEmpleadoRol.idEmpleado.nombre} #{ordenModel.ordenSeleccionadaConsulta.idEmpleadoRol.idEmpleado.apellido}"/>
+
+                        </div>
+
+
+                        <div class="field col-12 md:col-4">
+
+                            <strong>Rol</strong>
+                            <br/>
+
+                            <h:outputText
+                                value="#{ordenModel.ordenSeleccionadaConsulta.idEmpleadoRol.idRol.nombre}"/>
+
+                        </div>
 
                     </div>
 
-                    <div class="field col-12 md:col-4">
 
-                        <strong>Empleado</strong>
-                        <br/>
+                    <!-- PRODUCTOS DE LA ORDEN CONSULTADA -->
+
+                    <p:dataTable
+                        value="#{ordenModel.productosConsulta}"
+                        var="detalle"
+                        paginator="true"
+                        rows="8"
+                        paginatorPosition="bottom"
+                        emptyMessage="La orden no tiene productos registrados">
+
+                        <p:column headerText="Producto">
+
+                            <h:outputText
+                                value="#{detalle.idProducto.nombre}"/>
+
+                        </p:column>
+
+
+                        <p:column
+                            headerText="Precio actual"
+                            style="width: 150px;">
+
+                            <h:outputText
+                                value="#{detalle.precio}">
+
+                                <f:convertNumber
+                                    type="currency"
+                                    currencySymbol="$"
+                                    minFractionDigits="2"
+                                    maxFractionDigits="2"/>
+
+                            </h:outputText>
+
+                        </p:column>
+
+
+                        <p:column headerText="Observaciones">
+
+                            <h:outputText
+                                value="#{detalle.observaciones}"
+                                style="white-space: pre-line;"/>
+
+                        </p:column>
+
+                    </p:dataTable>
+
+
+                    <!-- TOTAL -->
+
+                    <div class="flex justify-content-end mt-3">
 
                         <h:outputText
-                            value="#{ordenModel.ordenSeleccionadaConsulta.idEmpleadoRol.idEmpleado.nombre} #{ordenModel.ordenSeleccionadaConsulta.idEmpleadoRol.idEmpleado.apellido}"/>
-
-                    </div>
-
-                    <div class="field col-12 md:col-4">
-
-                        <strong>Rol</strong>
-                        <br/>
+                            value="Total actual: "
+                            style="font-weight: bold;
+                                   margin-right: 0.5rem;"/>
 
                         <h:outputText
-                            value="#{ordenModel.ordenSeleccionadaConsulta.idEmpleadoRol.idRol.nombre}"/>
+                            value="#{ordenModel.totalConsulta}"
+                            style="font-weight: bold;">
 
-                    </div>
-
-                </div>
-
-
-                <p:dataTable
-                    value="#{ordenModel.productosConsulta}"
-                    var="detalle"
-                    emptyMessage="La orden no tiene productos registrados">
-
-                    <p:column headerText="Producto">
-                        <h:outputText
-                            value="#{detalle.idProducto.nombre}"/>
-                    </p:column>
-
-                    <p:column
-                        headerText="Precio"
-                        style="width: 140px;">
-
-                        <h:outputText value="#{detalle.precio}">
                             <f:convertNumber
+                                type="currency"
+                                currencySymbol="$"
                                 minFractionDigits="2"
                                 maxFractionDigits="2"/>
+
                         </h:outputText>
 
-                    </p:column>
+                    </div>
 
-                    <p:column headerText="Observaciones">
-                        <h:outputText
-                            value="#{detalle.observaciones}"/>
-                    </p:column>
+                </h:panelGroup>
 
-                </p:dataTable>
-
-
-                <div class="flex justify-content-end mt-3">
-
-                    <h:outputText
-                        value="Total: "
-                        style="font-weight: bold; margin-right: 0.5rem;"/>
-
-                    <h:outputText
-                        value="#{ordenModel.totalConsulta}"
-                        style="font-weight: bold;">
-
-                        <f:convertNumber
-                            minFractionDigits="2"
-                            maxFractionDigits="2"/>
-
-                    </h:outputText>
-
-                </div>
-
-            </h:panelGroup>
+            </div>
 
 
             <f:facet name="footer">
@@ -197,7 +241,9 @@
     </ui:define>
 
 
-    <!-- ACCIONES ESPECIALES -->
+    <!-- ===================================================== -->
+    <!-- ACCIÓN EXTRA: VER ORDEN                               -->
+    <!-- ===================================================== -->
 
     <ui:define name="accionesListadoEspeciales">
 
@@ -208,22 +254,32 @@
             action="#{ordenModel.verOrden}"
             process="@this"
             update=":frmPrincipal:dlgDetalleOrden"
-            disabled="#{ordenModel.ordenSeleccionadaConsulta == null}"
+            disabled="#{ordenModel.registro == null}"
             oncomplete="PF('dlgDetalleOrdenWV').show();"
             styleClass="ui-button-secondary mr-2"/>
 
     </ui:define>
 
 
-    <!-- CREACIÓN DE ORDEN -->
+    <!-- ===================================================== -->
+    <!-- FORMULARIO NUEVO / EDITAR                             -->
+    <!-- ===================================================== -->
 
     <ui:define name="formulario">
+
+
+        <!-- ================================================= -->
+        <!-- DATOS GENERALES                                   -->
+        <!-- ================================================= -->
 
         <p:panel
             header="Datos generales"
             styleClass="mb-4">
 
             <div class="formgrid grid">
+
+
+                <!-- EMPLEADO / CAMARERO -->
 
                 <div class="field col-12 md:col-6">
 
@@ -234,12 +290,13 @@
                     <p:selectOneMenu
                         id="cmbEmpleadoRol"
                         value="#{ordenModel.idEmpleadoRolSeleccionado}"
+                        disabled="#{ordenModel.editando}"
                         required="true"
-                        requiredMessage="Debe seleccionar un empleado y su rol"
+                        requiredMessage="Debe seleccionar un empleado con rol camarero"
                         style="width: 100%;">
 
                         <f:selectItem
-                            itemLabel="Seleccione un empleado"
+                            itemLabel="Seleccione un camarero"
                             itemValue="#{null}"
                             noSelectionOption="true"/>
 
@@ -251,22 +308,43 @@
 
                     </p:selectOneMenu>
 
+                    <small class="text-color-secondary">
+                        Solo se muestran empleados activos con rol camarero.
+                    </small>
+
                 </div>
 
+
+                <!-- FECHA -->
 
                 <div class="field col-12 md:col-6">
 
-                    <p:outputLabel value="Fecha de creación"/>
+                    <p:outputLabel
+                        for="fechaOrden"
+                        value="Fecha de la orden"/>
 
-                    <br/>
+                    <p:datePicker
+                        id="fechaOrden"
+                        value="#{ordenModel.registro.fechaCreacion}"
+                        pattern="dd/MM/yyyy"
+                        showIcon="true"
+                        mindate="#{ordenModel.fechaMinimaOrden}"
+                        disabled="#{ordenModel.editando}"
+                        required="true"
+                        requiredMessage="Debe indicar la fecha de la orden"
+                        style="width: 100%;"/>
 
-                    <h:outputText value="#{ordenModel.registro.fechaCreacion}">
+                    <small class="text-color-secondary">
 
-                        <f:convertDateTime
-                            pattern="dd/MM/yyyy HH:mm"
-                            timeZone="America/El_Salvador"/>
+                        <h:outputText
+                            rendered="#{ordenModel.nuevo}"
+                            value="Solo puede seleccionar la fecha de hoy o una fecha futura."/>
 
-                    </h:outputText>
+                        <h:outputText
+                            rendered="#{ordenModel.editando}"
+                            value="La fecha no puede modificarse después de crear la orden."/>
+
+                    </small>
 
                 </div>
 
@@ -275,171 +353,483 @@
         </p:panel>
 
 
-        <!-- AGREGAR PRODUCTO -->
+        <!-- ================================================= -->
+        <!-- CREACIÓN: TODAVÍA SIN PRODUCTOS                    -->
+        <!-- ================================================= -->
 
         <p:panel
-            header="Agregar producto"
+            header="Productos de la orden"
+            rendered="#{ordenModel.nuevo}"
             styleClass="mb-4">
 
-            <div class="formgrid grid">
+            <h:panelGroup
+                layout="block"
+                style="padding: 1rem;
+                       border: 1px solid #d6d6d6;
+                       border-radius: 6px;
+                       background-color: #f8f9fa;">
 
-                <div class="field col-12 md:col-5">
+                <i
+                    class="pi pi-info-circle"
+                    style="margin-right: 0.5rem;"></i>
 
-                    <p:outputLabel
-                        for="cmbProducto"
-                        value="Producto"/>
+                <h:outputText
+                    value="Primero guarde la orden. Después selecciónela y presione Editar para agregar productos y aplicar descuentos."/>
 
-                    <p:selectOneMenu
-                        id="cmbProducto"
-                        value="#{ordenModel.idProductoSeleccionado}"
-                        style="width: 100%;">
-
-                        <f:selectItem
-                            itemLabel="Seleccione un producto"
-                            itemValue="#{null}"
-                            noSelectionOption="true"/>
-
-                        <f:selectItems
-                            value="#{ordenModel.productosDisponibles}"
-                            var="producto"
-                            itemLabel="#{producto.nombre}"
-                            itemValue="#{producto.idProducto.toString()}"/>
-
-                        <p:ajax
-                            process="@this"
-                            update="txtPrecioProducto"/>
-
-                    </p:selectOneMenu>
-
-                </div>
-
-
-                <div class="field col-12 md:col-3">
-
-                    <p:outputLabel
-                        for="txtPrecioProducto"
-                        value="Precio"/>
-
-                    <p:inputNumber
-                        id="txtPrecioProducto"
-                        value="#{ordenModel.precioProducto}"
-                        decimalPlaces="2"
-                        readonly="true"
-                        style="width: 100%;"/>
-
-                </div>
-
-
-                <div class="field col-12 md:col-4">
-
-                    <p:outputLabel
-                        for="txtObservacionesProducto"
-                        value="Observaciones"/>
-
-                    <p:inputText
-                        id="txtObservacionesProducto"
-                        value="#{ordenModel.observacionesProducto}"
-                        maxlength="500"
-                        placeholder="Ej. sin azúcar"
-                        style="width: 100%;"/>
-
-                </div>
-
-
-                <div class="field col-12">
-
-                    <p:commandButton
-                        value="Agregar producto"
-                        icon="pi pi-plus"
-                        action="#{ordenModel.agregarProducto}"
-                        process="cmbEmpleadoRol cmbProducto txtPrecioProducto txtObservacionesProducto"
-                        update="@form"
-                        styleClass="ui-button-success"/>
-
-                </div>
-
-            </div>
+            </h:panelGroup>
 
         </p:panel>
 
 
-        <!-- PRODUCTOS DE LA ORDEN -->
+        <!-- ================================================= -->
+        <!-- ADMINISTRACIÓN DE PRODUCTOS                        -->
+        <!-- ================================================= -->
 
-        <p:panel header="Productos de la orden">
+        <h:panelGroup
+            id="pnlGestionProductos"
+            layout="block"
+            rendered="#{ordenModel.puedeGestionarProductos}">
 
-            <p:dataTable
-                id="tablaProductosOrden"
-                value="#{ordenModel.productosOrden}"
-                var="detalle"
-                emptyMessage="Aún no se han agregado productos">
 
-                <p:column headerText="Producto">
+            <!-- ============================================= -->
+            <!-- AGREGAR PRODUCTO                              -->
+            <!-- ============================================= -->
+
+            <p:panel
+                header="Agregar producto"
+                styleClass="mb-4">
+
+                <div class="formgrid grid">
+
+
+                    <!-- PRODUCTO -->
+
+                    <div class="field col-12 md:col-5">
+
+                        <p:outputLabel
+                            for="cmbProducto"
+                            value="Producto"/>
+
+                        <p:selectOneMenu
+                            id="cmbProducto"
+                            value="#{ordenModel.idProductoSeleccionado}"
+                            style="width: 100%;">
+
+                            <f:selectItem
+                                itemLabel="Seleccione un producto"
+                                itemValue="#{null}"
+                                noSelectionOption="true"/>
+
+                            <f:selectItems
+                                value="#{ordenModel.productosDisponibles}"
+                                var="producto"
+                                itemLabel="#{producto.nombre}"
+                                itemValue="#{producto.idProducto.toString()}"/>
+
+                            <p:ajax
+                                process="@this"
+                                update="txtPrecioProducto"/>
+
+                        </p:selectOneMenu>
+
+                    </div>
+
+
+                    <!-- PRECIO -->
+
+                    <div class="field col-12 md:col-3">
+
+                        <p:outputLabel
+                            for="txtPrecioProducto"
+                            value="Precio sugerido"/>
+
+                        <p:inputNumber
+                            id="txtPrecioProducto"
+                            value="#{ordenModel.precioProducto}"
+                            decimalPlaces="2"
+                            readonly="true"
+                            symbol="$"
+                            symbolPosition="p"
+                            style="width: 100%;"/>
+
+                    </div>
+
+
+                    <!-- OBSERVACIONES -->
+
+                    <div class="field col-12 md:col-4">
+
+                        <p:outputLabel
+                            for="txtObservacionesProducto"
+                            value="Observaciones"/>
+
+                        <p:inputTextarea
+                            id="txtObservacionesProducto"
+                            value="#{ordenModel.observacionesProducto}"
+                            maxlength="500"
+                            autoResize="false"
+                            rows="2"
+                            placeholder="Ej. sin azúcar"
+                            style="width: 100%;"/>
+
+                    </div>
+
+
+                    <!-- AGREGAR -->
+
+                    <div class="field col-12">
+
+                        <p:commandButton
+                            value="Agregar producto"
+                            icon="pi pi-plus"
+                            action="#{ordenModel.agregarProducto}"
+                            process="cmbProducto txtObservacionesProducto"
+                            update="@form"
+                            styleClass="ui-button-success"/>
+
+                    </div>
+
+                </div>
+
+            </p:panel>
+
+
+            <!-- ============================================= -->
+            <!-- PRODUCTOS DE LA ORDEN                         -->
+            <!-- ============================================= -->
+
+            <p:panel
+                header="Productos de la orden"
+                styleClass="mb-4">
+
+                <p:dataTable
+                    id="tablaProductosOrden"
+                    value="#{ordenModel.productosOrden}"
+                    var="detalle"
+                    paginator="true"
+                    rows="8"
+                    paginatorPosition="bottom"
+                    emptyMessage="La orden todavía no tiene productos">
+
+
+                    <!-- PRODUCTO -->
+
+                    <p:column headerText="Producto">
+
+                        <h:outputText
+                            value="#{detalle.idProducto.nombre}"/>
+
+                    </p:column>
+
+
+                    <!-- PRECIO ACTUAL -->
+
+                    <p:column
+                        headerText="Precio actual"
+                        style="width: 150px;">
+
+                        <h:outputText
+                            value="#{detalle.precio}">
+
+                            <f:convertNumber
+                                type="currency"
+                                currencySymbol="$"
+                                minFractionDigits="2"
+                                maxFractionDigits="2"/>
+
+                        </h:outputText>
+
+                    </p:column>
+
+
+                    <!-- OBSERVACIONES -->
+
+                    <p:column headerText="Observaciones">
+
+                        <h:outputText
+                            value="#{detalle.observaciones}"
+                            style="white-space: pre-line;"/>
+
+                    </p:column>
+
+
+                    <!-- ACCIONES -->
+
+                    <p:column
+                        headerText="Acciones"
+                        style="width: 230px; text-align: center;">
+
+
+                        <!-- ABRIR MODAL DE DESCUENTO -->
+
+                        <p:commandButton
+                            value="Descuento"
+                            icon="pi pi-percentage"
+                            title="Aplicar descuento"
+                            action="#{ordenModel.seleccionarProductoParaDescuento(detalle)}"
+                            process="@this"
+                            update=":frmPrincipal:dlgAplicarDescuento"
+                            oncomplete="PF('dlgAplicarDescuentoWV').show();"
+                            styleClass="ui-button-help mr-2"/>
+
+
+                        <!-- QUITAR PRODUCTO -->
+
+                        <p:commandButton
+                            icon="pi pi-trash"
+                            title="Quitar producto"
+                            action="#{ordenModel.quitarProducto(detalle)}"
+                            process="@this"
+                            update="@form"
+                            styleClass="ui-button-danger">
+
+                            <p:confirm
+                                header="Quitar producto"
+                                message="¿Desea quitar este producto de la orden?"
+                                icon="pi pi-exclamation-triangle"/>
+
+                        </p:commandButton>
+
+                    </p:column>
+
+                </p:dataTable>
+
+
+                <!-- TOTAL -->
+
+                <div class="flex justify-content-end mt-3">
+
                     <h:outputText
-                        value="#{detalle.idProducto.nombre}"/>
-                </p:column>
+                        value="Total actual: "
+                        style="font-weight: bold;
+                               font-size: 1.1rem;
+                               margin-right: 0.5rem;"/>
 
-                <p:column
-                    headerText="Precio"
-                    style="width: 140px;">
-
-                    <h:outputText value="#{detalle.precio}">
+                    <h:outputText
+                        id="txtTotalOrden"
+                        value="#{ordenModel.totalOrden}"
+                        style="font-weight: bold;
+                               font-size: 1.1rem;">
 
                         <f:convertNumber
+                            type="currency"
+                            currencySymbol="$"
                             minFractionDigits="2"
                             maxFractionDigits="2"/>
 
                     </h:outputText>
 
-                </p:column>
+                </div>
 
-                <p:column headerText="Observaciones">
-                    <h:outputText
-                        value="#{detalle.observaciones}"/>
-                </p:column>
-
-                <p:column
-                    headerText="Acciones"
-                    style="width: 100px; text-align: center;">
-
-                    <p:commandButton
-                        icon="pi pi-trash"
-                        title="Quitar producto"
-                        action="#{ordenModel.quitarProducto(detalle)}"
-                        process="@this"
-                        update="@form"
-                        styleClass="ui-button-danger">
-
-                        <p:confirm
-                            header="Quitar producto"
-                            message="¿Desea quitar este producto de la orden?"
-                            icon="pi pi-exclamation-triangle"/>
-
-                    </p:commandButton>
-
-                </p:column>
-
-            </p:dataTable>
+            </p:panel>
 
 
-            <div class="flex justify-content-end mt-3">
+            <!-- ============================================= -->
+            <!-- MODAL: APLICAR DESCUENTO                      -->
+            <!-- ============================================= -->
 
-                <h:outputText
-                    value="Total: "
-                    style="font-weight: bold; font-size: 1.1rem; margin-right: 0.5rem;"/>
+            <p:dialog
+                id="dlgAplicarDescuento"
+                widgetVar="dlgAplicarDescuentoWV"
+                header="Aplicar descuento"
+                modal="true"
+                responsive="true"
+                width="700"
+                closable="true"
+                resizable="false">
 
-                <h:outputText
-                    value="#{ordenModel.totalOrden}"
-                    style="font-weight: bold; font-size: 1.1rem;">
+                <div style="max-height: 65vh; overflow-y: auto; padding-right: 0.5rem;">
 
-                    <f:convertNumber
-                        minFractionDigits="2"
-                        maxFractionDigits="2"/>
+                    <h:panelGroup
+                        rendered="#{ordenModel.productoOrdenSeleccionado != null}">
 
-                </h:outputText>
+                        <div class="formgrid grid">
 
-            </div>
 
-        </p:panel>
+                            <!-- PRODUCTO -->
+
+                            <div class="field col-12 md:col-5">
+
+                                <p:outputLabel
+                                    value="Producto seleccionado"/>
+
+                                <br/>
+
+                                <h:outputText
+                                    value="#{ordenModel.productoOrdenSeleccionado.idProducto.nombre}"
+                                    style="font-weight: bold;"/>
+
+                            </div>
+
+
+                            <!-- PRECIO ACTUAL -->
+
+                            <div class="field col-12 md:col-3">
+
+                                <p:outputLabel
+                                    value="Precio actual"/>
+
+                                <br/>
+
+                                <h:outputText
+                                    value="#{ordenModel.productoOrdenSeleccionado.precio}"
+                                    style="font-weight: bold;">
+
+                                    <f:convertNumber
+                                        type="currency"
+                                        currencySymbol="$"
+                                        minFractionDigits="2"
+                                        maxFractionDigits="2"/>
+
+                                </h:outputText>
+
+                            </div>
+
+
+                            <!-- FECHA -->
+
+                            <div class="field col-12 md:col-4">
+
+                                <p:outputLabel
+                                    value="Fecha de la orden"/>
+
+                                <br/>
+
+                                <h:outputText
+                                    value="#{ordenModel.registro.fechaCreacion}">
+
+                                    <f:convertDateTime
+                                        pattern="dd/MM/yyyy"
+                                        timeZone="America/El_Salvador"/>
+
+                                </h:outputText>
+
+                            </div>
+
+
+                            <!-- SIN DESCUENTOS VÁLIDOS -->
+
+                            <h:panelGroup
+                                layout="block"
+                                styleClass="field col-12"
+                                rendered="#{empty ordenModel.descuentosAplicables}">
+
+                                <div style="
+                                     padding: 1rem;
+                                     border: 1px solid #d6d6d6;
+                                     border-radius: 6px;
+                                     background-color: #f8f9fa;">
+
+                                    <i
+                                        class="pi pi-info-circle"
+                                        style="margin-right: 0.5rem;"></i>
+
+                                    <h:outputText
+                                        value="Este producto no posee descuentos aplicables para la fecha de la orden."/>
+
+                                </div>
+
+                            </h:panelGroup>
+
+
+                            <!-- LISTA DE DESCUENTOS -->
+
+                            <h:panelGroup
+                                layout="block"
+                                styleClass="field col-12"
+                                rendered="#{not empty ordenModel.descuentosAplicables}">
+
+                                <p:outputLabel
+                                    for="cmbDescuento"
+                                    value="Descuento aplicable"/>
+
+                                <p:selectOneMenu
+                                    id="cmbDescuento"
+                                    value="#{ordenModel.idDescuentoProductoSeleccionado}"
+                                    style="width: 100%;">
+
+                                    <f:selectItem
+                                        itemLabel="Seleccione un descuento"
+                                        itemValue="#{null}"
+                                        noSelectionOption="true"/>
+
+                                    <f:selectItems
+                                        value="#{ordenModel.descuentosAplicables}"
+                                        var="descuentoProducto"
+                                        itemLabel="#{descuentoProducto.idDescuento.nombre} - #{descuentoProducto.valor}%"
+                                        itemValue="#{descuentoProducto.idDescuentoProducto.toString()}"/>
+
+                                </p:selectOneMenu>
+
+                                <small class="text-color-secondary">
+                                    Solo aparecen descuentos asociados al producto
+                                    y válidos para la fecha de esta orden.
+                                </small>
+
+                            </h:panelGroup>
+
+                        </div>
+
+
+                        <p:divider/>
+
+
+                        <!-- APLICAR DESCUENTO -->
+
+                        <h:panelGroup
+                            layout="block"
+                            rendered="#{not empty ordenModel.descuentosAplicables}">
+
+                            <p:commandButton
+                                value="Aplicar descuento"
+                                icon="pi pi-percentage"
+                                action="#{ordenModel.aplicarDescuento}"
+                                process="cmbDescuento"
+                                update=":frmPrincipal:tablaProductosOrden
+                                        :frmPrincipal:txtTotalOrden
+                                        :frmPrincipal:dlgAplicarDescuento"
+                                oncomplete="PF('dlgAplicarDescuentoWV').show();"
+                                styleClass="ui-button-warning mr-2">
+
+                                <p:confirm
+                                    header="Aplicar descuento"
+                                    message="¿Desea aplicar este descuento sobre el precio actual del producto?"
+                                    icon="pi pi-exclamation-triangle"/>
+
+                            </p:commandButton>
+
+                        </h:panelGroup>
+
+
+                        <!-- CERRAR -->
+
+                        <p:commandButton
+                            value="Cerrar"
+                            type="button"
+                            icon="pi pi-times"
+                            onclick="PF('dlgAplicarDescuentoWV').hide();"
+                            styleClass="ui-button-secondary"/>
+
+
+                        <!-- EXPLICACIÓN -->
+
+                        <div class="mt-3">
+
+                            <small class="text-color-secondary">
+                                Cada descuento se calcula sobre el precio actual
+                                del producto. Si aplica otro descuento después,
+                                se calculará sobre el precio ya rebajado.
+                            </small>
+
+                        </div>
+
+                    </h:panelGroup>
+
+                </div>
+
+            </p:dialog>
+
+        </h:panelGroup>
 
     </ui:define>
 
