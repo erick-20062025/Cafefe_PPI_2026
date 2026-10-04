@@ -242,6 +242,14 @@ public class ProductoCaracteristicaModel
 
             return;
         }
+        if (!Boolean.TRUE.equals(caracteristica.getActivo())) {
+
+            mostrarAdvertencia(
+                    "No se puede asignar una característica inactiva"
+            );
+
+            return;
+        }
 
         TipoCaracteristica tipo
                 = caracteristica.getIdTipoCaracteristica();

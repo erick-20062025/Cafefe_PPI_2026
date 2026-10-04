@@ -333,8 +333,8 @@ public class OrdenModel extends AbstractModel<Orden> {
 
             mostrarError(
                     nuevo
-                    ? "No se pudo crear la orden"
-                    : "No se pudo modificar la orden"
+                            ? "No se pudo crear la orden"
+                            : "No se pudo modificar la orden"
             );
         }
     }
@@ -501,13 +501,7 @@ public class OrdenModel extends AbstractModel<Orden> {
     private void cargarProductosDisponibles() {
 
         productosDisponibles
-                = productoDAO.findAll()
-                        .stream()
-                        .filter(producto
-                                -> Boolean.TRUE.equals(
-                                producto.getActivo()
-                        ))
-                        .toList();
+                = productoDAO.findAll();
     }
 
     public void setIdProductoSeleccionado(
@@ -828,10 +822,10 @@ public class OrdenModel extends AbstractModel<Orden> {
                     = descuentosAplicables.stream()
                             .filter(dp
                                     -> dp.getIdDescuentoProducto() != null
-                            && dp.getIdDescuentoProducto()
-                                    .equals(
-                                            idDescuentoProducto
-                                    ))
+                                    && dp.getIdDescuentoProducto()
+                                            .equals(
+                                                    idDescuentoProducto
+                                            ))
                             .findFirst()
                             .orElse(null);
 
@@ -970,8 +964,8 @@ public class OrdenModel extends AbstractModel<Orden> {
                     = productosOrden.stream()
                             .filter(op
                                     -> idProductoOrden.equals(
-                                    op.getIdOrdenProducto()
-                            ))
+                                            op.getIdOrdenProducto()
+                                    ))
                             .findFirst()
                             .orElse(null);
 
@@ -1047,7 +1041,6 @@ public class OrdenModel extends AbstractModel<Orden> {
      * FECHAS
      * =========================================================
      */
-
     /**
      * Fecha mínima permitida por el calendario.
      */
@@ -1056,8 +1049,7 @@ public class OrdenModel extends AbstractModel<Orden> {
     }
 
     /**
-     * Verifica la misma regla del calendario
-     * también desde backend.
+     * Verifica la misma regla del calendario también desde backend.
      */
     private boolean esFechaAnteriorAHoy(
             Date fecha) {

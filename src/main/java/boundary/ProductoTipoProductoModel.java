@@ -18,9 +18,7 @@ import java.util.UUID;
 @ViewScoped
 public class ProductoTipoProductoModel
         extends AbstractRelacionModel<
-                ProductoTipoProducto,
-                Producto,
-                TipoProducto> {
+                ProductoTipoProducto, Producto, TipoProducto> {
 
     private static final long serialVersionUID = 1L;
 
@@ -34,7 +32,6 @@ public class ProductoTipoProductoModel
     /* =========================================================
        INICIALIZACIÓN
        ========================================================= */
-
     @PostConstruct
     public void init() {
         cargarOpciones();
@@ -44,7 +41,6 @@ public class ProductoTipoProductoModel
     /* =========================================================
        DAO PRINCIPAL DE LA RELACIÓN
        ========================================================= */
-
     @Override
     protected DAOInterface<ProductoTipoProducto> getDAO() {
         return productoTipoProductoDAO;
@@ -54,10 +50,8 @@ public class ProductoTipoProductoModel
     /* =========================================================
        IMPLEMENTACIÓN DEL PATRÓN DE RELACIONES
        ========================================================= */
-
     /**
-     * Obtiene todos los tipos de producto
-     * que pueden ser seleccionados.
+     * Obtiene todos los tipos de producto que pueden ser seleccionados.
      */
     @Override
     protected List<TipoProducto> consultarOpcionesDisponibles() {
@@ -65,10 +59,8 @@ public class ProductoTipoProductoModel
         return tipoProductoDAO.findAll();
     }
 
-
     /**
-     * Obtiene únicamente los tipos asociados
-     * al producto actual.
+     * Obtiene únicamente los tipos asociados al producto actual.
      */
     @Override
     protected List<ProductoTipoProducto> consultarRelaciones(
@@ -79,10 +71,8 @@ public class ProductoTipoProductoModel
         );
     }
 
-
     /**
-     * Comprueba que el Producto pueda utilizarse
-     * para administrar relaciones.
+     * Comprueba que el Producto pueda utilizarse para administrar relaciones.
      */
     @Override
     protected boolean principalValido(
@@ -92,10 +82,9 @@ public class ProductoTipoProductoModel
                 && producto.getIdProducto() != null;
     }
 
-
     /**
-     * Convierte el UUID recibido desde JSF
-     * y obtiene el TipoProducto correspondiente.
+     * Convierte el UUID recibido desde JSF y obtiene el TipoProducto
+     * correspondiente.
      */
     @Override
     protected TipoProducto buscarOpcion(
@@ -122,10 +111,8 @@ public class ProductoTipoProductoModel
         }
     }
 
-
     /**
-     * Comprueba que el mismo TipoProducto
-     * no esté asignado dos veces.
+     * Comprueba que el mismo TipoProducto no esté asignado dos veces.
      */
     @Override
     protected boolean existeRelacion(
@@ -137,7 +124,6 @@ public class ProductoTipoProductoModel
                 tipoProducto.getIdTipoProducto()
         );
     }
-
 
     /**
      * Construye la nueva relación.
@@ -172,18 +158,16 @@ public class ProductoTipoProductoModel
        MÉTODOS DE COMPATIBILIDAD CON PRODUCTO.XHTML
        ========================================================= */
 
-    /*
+ /*
      * Estos métodos conservan los nombres que ya utiliza
      * Producto.xhtml.
      *
      * Internamente delegan toda la lógica común
      * a AbstractRelacionModel.
      */
-
     public void cargarTiposProducto() {
         cargarOpciones();
     }
-
 
     public void cargarProducto(
             Producto producto) {
@@ -191,11 +175,41 @@ public class ProductoTipoProductoModel
         cargarPrincipal(producto);
     }
 
-
     public void agregarTipo() {
+
+        if (getIdTipoProductoSeleccionado() == null
+                || getIdTipoProductoSeleccionado().isBlank()) {
+
+            mostrarAdvertencia(
+                    "Debe seleccionar un tipo de producto"
+            );
+
+            return;
+        }
+
+        TipoProducto tipoProducto
+                = buscarOpcion(getIdTipoProductoSeleccionado());
+
+        if (tipoProducto == null) {
+
+            mostrarError(
+                    "El tipo de producto seleccionado no existe"
+            );
+
+            return;
+        }
+
+        if (!Boolean.TRUE.equals(tipoProducto.getActivo())) {
+
+            mostrarAdvertencia(
+                    "No se puede asignar un tipo de producto inactivo"
+            );
+
+            return;
+        }
+
         agregarRelacion();
     }
-
 
     public void quitarTipo(
             ProductoTipoProducto relacion) {
@@ -207,11 +221,9 @@ public class ProductoTipoProductoModel
     /* =========================================================
        PROPIEDADES UTILIZADAS POR LA VISTA
        ========================================================= */
-
     public Producto getProducto() {
         return getPrincipal();
     }
-
 
     public void setProducto(
             Producto producto) {
@@ -219,11 +231,9 @@ public class ProductoTipoProductoModel
         setPrincipal(producto);
     }
 
-
     public List<TipoProducto> getTipoProductoList() {
         return getOpcionesDisponibles();
     }
-
 
     public void setTipoProductoList(
             List<TipoProducto> lista) {
@@ -231,11 +241,9 @@ public class ProductoTipoProductoModel
         setOpcionesDisponibles(lista);
     }
 
-
     public String getIdTipoProductoSeleccionado() {
         return getIdOpcionSeleccionada();
     }
-
 
     public void setIdTipoProductoSeleccionado(
             String idTipoProductoSeleccionado) {

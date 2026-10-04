@@ -204,7 +204,7 @@
                         <h:outputText
                             value="Total actual: "
                             style="font-weight: bold;
-                                   margin-right: 0.5rem;"/>
+                            margin-right: 0.5rem;"/>
 
                         <h:outputText
                             value="#{ordenModel.totalConsulta}"
@@ -304,7 +304,10 @@
                             value="#{ordenModel.empleadosRol}"
                             var="empleadoRol"
                             itemLabel="#{empleadoRol.idEmpleado.nombre} #{empleadoRol.idEmpleado.apellido} - #{empleadoRol.idRol.nombre}"
-                            itemValue="#{empleadoRol.idEmpleadoRol.toString()}"/>
+                            itemValue="#{empleadoRol.idEmpleadoRol.toString()}"
+                            itemDisabled="#{not empleadoRol.activo
+                                            or not empleadoRol.idEmpleado.activo
+                                            or not empleadoRol.idRol.activo}"/>
 
                     </p:selectOneMenu>
 
@@ -365,9 +368,9 @@
             <h:panelGroup
                 layout="block"
                 style="padding: 1rem;
-                       border: 1px solid #d6d6d6;
-                       border-radius: 6px;
-                       background-color: #f8f9fa;">
+                border: 1px solid #d6d6d6;
+                border-radius: 6px;
+                background-color: #f8f9fa;">
 
                 <i
                     class="pi pi-info-circle"
@@ -424,7 +427,8 @@
                                 value="#{ordenModel.productosDisponibles}"
                                 var="producto"
                                 itemLabel="#{producto.nombre}"
-                                itemValue="#{producto.idProducto.toString()}"/>
+                                itemValue="#{producto.idProducto.toString()}"
+                                itemDisabled="#{not producto.activo}"/>
 
                             <p:ajax
                                 process="@this"
@@ -602,14 +606,14 @@
                     <h:outputText
                         value="Total actual: "
                         style="font-weight: bold;
-                               font-size: 1.1rem;
-                               margin-right: 0.5rem;"/>
+                        font-size: 1.1rem;
+                        margin-right: 0.5rem;"/>
 
                     <h:outputText
                         id="txtTotalOrden"
                         value="#{ordenModel.totalOrden}"
                         style="font-weight: bold;
-                               font-size: 1.1rem;">
+                        font-size: 1.1rem;">
 
                         <f:convertNumber
                             type="currency"
@@ -786,8 +790,8 @@
                                 action="#{ordenModel.aplicarDescuento}"
                                 process="cmbDescuento"
                                 update=":frmPrincipal:tablaProductosOrden
-                                        :frmPrincipal:txtTotalOrden
-                                        :frmPrincipal:dlgAplicarDescuento"
+                                :frmPrincipal:txtTotalOrden
+                                :frmPrincipal:dlgAplicarDescuento"
                                 oncomplete="PF('dlgAplicarDescuentoWV').show();"
                                 styleClass="ui-button-warning mr-2">
 

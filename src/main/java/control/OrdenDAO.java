@@ -47,10 +47,7 @@ public class OrdenDAO extends DefaultDAO<Orden> {
                 + "FROM EmpleadoRol er "
                 + "JOIN FETCH er.idEmpleado e "
                 + "JOIN FETCH er.idRol r "
-                + "WHERE er.activo = true "
-                + "AND e.activo = true "
-                + "AND r.activo = true "
-                + "AND LOWER(TRIM(r.nombre)) = :nombreRol "
+                + "WHERE LOWER(TRIM(r.nombre)) = :nombreRol "
                 + "ORDER BY e.nombre, e.apellido",
                 EmpleadoRol.class
         )
