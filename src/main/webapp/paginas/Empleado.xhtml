@@ -103,6 +103,10 @@
             id="tabEmpleado"
             activeIndex="#{empleadoModel.indiceTab}">
 
+            <p:ajax
+                event="tabChange"
+                listener="#{empleadoModel.onTabChange}"/>
+
 
             <!-- ================================================== -->
             <!-- TAB 1: DATOS DEL EMPLEADO                          -->

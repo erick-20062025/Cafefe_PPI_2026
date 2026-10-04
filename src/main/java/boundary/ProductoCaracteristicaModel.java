@@ -10,12 +10,14 @@ import control.ProductoCaracteristicaDAO;
 import entity.Caracteristica;
 import entity.Producto;
 import entity.ProductoCaracteristica;
+import entity.TipoCaracteristica;
 import jakarta.annotation.PostConstruct;
 import jakarta.faces.view.ViewScoped;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
 import java.util.List;
 import java.util.UUID;
+import java.util.regex.PatternSyntaxException;
 
 /**
  *
@@ -206,6 +208,77 @@ public class ProductoCaracteristicaModel
     }
 
     public void agregarCaracteristica() {
+
+        if (getIdCaracteristicaSeleccionada() == null
+                || getIdCaracteristicaSeleccionada().isBlank()) {
+
+            mostrarAdvertencia(
+                    "Debe seleccionar una característica"
+            );
+
+            return;
+        }
+
+        if (valorCaracteristica == null
+                || valorCaracteristica.isBlank()) {
+
+            mostrarAdvertencia(
+                    "Debe ingresar un valor para la característica"
+            );
+
+            return;
+        }
+
+        Caracteristica caracteristica
+                = buscarOpcion(
+                        getIdCaracteristicaSeleccionada()
+                );
+
+        if (caracteristica == null) {
+
+            mostrarError(
+                    "La característica seleccionada no existe"
+            );
+
+            return;
+        }
+
+        TipoCaracteristica tipo
+                = caracteristica.getIdTipoCaracteristica();
+
+        if (tipo != null) {
+
+            String expresion
+                    = tipo.getExpresionRegular();
+
+            /*
+         * Si no existe expresión regular,
+         * cualquier valor es permitido.
+             */
+            if (expresion != null
+                    && !expresion.isBlank()) {
+
+                try {
+
+                    if (!valorCaracteristica.matches(expresion)) {
+
+                        mostrarAdvertencia(
+                                "El valor ingresado no cumple con el formato requerido"
+                        );
+
+                        return;
+                    }
+
+                } catch (PatternSyntaxException e) {
+
+                    mostrarError(
+                            "La expresión regular configurada no es válida"
+                    );
+
+                    return;
+                }
+            }
+        }
 
         agregarRelacion();
     }

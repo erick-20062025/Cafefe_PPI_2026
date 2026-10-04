@@ -105,7 +105,8 @@
                     <f:selectItems value="#{caracteristicaModel.tiposCaracteristica}"
                                    var="tipo"
                                    itemLabel="#{tipo.nombre}"
-                                   itemValue="#{tipo}" />
+                                   itemValue="#{tipo}"
+                                   itemDisabled="#{not tipo.activo}" />
 
                 </p:selectOneMenu>
 

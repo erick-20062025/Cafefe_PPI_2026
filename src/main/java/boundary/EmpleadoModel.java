@@ -9,6 +9,7 @@ import jakarta.faces.view.ViewScoped;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
 import java.util.UUID;
+import org.primefaces.event.TabChangeEvent;
 
 @Named("empleadoModel")
 @ViewScoped
@@ -139,4 +140,12 @@ public class EmpleadoModel extends AbstractModel<Empleado> {
     public void setIndiceTab(int indiceTab) {
         this.indiceTab = indiceTab;
     }
+    public void onTabChange(TabChangeEvent event) {
+
+if ("Asignar roles".equals(event.getTab().getTitle())) {
+    this.indiceTab = 1;
+} else {
+    this.indiceTab = 0;
+}
+}
 }

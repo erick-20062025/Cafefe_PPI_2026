@@ -13,6 +13,7 @@ import jakarta.faces.view.ViewScoped;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
 import java.util.UUID;
+import org.primefaces.event.TabChangeEvent;
 
 /**
  *
@@ -34,7 +35,9 @@ public class ProductoModel extends AbstractModel<Producto> {
     @PostConstruct
     public void init() {
         cargarDatos();
+
     }
+    private int indiceTab;
 
     @Override
     protected DAOInterface<Producto> getDAO() {
@@ -58,45 +61,33 @@ public class ProductoModel extends AbstractModel<Producto> {
      */
     @Override
     public void btnNuevoHandler(ActionEvent ae) {
-
         super.btnNuevoHandler(ae);
 
+        this.indiceTab = 0;
         limpiarRelaciones();
     }
 
-    /*
-     * Cuando seleccionamos un producto,
-     * cargamos todas sus relaciones.
-     */
     @Override
     public void onRowSelect() {
-
         super.onRowSelect();
 
+        this.indiceTab = 0;
         cargarRelacionesProducto();
     }
 
-    /*
-     * Si se quita la selección,
-     * limpiamos también los modelos relacionados.
-     */
     @Override
     public void onRowUnselect() {
-
         super.onRowUnselect();
 
+        this.indiceTab = 0;
         limpiarRelaciones();
     }
 
-    /*
-     * Al cancelar limpiamos Producto
-     * y todos sus modelos relacionados.
-     */
     @Override
     public void btnCancelarHandler(ActionEvent ae) {
-
         super.btnCancelarHandler(ae);
 
+        this.indiceTab = 0;
         limpiarRelaciones();
     }
 
@@ -143,5 +134,22 @@ public class ProductoModel extends AbstractModel<Producto> {
     public boolean isPuedeGestionarTipos() {
 
         return isPuedeGestionarRelaciones();
+    }
+
+    public void onTabChange(TabChangeEvent event) {
+
+        if ("Relaciones".equals(event.getTab().getTitle())) {
+            this.indiceTab = 1;
+        } else {
+            this.indiceTab = 0;
+        }
+    }
+
+    public int getIndiceTab() {
+        return indiceTab;
+    }
+
+    public void setIndiceTab(int indiceTab) {
+        this.indiceTab = indiceTab;
     }
 }

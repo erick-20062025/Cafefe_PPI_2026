@@ -11,6 +11,7 @@ import jakarta.inject.Inject;
 import jakarta.inject.Named;
 import java.util.List;
 import java.util.UUID;
+import jakarta.faces.event.ActionEvent;
 
 @Named("caracteristicaModel")
 @ViewScoped
@@ -44,6 +45,30 @@ public class CaracteristicaModel extends AbstractModel<Caracteristica> {
         caracteristica.setActivo(true);
 
         return caracteristica;
+    }
+
+    @Override
+    public void btnGuardarHandler(ActionEvent ae) {
+
+        if (registro == null) {
+            return;
+        }
+
+        TipoCaracteristica tipo = registro.getIdTipoCaracteristica();
+
+        if (tipo == null) {
+            mostrarAdvertencia("Debe seleccionar un tipo de característica");
+            return;
+        }
+
+        if (!Boolean.TRUE.equals(tipo.getActivo())) {
+            mostrarAdvertencia(
+                    "No se puede asignar un tipo de característica inactivo"
+            );
+            return;
+        }
+
+        super.btnGuardarHandler(ae);
     }
 
     public List<TipoCaracteristica> getTiposCaracteristica() {

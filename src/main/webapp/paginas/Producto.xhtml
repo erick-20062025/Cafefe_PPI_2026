@@ -113,9 +113,12 @@
     <ui:define name="formulario">
 
         <p:tabView
-            id="tabProducto">
+            id="tabProducto"
+            activeIndex="#{productoModel.indiceTab}">
 
-
+            <p:ajax
+                event="tabChange"
+                listener="#{productoModel.onTabChange}"/>
             <!-- ================================================== -->
             <!-- TAB 1: DATOS DEL PRODUCTO                          -->
             <!-- ================================================== -->
@@ -330,7 +333,8 @@
                                 value="#{relacion.fechaCreacion}">
 
                                 <f:convertDateTime
-                                    pattern="dd/MM/yyyy HH:mm"/>
+                                    pattern="dd/MM/yyyy HH:mm"
+                                    timeZone="America/El_Salvador"/>
 
                             </h:outputText>
 
