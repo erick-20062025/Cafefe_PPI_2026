@@ -33,16 +33,19 @@ public class OrdenDAOTest {
     }
 
     @Test
-    void debeConsultarCamarerosActivosYCompatibilidad() {
+    void debeConsultarEmpleadosConRolCamareroYMantenerCompatibilidad() {
         TypedQuery<EmpleadoRol> query = mock(TypedQuery.class);
-        when(em.createQuery("SELECT er FROM EmpleadoRol er JOIN FETCH er.idEmpleado e JOIN FETCH er.idRol r WHERE er.activo = true AND e.activo = true AND r.activo = true AND LOWER(TRIM(r.nombre)) = :nombreRol ORDER BY e.nombre, e.apellido", EmpleadoRol.class)).thenReturn(query);
+        String jpql = "SELECT er FROM EmpleadoRol er JOIN FETCH er.idEmpleado e JOIN FETCH er.idRol r WHERE LOWER(TRIM(r.nombre)) = :nombreRol ORDER BY e.nombre, e.apellido";
+        when(em.createQuery(jpql, EmpleadoRol.class)).thenReturn(query);
         when(query.setParameter("nombreRol", "camarero")).thenReturn(query);
         List<EmpleadoRol> empleados = List.of(new EmpleadoRol());
         when(query.getResultList()).thenReturn(empleados, empleados, List.of());
         assertSame(empleados, dao.findCamarerosActivos());
         assertSame(empleados, dao.findEmpleadosRolActivos());
         assertTrue(dao.findCamarerosActivos().isEmpty());
+        verify(em, times(3)).createQuery(jpql, EmpleadoRol.class);
         verify(query, times(3)).setParameter("nombreRol", "camarero");
+        verify(query, times(3)).getResultList();
     }
 
     @Test
