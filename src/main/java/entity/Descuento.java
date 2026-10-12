@@ -20,6 +20,7 @@ import java.io.Serializable;
 import java.util.Collection;
 import java.util.Date;
 import java.util.UUID;
+import jakarta.json.bind.annotation.JsonbTransient;
 
 /**
  *
@@ -113,6 +114,7 @@ public class Descuento implements Serializable {
         this.observaciones = observaciones;
     }
 
+    @JsonbTransient
     public Collection<DescuentoProducto> getDescuentoProductoCollection() {
         return descuentoProductoCollection;
     }
@@ -145,5 +147,5 @@ public class Descuento implements Serializable {
     public String toString() {
         return "entity.Descuento[ idDescuento=" + idDescuento + " ]";
     }
-    
+
 }
