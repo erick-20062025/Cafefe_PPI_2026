@@ -1,3 +1,4 @@
+
 package boundary;
 
 import control.DAOInterface;
@@ -12,14 +13,24 @@ import jakarta.inject.Inject;
 import jakarta.inject.Named;
 import java.util.List;
 import java.util.UUID;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
+/**
+ * Modelo JSF para asignar y quitar roles de empleados.
+ *
+ * Reutiliza AbstractRelacionModel y comunica los
+ * errores de negocio mediante mensajes de la vista.
+ */
 @Named("empleadoRolModel")
 @ViewScoped
 public class EmpleadoRolModel
-        extends AbstractRelacionModel<
-                EmpleadoRol, Empleado, Rol> {
+        extends AbstractRelacionModel<EmpleadoRol, Empleado, Rol> {
 
     private static final long serialVersionUID = 1L;
+
+    private static final Logger LOGGER =
+            Logger.getLogger(EmpleadoRolModel.class.getName());
 
     @Inject
     private EmpleadoRolDAO empleadoRolDAO;
@@ -47,31 +58,28 @@ public class EmpleadoRolModel
             Empleado empleado) {
 
         return empleadoRolDAO.findByIdEmpleado(
-                empleado.getIdEmpleado()
-        );
+                empleado.getIdEmpleado());
     }
 
     @Override
-    protected boolean principalValido(
-            Empleado empleado) {
-
+    protected boolean principalValido(Empleado empleado) {
         return empleado != null
                 && empleado.getIdEmpleado() != null;
     }
 
+    /**
+     * Busca un rol mediante el UUID recibido desde JSF.
+     */
     @Override
     protected Rol buscarOpcion(String idOpcion) {
 
-        if (idOpcion == null
-                || idOpcion.isBlank()) {
+        if (idOpcion == null || idOpcion.isBlank()) {
             return null;
         }
 
         try {
-
-            UUID idRol = UUID.fromString(idOpcion);
-
-            return rolDAO.findById(idRol);
+            UUID id = UUID.fromString(idOpcion);
+            return rolDAO.findById(id);
 
         } catch (IllegalArgumentException e) {
             return null;
@@ -79,23 +87,17 @@ public class EmpleadoRolModel
     }
 
     @Override
-    protected boolean existeRelacion(
-            Empleado empleado,
-            Rol rol) {
-
+    protected boolean existeRelacion(Empleado empleado, Rol rol) {
         return empleadoRolDAO.existeRelacion(
                 empleado.getIdEmpleado(),
-                rol.getIdRol()
-        );
+                rol.getIdRol());
     }
 
     @Override
     protected EmpleadoRol construirRelacion(
-            Empleado empleado,
-            Rol rol) {
+            Empleado empleado, Rol rol) {
 
         EmpleadoRol relacion = new EmpleadoRol();
-
         relacion.setIdEmpleadoRol(UUID.randomUUID());
         relacion.setIdEmpleado(empleado);
         relacion.setIdRol(rol);
@@ -104,6 +106,9 @@ public class EmpleadoRolModel
         return relacion;
     }
 
+    /**
+     * Comprueba que el rol sea asignable.
+     */
     protected boolean opcionValida(Rol rol) {
 
         if (rol == null) {
@@ -111,19 +116,15 @@ public class EmpleadoRolModel
             return false;
         }
 
-        if (!rol.getActivo()) {
+        if (!Boolean.TRUE.equals(rol.getActivo())) {
             mostrarAdvertencia(
-                    "No se puede asignar un rol inactivo"
-            );
+                    "No se puede asignar un rol inactivo");
             return false;
         }
 
         return true;
     }
 
-    /*
-     * Métodos utilizados desde Empleado.xhtml
-     */
     public void cargarRoles() {
         cargarOpciones();
     }
@@ -132,39 +133,133 @@ public class EmpleadoRolModel
         cargarPrincipal(empleado);
     }
 
-    public void agregarRol() {
+/**
+ * Asigna un rol al empleado seleccionado.
+ *
+ * Valida la selección, informa errores de negocio
+ * y registra los fallos inesperados.
+ */
+public void agregarRol() {
 
-    String idRol = getIdOpcionSeleccionada();
+    Empleado empleado = getPrincipal();
 
-    if (idRol == null || idRol.isBlank()) {
+    if (!principalValido(empleado)) {
+        mostrarAdvertencia("Debe seleccionar un empleado");
+        return;
+    }
+
+    String idSeleccionado = getIdOpcionSeleccionada();
+
+    if (idSeleccionado == null
+            || idSeleccionado.isBlank()) {
         mostrarAdvertencia("Debe seleccionar un rol");
         return;
     }
 
-    Rol rol = buscarOpcion(idRol);
+    try {
+        Rol rol = buscarOpcion(idSeleccionado);
 
-    if (rol == null) {
-        mostrarError("El rol seleccionado no existe");
+        if (rol == null) {
+            mostrarError("El rol seleccionado no existe");
+            return;
+        }
+
+        if (!opcionValida(rol)) {
+            return;
+        }
+
+        EmpleadoRol relacion =
+                construirRelacion(empleado, rol);
+
+        empleadoRolDAO.crear(relacion);
+
+    } catch (IllegalArgumentException e) {
+        mostrarAdvertencia(e.getMessage());
         return;
-    }
 
-    if (!Boolean.TRUE.equals(rol.getActivo())) {
-        mostrarAdvertencia(
-                "No se puede asignar un rol inactivo"
+    } catch (RuntimeException e) {
+        LOGGER.log(
+                Level.SEVERE,
+                "Error al asignar rol",
+                e
         );
+
+        mostrarError("No se pudo asignar el rol");
         return;
     }
 
-    agregarRelacion();
+    try {
+        cargarEmpleado(empleado);
+
+    } catch (RuntimeException e) {
+        LOGGER.log(
+                Level.WARNING,
+                "Rol asignado; falló la recarga",
+                e
+        );
+
+        mostrarAdvertencia(
+                "El rol se asignó, pero no se pudo "
+                + "actualizar la lista");
+        return;
+    }
+
+    mostrarExito("Rol asignado correctamente");
 }
 
+
+    /**
+     * Quita una relación únicamente cuando pertenece
+     * al empleado seleccionado.
+     */
     public void quitarRol(EmpleadoRol relacion) {
-        quitarRelacion(relacion);
+
+        Empleado empleado = getPrincipal();
+
+        if (!principalValido(empleado)
+                || relacion == null
+                || relacion.getIdEmpleado() == null
+                || relacion.getIdEmpleado().getIdEmpleado() == null
+                || !empleado.getIdEmpleado().equals(
+                        relacion.getIdEmpleado().getIdEmpleado())) {
+
+            mostrarAdvertencia(
+                    "La asignación no pertenece al empleado seleccionado");
+            return;
+        }
+
+        try {
+
+            empleadoRolDAO.eliminar(relacion);
+
+        } catch (IllegalArgumentException e) {
+
+            mostrarAdvertencia(e.getMessage());
+            return;
+
+        } catch (RuntimeException e) {
+
+            LOGGER.log(Level.SEVERE,
+                    "Error al quitar rol", e);
+            mostrarError("No se pudo quitar el rol");
+            return;
+        }
+
+        try {
+            cargarEmpleado(empleado);
+        } catch (RuntimeException e) {
+
+            LOGGER.log(Level.WARNING,
+                    "Rol quitado; falló la recarga", e);
+            mostrarAdvertencia(
+                    "La asignación se eliminó, pero no se pudo "
+                    + "actualizar la lista");
+            return;
+        }
+
+        mostrarExito("Rol eliminado del empleado");
     }
 
-    /*
-     * Propiedades utilizadas desde la vista
-     */
     public Empleado getEmpleado() {
         return getPrincipal();
     }
@@ -185,9 +280,7 @@ public class EmpleadoRolModel
         return getIdOpcionSeleccionada();
     }
 
-    public void setIdRolSeleccionado(
-            String idRolSeleccionado) {
-
-        setIdOpcionSeleccionada(idRolSeleccionado);
+    public void setIdRolSeleccionado(String idRol) {
+        setIdOpcionSeleccionada(idRol);
     }
 }

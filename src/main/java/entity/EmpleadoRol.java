@@ -26,10 +26,52 @@ import java.util.UUID;
  */
 @Entity
 @Table(name = "empleado_rol")
+
 @NamedQueries({
-    @NamedQuery(name = "EmpleadoRol.findAll", query = "SELECT e FROM EmpleadoRol e"),
-    @NamedQuery(name = "EmpleadoRol.findByActivo", query = "SELECT e FROM EmpleadoRol e WHERE e.activo = :activo"),
-    @NamedQuery(name = "EmpleadoRol.findByObservaciones", query = "SELECT e FROM EmpleadoRol e WHERE e.observaciones = :observaciones")})
+    @NamedQuery(
+            name = "EmpleadoRol.findAll",
+            query = "SELECT er FROM EmpleadoRol er"
+    ),
+    @NamedQuery(
+            name = "EmpleadoRol.findByActivo",
+            query = "SELECT er FROM EmpleadoRol er "
+            + "WHERE er.activo = :activo"
+    ),
+    @NamedQuery(
+            name = "EmpleadoRol.findByObservaciones",
+            query = "SELECT er FROM EmpleadoRol er "
+            + "WHERE er.observaciones = :observaciones"
+    ),
+    @NamedQuery(
+            name = "EmpleadoRol.findByIdEmpleado",
+            query = "SELECT er FROM EmpleadoRol er "
+            + "JOIN FETCH er.idRol r "
+            + "WHERE er.idEmpleado.idEmpleado = :idEmpleado "
+            + "ORDER BY r.nombre"
+    ),
+    @NamedQuery(
+            name = "EmpleadoRol.countByIdEmpleado",
+            query = "SELECT COUNT(er) FROM EmpleadoRol er "
+            + "WHERE er.idEmpleado.idEmpleado = :idEmpleado"
+    ),
+    @NamedQuery(
+            name = "EmpleadoRol.countByEmpleadoAndRol",
+            query = "SELECT COUNT(er) FROM EmpleadoRol er "
+            + "WHERE er.idEmpleado.idEmpleado = :idEmpleado "
+            + "AND er.idRol.idRol = :idRol"
+    ),
+    @NamedQuery(
+            name = "EmpleadoRol.countOrdenes",
+            query = "SELECT COUNT(o) FROM Orden o "
+            + "WHERE o.idEmpleadoRol.idEmpleadoRol = :idEmpleadoRol"
+    ),
+    @NamedQuery(
+            name = "EmpleadoRol.countFacturas",
+            query = "SELECT COUNT(f) FROM Factura f "
+            + "WHERE f.idEmpleadoRol.idEmpleadoRol = :idEmpleadoRol"
+    )
+})
+
 public class EmpleadoRol implements Serializable {
 
     private static final long serialVersionUID = 1L;
@@ -141,5 +183,5 @@ public class EmpleadoRol implements Serializable {
     public String toString() {
         return "entity.EmpleadoRol[ idEmpleadoRol=" + idEmpleadoRol + " ]";
     }
-    
+
 }

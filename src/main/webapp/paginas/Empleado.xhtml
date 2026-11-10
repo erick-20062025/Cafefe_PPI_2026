@@ -142,7 +142,7 @@
                             value="#{empleadoModel.registro.nombre}"
                             required="true"
                             requiredMessage="El campo Nombre es obligatorio"
-                            validatorMessage="El nombre debe contener al menos 2 caracteres"
+                            validatorMessage="El nombre debe tener entre 2 y 255 caracteres"
                             maxlength="255"
                             style="width: 100%;">
 
@@ -168,7 +168,7 @@
                             value="#{empleadoModel.registro.apellido}"
                             required="true"
                             requiredMessage="El campo Apellido es obligatorio"
-                            validatorMessage="El apellido debe contener al menos 2 caracteres"
+                            validatorMessage="El apellido debe tener entre 2 y 255 caracteres"
                             maxlength="255"
                             style="width: 100%;">
 
@@ -298,7 +298,9 @@
                                         icon="pi pi-plus"
                                         action="#{empleadoRolModel.agregarRol}"
                                         process="cmbRol"
-                                        update="@form" />
+                                        update="@form" 
+                                        disabled="#{not empleadoModel.registro.activo}" 
+                                        />
 
                                     <p:commandButton
                                         value="Actualizar roles"
