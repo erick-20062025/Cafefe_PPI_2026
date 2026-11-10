@@ -17,8 +17,13 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+
 /**
  *
  * @author erick
@@ -52,5 +57,29 @@ public class RolModelTest {
         assertEquals("Cajero", rolModel.getModelo().get(1).getNombre());
 
         verify(rolDAO).findAll();
+    }
+
+    @Test
+    void nuevoRolDebeTenerUUIDYEstarActivo() {
+
+        rolModel.btnNuevoHandler(null);
+
+        Rol rol = rolModel.getRegistro();
+
+        assertNotNull(rol);
+        assertNotNull(rol.getIdRol());
+        assertTrue(rol.getActivo());
+        assertTrue(rolModel.isNuevo());
+    }
+
+    @Test
+    void cancelarNuevoRolDebeLimpiarFormulario() {
+
+        rolModel.btnNuevoHandler(null);
+
+        rolModel.btnCancelarHandler(null);
+
+        assertNull(rolModel.getRegistro());
+        assertFalse(rolModel.isNuevo());
     }
 }
