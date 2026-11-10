@@ -11,6 +11,7 @@ import java.util.UUID;
 import jakarta.faces.event.ActionEvent;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
+import validation.TipoCaracteristicaValidator;
 
 @Named("tipoCaracteristicaModel")
 @ViewScoped
@@ -39,30 +40,21 @@ public class TipoCaracteristicaModel extends AbstractModel<TipoCaracteristica> {
 
         return tipoCaracteristica;
     }
+
     @Override
-public void btnGuardarHandler(ActionEvent ae) {
-
-    if (registro == null) {
-        return;
-    }
-
-    String expresion = registro.getExpresionRegular();
-
-    if (expresion != null && !expresion.isBlank()) {
-
-        try {
-            Pattern.compile(expresion);
-
-        } catch (PatternSyntaxException e) {
-
-            mostrarAdvertencia(
-                    "La expresión regular ingresada no es válida"
-            );
-
+    public void btnGuardarHandler(ActionEvent ae) {
+        if (registro == null) {
             return;
         }
+
+        try {
+            TipoCaracteristicaValidator.validar(registro);
+        } catch (IllegalArgumentException e) {
+            mostrarAdvertencia(e.getMessage());
+            return;
+        }
+
+        super.btnGuardarHandler(ae);
     }
 
-    super.btnGuardarHandler(ae);
-}
 }
