@@ -25,6 +25,7 @@ import java.util.UUID;
 @Entity
 @Table(name = "caja")
 
+
 @NamedQueries({
     @NamedQuery(
         name = "Caja.findAll",
