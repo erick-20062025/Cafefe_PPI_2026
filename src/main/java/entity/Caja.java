@@ -24,11 +24,31 @@ import java.util.UUID;
  */
 @Entity
 @Table(name = "caja")
+
 @NamedQueries({
-    @NamedQuery(name = "Caja.findAll", query = "SELECT c FROM Caja c"),
-    @NamedQuery(name = "Caja.findByNombre", query = "SELECT c FROM Caja c WHERE c.nombre = :nombre"),
-    @NamedQuery(name = "Caja.findByActivo", query = "SELECT c FROM Caja c WHERE c.activo = :activo"),
-    @NamedQuery(name = "Caja.findByObservaciones", query = "SELECT c FROM Caja c WHERE c.observaciones = :observaciones")})
+    @NamedQuery(
+        name = "Caja.findAll",
+        query = "SELECT c FROM Caja c"
+    ),
+    @NamedQuery(
+        name = "Caja.findByNombre",
+        query = "SELECT c FROM Caja c WHERE c.nombre = :nombre"
+    ),
+    @NamedQuery(
+        name = "Caja.findByActivo",
+        query = "SELECT c FROM Caja c WHERE c.activo = :activo"
+    ),
+    @NamedQuery(
+        name = "Caja.findByObservaciones",
+        query = "SELECT c FROM Caja c WHERE c.observaciones = :observaciones"
+    ),
+    @NamedQuery(
+        name = "Caja.countFacturas",
+        query = "SELECT COUNT(f) FROM Factura f "
+              + "WHERE f.idCaja.idCaja = :idCaja"
+    )
+})
+
 public class Caja implements Serializable {
 
     private static final long serialVersionUID = 1L;
