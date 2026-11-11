@@ -3,7 +3,7 @@ package boundary;
 import control.DAOInterface;
 import control.OrdenDAO;
 import control.ProductoDAO;
-import entity.DescuentoProducto;
+import entity.Descuento;
 import entity.EmpleadoRol;
 import entity.Orden;
 import entity.OrdenProducto;
@@ -21,1314 +21,412 @@ import java.util.Date;
 import java.util.List;
 import java.util.TimeZone;
 import java.util.UUID;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
+/** Controlador de órdenes: selección de productos y promoción GENERAL. */
 @Named("ordenModel")
 @ViewScoped
 public class OrdenModel extends AbstractModel<Orden> {
 
     private static final long serialVersionUID = 1L;
+    private static final Logger LOGGER = Logger.getLogger(OrdenModel.class.getName());
+    private static final TimeZone ZONA = TimeZone.getTimeZone("America/El_Salvador");
 
-    private static final String ZONA_HORARIA
-            = "America/El_Salvador";
+    @Inject private OrdenDAO ordenDAO;
+    @Inject private ProductoDAO productoDAO;
 
-    @Inject
-    private OrdenDAO ordenDAO;
-
-    @Inject
-    private ProductoDAO productoDAO;
-
-    /*
-     * =========================================================
-     * DATOS GENERALES
-     * =========================================================
-     */
-    private List<EmpleadoRol> empleadosRol;
-    private List<Producto> productosDisponibles;
-    private List<OrdenProducto> productosOrden;
+    private List<EmpleadoRol> empleadosRol = new ArrayList<>();
+    private List<Producto> productosDisponibles = new ArrayList<>();
+    private List<OrdenProducto> productosOrden = new ArrayList<>();
+    private List<Descuento> promocionesDisponibles = new ArrayList<>();
+    private List<OrdenProducto> productosConsulta = new ArrayList<>();
 
     private String idEmpleadoRolSeleccionado;
     private String idProductoSeleccionado;
-
+    private String idPromocionSeleccionada;
     private BigDecimal precioProducto;
     private String observacionesProducto;
-
-    /*
-     * =========================================================
-     * DESCUENTOS
-     * =========================================================
-     */
-    private OrdenProducto productoOrdenSeleccionado;
-
-    private List<DescuentoProducto> descuentosAplicables;
-
-    private String idDescuentoProductoSeleccionado;
-
-    /*
-     * =========================================================
-     * CONSULTA
-     * =========================================================
-     */
     private Orden ordenSeleccionadaConsulta;
 
-    private List<OrdenProducto> productosConsulta;
-
-    /*
-     * =========================================================
-     * INICIALIZACIÓN
-     * =========================================================
-     */
     @PostConstruct
     public void init() {
-
         cargarDatos();
         cargarEmpleadosRol();
         cargarProductosDisponibles();
-
-        productosOrden = new ArrayList<>();
-        productosConsulta = new ArrayList<>();
-        descuentosAplicables = new ArrayList<>();
     }
 
-    @Override
-    protected DAOInterface<Orden> getDAO() {
-        return ordenDAO;
-    }
+    @Override protected DAOInterface<Orden> getDAO() { return ordenDAO; }
 
-    /*
-     * =========================================================
-     * NUEVA ORDEN
-     * =========================================================
-     */
     @Override
     protected Orden crearNuevoRegistro() {
-
         Orden orden = new Orden();
-
-        orden.setIdOrden(
-                UUID.randomUUID()
-        );
-
-        /*
-         * Hoy aparece inicialmente seleccionado.
-         * El usuario puede escoger hoy o una fecha futura.
-         */
-        orden.setFechaCreacion(
-                obtenerFechaActual()
-        );
-
+        orden.setIdOrden(UUID.randomUUID());
+        orden.setFechaCreacion(inicioDiaActual());
         return orden;
     }
 
     @Override
     public void btnNuevoHandler(ActionEvent ae) {
-
         super.btnNuevoHandler(ae);
-
+        limpiarFormulario();
+        productosOrden = new ArrayList<>();
         cargarEmpleadosRol();
         cargarProductosDisponibles();
-
-        limpiarDatosFormulario();
-
-        productosOrden = new ArrayList<>();
     }
 
-    /*
-     * =========================================================
-     * SELECCIÓN
-     * =========================================================
-     */
     @Override
     public void onRowSelect() {
-
         super.onRowSelect();
-
-        prepararOrdenSeleccionada();
+        ordenSeleccionadaConsulta = registro;
+        idEmpleadoRolSeleccionado = registro != null && registro.getIdEmpleadoRol() != null
+                && registro.getIdEmpleadoRol().getIdEmpleadoRol() != null
+                ? registro.getIdEmpleadoRol().getIdEmpleadoRol().toString() : null;
+        idPromocionSeleccionada = null;
     }
 
     @Override
     public void onRowUnselect() {
-
         super.onRowUnselect();
-
-        ordenSeleccionadaConsulta = null;
-
-        limpiarDatosFormulario();
-
+        limpiarFormulario();
         productosOrden = new ArrayList<>();
-        productosConsulta = new ArrayList<>();
     }
 
-    private void prepararOrdenSeleccionada() {
-
-        if (registro == null) {
-
-            idEmpleadoRolSeleccionado = null;
-            return;
-        }
-
-        ordenSeleccionadaConsulta = registro;
-
-        if (registro.getIdEmpleadoRol() != null
-                && registro.getIdEmpleadoRol()
-                        .getIdEmpleadoRol() != null) {
-
-            idEmpleadoRolSeleccionado
-                    = registro.getIdEmpleadoRol()
-                            .getIdEmpleadoRol()
-                            .toString();
-
-        } else {
-
-            idEmpleadoRolSeleccionado = null;
-        }
-    }
-
-    /*
-     * =========================================================
-     * MODIFICAR
-     * =========================================================
-     */
     @Override
     public void btnModificarHandler(ActionEvent ae) {
-
-        if (registro == null
-                || registro.getIdOrden() == null) {
-
-            mostrarAdvertencia(
-                    "Debe seleccionar una orden"
-            );
-
+        if (registro == null || registro.getIdOrden() == null) {
+            mostrarAdvertencia("Debe seleccionar una orden");
             return;
         }
-
-        super.btnModificarHandler(ae);
-
-        productosOrden
-                = ordenDAO.findProductosByOrden(
-                        registro.getIdOrden()
-                );
-
-        cargarProductosDisponibles();
-
-        limpiarSeleccionProducto();
-        limpiarSeleccionDescuento();
+        try {
+            super.btnModificarHandler(ae);
+            productosOrden = ordenDAO.findProductosByOrden(registro.getIdOrden());
+            cargarPromociones();
+            cargarProductosDisponibles();
+            limpiarSeleccionProducto();
+        } catch (RuntimeException e) {
+            LOGGER.log(Level.SEVERE, "No se pudo cargar la orden para edición", e);
+            mostrarError("No se pudo cargar el detalle de la orden");
+        }
     }
 
-    /*
-     * =========================================================
-     * GUARDAR
-     * =========================================================
+    /**
+     * La cabecera solo se crea. La fecha y el camarero se conservan en edición;
+     * los productos y descuentos se guardan en operaciones independientes.
      */
     @Override
     public void btnGuardarHandler(ActionEvent ae) {
-
-        try {
-
-            if (registro == null) {
-                return;
-            }
-
-            if (registro.getFechaCreacion() == null) {
-
-                mostrarAdvertencia(
-                        "Debe indicar la fecha de la orden"
-                );
-
-                return;
-            }
-
-            /*
-             * La restricción de fecha se valida únicamente
-             * durante la creación.
-             *
-             * Una orden ya guardada conserva su fecha original.
-             */
-            if (nuevo
-                    && esFechaAnteriorAHoy(
-                            registro.getFechaCreacion()
-                    )) {
-
-                mostrarAdvertencia(
-                        "La fecha de la orden no puede ser anterior a hoy"
-                );
-
-                return;
-            }
-
-            /*
-             * CREACIÓN
-             */
-            if (nuevo) {
-
-                if (registro.getIdEmpleadoRol() == null
-                        || registro.getIdEmpleadoRol()
-                                .getIdEmpleadoRol() == null) {
-
-                    mostrarAdvertencia(
-                            "Debe seleccionar un empleado con rol camarero"
-                    );
-
-                    return;
-                }
-
-                EmpleadoRol camarero
-                        = ordenDAO.findCamareroActivoById(
-                                registro.getIdEmpleadoRol()
-                                        .getIdEmpleadoRol()
-                        );
-
-                if (camarero == null) {
-
-                    mostrarAdvertencia(
-                            "El empleado seleccionado no posee "
-                            + "un rol camarero activo"
-                    );
-
-                    return;
-                }
-
-                registro.setIdEmpleadoRol(
-                        camarero
-                );
-
-                /*
-                 * Solo se crea la cabecera.
-                 * Los productos se agregan posteriormente
-                 * desde Editar.
-                 */
-                ordenDAO.crear(
-                        registro
-                );
-
-                mostrarExito(
-                        "Orden creada correctamente"
-                );
-
-            } else {
-
-                /*
-                 * Empleado y fecha están bloqueados
-                 * durante edición.
-                 */
-                ordenDAO.modificar(
-                        registro
-                );
-
-                mostrarExito(
-                        "Orden modificada correctamente"
-                );
-            }
-
-            limpiarEstado();
-
-            limpiarDatosFormulario();
-
-            productosOrden = new ArrayList<>();
-
-            cargarDatos();
-
-        } catch (Exception e) {
-
-            e.printStackTrace();
-
-            mostrarError(
-                    nuevo
-                            ? "No se pudo crear la orden"
-                            : "No se pudo modificar la orden"
-            );
+        if (registro == null) {
+            mostrarAdvertencia("Primero cree o seleccione una orden");
+            return;
         }
+        if (!nuevo) {
+            mostrarExito("Edición finalizada. Los cambios en productos ya fueron guardados");
+            cerrarEdicionYRefrescar();
+            return;
+        }
+        if (registro.getFechaCreacion() == null) {
+            mostrarAdvertencia("Debe indicar la fecha de la orden");
+            return;
+        }
+        if (registro.getIdEmpleadoRol() == null
+                || registro.getIdEmpleadoRol().getIdEmpleadoRol() == null) {
+            mostrarAdvertencia("Debe seleccionar un camarero activo");
+            return;
+        }
+        try {
+            ordenDAO.crear(registro);
+        } catch (IllegalArgumentException e) {
+            mostrarAdvertencia(e.getMessage());
+            return;
+        } catch (RuntimeException e) {
+            LOGGER.log(Level.SEVERE, "Error al crear la orden", e);
+            mostrarError("No se pudo crear la orden");
+            return;
+        }
+        mostrarExito("Orden creada correctamente. Ahora puede editarla y agregar productos");
+        cerrarEdicionYRefrescar();
     }
 
-    /*
-     * =========================================================
-     * CANCELAR
-     * =========================================================
-     */
     @Override
     public void btnCancelarHandler(ActionEvent ae) {
-
         super.btnCancelarHandler(ae);
-
-        limpiarDatosFormulario();
-
+        limpiarFormulario();
         productosOrden = new ArrayList<>();
     }
 
-    /*
-     * =========================================================
-     * ELIMINAR ORDEN
-     * =========================================================
-     */
     @Override
     public void btnEliminarHandler(ActionEvent ae) {
-
-        if (registro == null
-                || registro.getIdOrden() == null) {
-
-            mostrarAdvertencia(
-                    "Debe seleccionar una orden"
-            );
-
+        if (registro == null || registro.getIdOrden() == null) {
+            mostrarAdvertencia("Debe seleccionar una orden");
             return;
         }
-
         try {
+            ordenDAO.eliminar(registro);
+        } catch (IllegalArgumentException e) {
+            mostrarAdvertencia(e.getMessage());
+            return;
+        } catch (RuntimeException e) {
+            LOGGER.log(Level.SEVERE, "Error al eliminar la orden", e);
+            mostrarError("No se pudo eliminar la orden");
+            return;
+        }
+        mostrarExito("Orden eliminada correctamente");
+        cerrarEdicionYRefrescar();
+    }
 
-            long cantidadProductos
-                    = ordenDAO.countProductosByOrden(
-                            registro.getIdOrden()
-                    );
-
-            if (cantidadProductos > 0) {
-
-                mostrarAdvertencia(
-                        "No se puede eliminar la orden porque "
-                        + "todavía tiene productos asociados"
-                );
-
-                return;
-            }
-
-            ordenDAO.eliminar(
-                    registro
-            );
-
-            mostrarExito(
-                    "Orden eliminada correctamente"
-            );
-
-            limpiarEstado();
-
-            ordenSeleccionadaConsulta = null;
-
-            limpiarDatosFormulario();
-
-            productosOrden = new ArrayList<>();
-            productosConsulta = new ArrayList<>();
-
+    private void cerrarEdicionYRefrescar() {
+        limpiarEstado();
+        limpiarFormulario();
+        productosOrden = new ArrayList<>();
+        try {
             cargarDatos();
-
-        } catch (Exception e) {
-
-            e.printStackTrace();
-
-            mostrarError(
-                    "No se pudo eliminar la orden"
-            );
+        } catch (RuntimeException e) {
+            LOGGER.log(Level.WARNING, "Operación guardada pero falló la recarga de órdenes", e);
+            mostrarAdvertencia("Operación realizada, pero no se pudo actualizar la lista");
         }
     }
 
-    /*
-     * =========================================================
-     * EMPLEADO / ROL
-     * =========================================================
-     */
     private void cargarEmpleadosRol() {
-
-        empleadosRol
-                = ordenDAO.findCamarerosActivos();
+        empleadosRol = ordenDAO.findCamarerosActivos();
     }
-
-    public void setIdEmpleadoRolSeleccionado(
-            String idEmpleadoRolSeleccionado) {
-
-        /*
-         * Una orden existente no permite cambiar
-         * el empleado que la tomó.
-         */
-        if (editando && !nuevo) {
-            return;
-        }
-
-        this.idEmpleadoRolSeleccionado
-                = idEmpleadoRolSeleccionado;
-
-        if (registro == null) {
-            return;
-        }
-
-        if (idEmpleadoRolSeleccionado == null
-                || idEmpleadoRolSeleccionado.isBlank()) {
-
-            registro.setIdEmpleadoRol(null);
-
-            return;
-        }
-
-        try {
-
-            UUID id
-                    = UUID.fromString(
-                            idEmpleadoRolSeleccionado
-                    );
-
-            EmpleadoRol empleadoRol
-                    = ordenDAO.findCamareroActivoById(
-                            id
-                    );
-
-            if (empleadoRol == null) {
-
-                registro.setIdEmpleadoRol(null);
-
-                mostrarAdvertencia(
-                        "Solo puede seleccionar empleados "
-                        + "con rol camarero activo"
-                );
-
-                return;
-            }
-
-            registro.setIdEmpleadoRol(
-                    empleadoRol
-            );
-
-        } catch (IllegalArgumentException e) {
-
-            registro.setIdEmpleadoRol(null);
-
-            mostrarAdvertencia(
-                    "El empleado seleccionado no es válido"
-            );
-        }
-    }
-
-    /*
-     * =========================================================
-     * PRODUCTOS DISPONIBLES
-     * =========================================================
-     */
     private void cargarProductosDisponibles() {
-
-        productosDisponibles
-                = productoDAO.findAll();
+        productosDisponibles = productoDAO.findAll();
     }
 
-    public void setIdProductoSeleccionado(
-            String idProductoSeleccionado) {
+    /** Se ejecuta al seleccionar el camarero, sin permitir cambios al editar. */
+    public void setIdEmpleadoRolSeleccionado(String valor) {
+        if (editando && !nuevo) return;
+        idEmpleadoRolSeleccionado = valor;
+        if (registro == null) return;
+        if (valor == null || valor.isBlank()) {
+            registro.setIdEmpleadoRol(null);
+            return;
+        }
+        try {
+            EmpleadoRol seleccionado = ordenDAO.findCamareroActivoById(UUID.fromString(valor));
+            registro.setIdEmpleadoRol(seleccionado);
+            if (seleccionado == null) mostrarAdvertencia("El camarero no está activo");
+        } catch (IllegalArgumentException e) {
+            registro.setIdEmpleadoRol(null);
+            mostrarAdvertencia("Seleccione un camarero válido");
+        } catch (RuntimeException e) {
+            LOGGER.log(Level.SEVERE, "Error al verificar camarero", e);
+            registro.setIdEmpleadoRol(null);
+            mostrarError("No se pudo consultar el camarero");
+        }
+    }
 
-        this.idProductoSeleccionado
-                = idProductoSeleccionado;
-
+    /** Al elegir un producto, previsualiza su precio sugerido. */
+    public void setIdProductoSeleccionado(String valor) {
+        idProductoSeleccionado = valor;
         precioProducto = null;
-
-        if (idProductoSeleccionado == null
-                || idProductoSeleccionado.isBlank()) {
-
-            return;
-        }
-
+        if (valor == null || valor.isBlank()) return;
         try {
-
-            UUID id
-                    = UUID.fromString(
-                            idProductoSeleccionado
-                    );
-
-            Producto producto
-                    = productoDAO.findById(id);
-
-            if (producto != null
-                    && Boolean.TRUE.equals(
-                            producto.getActivo()
-                    )) {
-
-                precioProducto
-                        = producto.getPrecioSugerido();
+            Producto producto = productoDAO.findById(UUID.fromString(valor));
+            if (producto != null && Boolean.TRUE.equals(producto.getActivo())) {
+                precioProducto = producto.getPrecioSugerido();
             }
-
         } catch (IllegalArgumentException e) {
-
-            precioProducto = null;
+            mostrarAdvertencia("Seleccione un producto válido");
+        } catch (RuntimeException e) {
+            LOGGER.log(Level.SEVERE, "Error al consultar producto", e);
+            mostrarError("No se pudo consultar el producto");
         }
     }
 
-    /*
-     * =========================================================
-     * AGREGAR PRODUCTO
-     * =========================================================
-     */
+    /** Agrega una fila; permite repetir productos en una orden. */
     public void agregarProducto() {
-
-        if (registro == null
-                || registro.getIdOrden() == null
-                || nuevo
-                || !editando) {
-
-            mostrarAdvertencia(
-                    "Debe editar una orden guardada "
-                    + "para agregar productos"
-            );
-
+        if (!isPuedeGestionarProductos()) {
+            mostrarAdvertencia("Debe editar una orden guardada");
             return;
         }
-
-        if (idProductoSeleccionado == null
-                || idProductoSeleccionado.isBlank()) {
-
-            mostrarAdvertencia(
-                    "Debe seleccionar un producto"
-            );
-
+        if (idProductoSeleccionado == null || idProductoSeleccionado.isBlank()) {
+            mostrarAdvertencia("Debe seleccionar un producto");
             return;
         }
-
         try {
-
-            UUID idProducto
-                    = UUID.fromString(
-                            idProductoSeleccionado
-                    );
-
-            Producto producto
-                    = productoDAO.findById(
-                            idProducto
-                    );
-
-            if (producto == null) {
-
-                mostrarAdvertencia(
-                        "El producto seleccionado no existe"
-                );
-
+            Producto producto = productoDAO.findById(UUID.fromString(idProductoSeleccionado));
+            if (producto == null || !Boolean.TRUE.equals(producto.getActivo())) {
+                mostrarAdvertencia("El producto no existe o está inactivo");
                 return;
             }
-
-            if (!Boolean.TRUE.equals(
-                    producto.getActivo())) {
-
-                mostrarAdvertencia(
-                        "El producto seleccionado está inactivo"
-                );
-
-                return;
-            }
-
-            BigDecimal precio
-                    = producto.getPrecioSugerido();
-
-            if (precio == null
-                    || precio.compareTo(
-                            BigDecimal.ZERO
-                    ) < 0) {
-
-                mostrarAdvertencia(
-                        "El producto no tiene un precio sugerido válido"
-                );
-
-                return;
-            }
-
-            OrdenProducto ordenProducto
-                    = new OrdenProducto();
-
-            ordenProducto.setIdOrdenProducto(
-                    UUID.randomUUID()
-            );
-
-            ordenProducto.setIdOrden(
-                    registro
-            );
-
-            ordenProducto.setIdProducto(
-                    producto
-            );
-
-            ordenProducto.setPrecio(
-                    precio
-            );
-
-            ordenProducto.setObservaciones(
-                    observacionesProducto
-            );
-
-            ordenDAO.agregarProducto(
-                    ordenProducto
-            );
-
-            recargarProductosOrden();
-
-            limpiarSeleccionProducto();
-            limpiarSeleccionDescuento();
-
-            mostrarExito(
-                    "Producto agregado a la orden"
-            );
-
+            OrdenProducto fila = new OrdenProducto(UUID.randomUUID());
+            fila.setIdOrden(registro);
+            fila.setIdProducto(producto);
+            fila.setPrecio(producto.getPrecioSugerido());
+            fila.setObservaciones(observacionesProducto);
+            ordenDAO.agregarProducto(fila);
         } catch (IllegalArgumentException e) {
-
-            mostrarAdvertencia(
-                    "El producto seleccionado no es válido"
-            );
-
-        } catch (Exception e) {
-
-            e.printStackTrace();
-
-            mostrarError(
-                    "No se pudo agregar el producto"
-            );
+            mostrarAdvertencia(e.getMessage());
+            return;
+        } catch (RuntimeException e) {
+            LOGGER.log(Level.SEVERE, "Error al agregar producto", e);
+            mostrarError("No se pudo agregar el producto");
+            return;
         }
+        mostrarExito("Producto agregado a la orden");
+        limpiarSeleccionProducto();
+        recargarProductosYPromociones();
     }
 
-    /*
-     * =========================================================
-     * QUITAR PRODUCTO
-     * =========================================================
-     */
-    public void quitarProducto(
-            OrdenProducto ordenProducto) {
-
-        if (registro == null
-                || !editando
-                || nuevo) {
-
-            mostrarAdvertencia(
-                    "Debe editar la orden para quitar productos"
-            );
-
+    /** Quita una fila si no está facturada. */
+    public void quitarProducto(OrdenProducto detalle) {
+        if (!isPuedeGestionarProductos() || detalle == null) {
+            mostrarAdvertencia("Debe seleccionar una fila de una orden en edición");
             return;
         }
-
-        if (ordenProducto == null) {
+        if (detalle.getIdOrden() == null || registro.getIdOrden() == null
+                || !registro.getIdOrden().equals(detalle.getIdOrden().getIdOrden())) {
+            mostrarAdvertencia("El producto no pertenece a la orden seleccionada");
             return;
         }
-
         try {
-
-            ordenDAO.eliminarProducto(
-                    ordenProducto
-            );
-
-            recargarProductosOrden();
-
-            limpiarSeleccionProducto();
-            limpiarSeleccionDescuento();
-
-            mostrarExito(
-                    "Producto eliminado de la orden"
-            );
-
-        } catch (Exception e) {
-
-            e.printStackTrace();
-
-            mostrarError(
-                    "No se pudo eliminar el producto de la orden"
-            );
-        }
-    }
-
-    /*
-     * =========================================================
-     * SELECCIONAR PRODUCTO PARA DESCUENTO
-     * =========================================================
-     */
-    public void seleccionarProductoParaDescuento(
-            OrdenProducto ordenProducto) {
-
-        limpiarSeleccionDescuento();
-
-        if (registro == null
-                || registro.getFechaCreacion() == null
-                || ordenProducto == null
-                || ordenProducto.getIdProducto() == null
-                || ordenProducto.getIdProducto()
-                        .getIdProducto() == null) {
-
-            return;
-        }
-
-        productoOrdenSeleccionado
-                = ordenProducto;
-
-        /*
-         * Únicamente se recuperan descuentos:
-         *
-         * - asociados al producto;
-         * - válidos para la fecha de la orden.
-         */
-        descuentosAplicables
-                = ordenDAO.findDescuentosAplicables(
-                        ordenProducto.getIdProducto()
-                                .getIdProducto(),
-                        registro.getFechaCreacion()
-                );
-
-        if (descuentosAplicables == null) {
-
-            descuentosAplicables
-                    = new ArrayList<>();
-        }
-
-        if (descuentosAplicables.isEmpty()) {
-
-            mostrarAdvertencia(
-                    "Este producto no tiene descuentos "
-                    + "aplicables para la fecha de la orden"
-            );
-        }
-    }
-
-    /*
-     * =========================================================
-     * APLICAR DESCUENTO
-     * =========================================================
-     */
-    public void aplicarDescuento() {
-
-        if (registro == null
-                || !editando
-                || nuevo) {
-
-            mostrarAdvertencia(
-                    "Debe editar una orden para aplicar descuentos"
-            );
-
-            return;
-        }
-
-        if (productoOrdenSeleccionado == null) {
-
-            mostrarAdvertencia(
-                    "Debe seleccionar un producto de la orden"
-            );
-
-            return;
-        }
-
-        if (idDescuentoProductoSeleccionado == null
-                || idDescuentoProductoSeleccionado.isBlank()) {
-
-            mostrarAdvertencia(
-                    "Debe seleccionar un descuento"
-            );
-
-            return;
-        }
-
-        try {
-
-            UUID idDescuentoProducto
-                    = UUID.fromString(
-                            idDescuentoProductoSeleccionado
-                    );
-
-            /*
-             * El descuento debe formar parte de la lista
-             * previamente validada por producto + fecha.
-             */
-            DescuentoProducto descuentoProducto
-                    = descuentosAplicables.stream()
-                            .filter(dp
-                                    -> dp.getIdDescuentoProducto() != null
-                                    && dp.getIdDescuentoProducto()
-                                            .equals(
-                                                    idDescuentoProducto
-                                            ))
-                            .findFirst()
-                            .orElse(null);
-
-            if (descuentoProducto == null) {
-
-                mostrarAdvertencia(
-                        "El descuento seleccionado no es aplicable"
-                );
-
-                return;
-            }
-
-            if (descuentoProducto.getValor() == null
-                    || descuentoProducto.getValor() <= 0) {
-
-                mostrarAdvertencia(
-                        "El descuento no tiene un porcentaje válido"
-                );
-
-                return;
-            }
-
-            BigDecimal precioActual
-                    = productoOrdenSeleccionado
-                            .getPrecio();
-
-            if (precioActual == null) {
-
-                mostrarAdvertencia(
-                        "El producto no tiene un precio válido"
-                );
-
-                return;
-            }
-
-            /*
-             * Se calcula siempre sobre el PRECIO ACTUAL.
-             *
-             * Ejemplo:
-             *
-             * 2.00 - 20 % = 1.60
-             * 1.60 - 20 % = 1.28
-             */
-            BigDecimal porcentaje
-                    = BigDecimal.valueOf(
-                            descuentoProducto.getValor()
-                    );
-
-            BigDecimal montoDescuento
-                    = precioActual
-                            .multiply(porcentaje)
-                            .divide(
-                                    BigDecimal.valueOf(100),
-                                    2,
-                                    RoundingMode.HALF_UP
-                            );
-
-            BigDecimal nuevoPrecio
-                    = precioActual
-                            .subtract(montoDescuento)
-                            .setScale(
-                                    2,
-                                    RoundingMode.HALF_UP
-                            );
-
-            if (nuevoPrecio.compareTo(
-                    BigDecimal.ZERO
-            ) < 0) {
-
-                nuevoPrecio = BigDecimal.ZERO;
-            }
-
-            String nombreDescuento
-                    = descuentoProducto
-                            .getIdDescuento()
-                            .getNombre();
-
-            String nuevaObservacion
-                    = "Aplicado descuento "
-                    + nombreDescuento
-                    + " ("
-                    + descuentoProducto.getValor()
-                    + "%) sobre $"
-                    + precioActual.setScale(
-                            2,
-                            RoundingMode.HALF_UP
-                    ).toPlainString()
-                    + " - Monto: $"
-                    + montoDescuento.toPlainString()
-                    + " - Nuevo precio: $"
-                    + nuevoPrecio.toPlainString();
-
-            String observacionesActuales
-                    = productoOrdenSeleccionado
-                            .getObservaciones();
-
-            if (observacionesActuales == null
-                    || observacionesActuales.isBlank()) {
-
-                productoOrdenSeleccionado
-                        .setObservaciones(
-                                nuevaObservacion
-                        );
-
-            } else {
-
-                productoOrdenSeleccionado
-                        .setObservaciones(
-                                observacionesActuales
-                                + "\n"
-                                + nuevaObservacion
-                        );
-            }
-
-            productoOrdenSeleccionado
-                    .setPrecio(
-                            nuevoPrecio
-                    );
-
-            ordenDAO.actualizarProducto(
-                    productoOrdenSeleccionado
-            );
-
-            UUID idProductoOrden
-                    = productoOrdenSeleccionado
-                            .getIdOrdenProducto();
-
-            recargarProductosOrden();
-
-            /*
-             * Recuperamos nuevamente la fila para que,
-             * si aplicamos otro descuento,
-             * se use el precio ya rebajado.
-             */
-            productoOrdenSeleccionado
-                    = productosOrden.stream()
-                            .filter(op
-                                    -> idProductoOrden.equals(
-                                            op.getIdOrdenProducto()
-                                    ))
-                            .findFirst()
-                            .orElse(null);
-
-            if (productoOrdenSeleccionado != null) {
-
-                descuentosAplicables
-                        = ordenDAO.findDescuentosAplicables(
-                                productoOrdenSeleccionado
-                                        .getIdProducto()
-                                        .getIdProducto(),
-                                registro.getFechaCreacion()
-                        );
-            }
-
-            idDescuentoProductoSeleccionado
-                    = null;
-
-            mostrarExito(
-                    "Descuento aplicado correctamente. "
-                    + "Monto descontado: $"
-                    + montoDescuento.toPlainString()
-            );
-
+            ordenDAO.eliminarProducto(detalle);
         } catch (IllegalArgumentException e) {
+            mostrarAdvertencia(e.getMessage());
+            return;
+        } catch (RuntimeException e) {
+            LOGGER.log(Level.SEVERE, "Error al eliminar fila de orden", e);
+            mostrarError("No se pudo quitar el producto");
+            return;
+        }
+        mostrarExito("Producto eliminado de la orden");
+        recargarProductosYPromociones();
+    }
 
-            mostrarAdvertencia(
-                    "El descuento seleccionado no es válido"
-            );
+    /**
+     * Aplica una promoción seleccionada a todos los productos asociados a ella.
+     * Las reglas críticas se validan de nuevo dentro de la transacción del DAO.
+     */
+    public void aplicarPromocion() {
+        if (!isPuedeGestionarProductos()) {
+            mostrarAdvertencia("Debe editar una orden guardada");
+            return;
+        }
+        if (idPromocionSeleccionada == null || idPromocionSeleccionada.isBlank()) {
+            mostrarAdvertencia("Debe seleccionar una promoción");
+            return;
+        }
+        try {
+            UUID id = UUID.fromString(idPromocionSeleccionada);
+            boolean existe = promocionesDisponibles.stream().anyMatch(p -> p != null
+                    && id.equals(p.getIdDescuento()));
+            if (!existe) {
+                mostrarAdvertencia("La promoción seleccionada no está disponible");
+                return;
+            }
+            OrdenDAO.ResultadoPromocion resultado = ordenDAO.aplicarPromocion(registro.getIdOrden(), id);
+            mostrarExito("Promoción aplicada a " + resultado.getProductosAfectados()
+                    + " producto(s). Rebaja total: $" + resultado.getDescuentoTotal().toPlainString());
+        } catch (IllegalArgumentException e) {
+            mostrarAdvertencia(e.getMessage());
+            return;
+        } catch (RuntimeException e) {
+            LOGGER.log(Level.SEVERE, "Error al aplicar promoción general", e);
+            mostrarError("No se pudo aplicar la promoción");
+            return;
+        }
+        // Volvemos a consultar los precios para que otra aplicación parta del precio rebajado.
+        idPromocionSeleccionada = null;
+        recargarProductosYPromociones();
+    }
 
-        } catch (Exception e) {
+    private void cargarPromociones() {
+        if (registro == null || registro.getIdOrden() == null
+                || registro.getFechaCreacion() == null) {
+            promocionesDisponibles = new ArrayList<>();
+            return;
+        }
+        promocionesDisponibles = ordenDAO.findPromocionesAplicables(
+                registro.getIdOrden(), registro.getFechaCreacion());
+        if (promocionesDisponibles == null) promocionesDisponibles = new ArrayList<>();
+    }
 
-            e.printStackTrace();
-
-            mostrarError(
-                    "No se pudo aplicar el descuento"
-            );
+    /** Reconsulta ambas listas sin anunciar erróneamente que falló el guardado. */
+    private void recargarProductosYPromociones() {
+        try {
+            productosOrden = ordenDAO.findProductosByOrden(registro.getIdOrden());
+            cargarPromociones();
+        } catch (RuntimeException e) {
+            LOGGER.log(Level.WARNING, "Operación guardada; error al recargar la orden", e);
+            mostrarAdvertencia("Operación realizada, pero no se pudo actualizar la lista");
         }
     }
 
-    /*
-     * =========================================================
-     * VER ORDEN
-     * =========================================================
-     */
     public void verOrden() {
-
-        if (registro != null) {
-
-            ordenSeleccionadaConsulta
-                    = registro;
-        }
-
-        if (ordenSeleccionadaConsulta == null
-                || ordenSeleccionadaConsulta
-                        .getIdOrden() == null) {
-
-            mostrarAdvertencia(
-                    "Debe seleccionar una orden"
-            );
-
+        if (registro != null) ordenSeleccionadaConsulta = registro;
+        if (ordenSeleccionadaConsulta == null || ordenSeleccionadaConsulta.getIdOrden() == null) {
+            mostrarAdvertencia("Debe seleccionar una orden");
             return;
         }
-
-        productosConsulta
-                = ordenDAO.findProductosByOrden(
-                        ordenSeleccionadaConsulta
-                                .getIdOrden()
-                );
-    }
-
-    /*
-     * =========================================================
-     * FECHAS
-     * =========================================================
-     */
-    /**
-     * Fecha mínima permitida por el calendario.
-     */
-    public Date getFechaMinimaOrden() {
-        return obtenerFechaActual();
-    }
-
-    /**
-     * Verifica la misma regla del calendario también desde backend.
-     */
-    private boolean esFechaAnteriorAHoy(
-            Date fecha) {
-
-        if (fecha == null) {
-            return false;
+        try {
+            productosConsulta = ordenDAO.findProductosByOrden(ordenSeleccionadaConsulta.getIdOrden());
+        } catch (RuntimeException e) {
+            LOGGER.log(Level.SEVERE, "Error al consultar el detalle de la orden", e);
+            mostrarError("No se pudo consultar la orden");
         }
-
-        Date fechaOrden
-                = normalizarFecha(fecha);
-
-        Date hoy
-                = obtenerFechaActual();
-
-        return fechaOrden.before(hoy);
     }
 
-    private Date obtenerFechaActual() {
-
-        Calendar calendario
-                = Calendar.getInstance(
-                        TimeZone.getTimeZone(
-                                ZONA_HORARIA
-                        )
-                );
-
-        calendario.set(
-                Calendar.HOUR_OF_DAY,
-                0
-        );
-
-        calendario.set(
-                Calendar.MINUTE,
-                0
-        );
-
-        calendario.set(
-                Calendar.SECOND,
-                0
-        );
-
-        calendario.set(
-                Calendar.MILLISECOND,
-                0
-        );
-
-        return calendario.getTime();
-    }
-
-    private Date normalizarFecha(
-            Date fecha) {
-
-        Calendar calendario
-                = Calendar.getInstance(
-                        TimeZone.getTimeZone(
-                                ZONA_HORARIA
-                        )
-                );
-
-        calendario.setTime(
-                fecha
-        );
-
-        calendario.set(
-                Calendar.HOUR_OF_DAY,
-                0
-        );
-
-        calendario.set(
-                Calendar.MINUTE,
-                0
-        );
-
-        calendario.set(
-                Calendar.SECOND,
-                0
-        );
-
-        calendario.set(
-                Calendar.MILLISECOND,
-                0
-        );
-
-        return calendario.getTime();
-    }
-
-    /*
-     * =========================================================
-     * LIMPIEZA
-     * =========================================================
-     */
-    private void recargarProductosOrden() {
-
-        if (registro == null
-                || registro.getIdOrden() == null) {
-
-            productosOrden
-                    = new ArrayList<>();
-
-            return;
-        }
-
-        productosOrden
-                = ordenDAO.findProductosByOrden(
-                        registro.getIdOrden()
-                );
+    private static Date inicioDiaActual() {
+        Calendar c = Calendar.getInstance(ZONA);
+        c.set(Calendar.HOUR_OF_DAY, 0);
+        c.set(Calendar.MINUTE, 0);
+        c.set(Calendar.SECOND, 0);
+        c.set(Calendar.MILLISECOND, 0);
+        return c.getTime();
     }
 
     private void limpiarSeleccionProducto() {
-
         idProductoSeleccionado = null;
         precioProducto = null;
         observacionesProducto = null;
     }
-
-    private void limpiarSeleccionDescuento() {
-
-        productoOrdenSeleccionado = null;
-
-        idDescuentoProductoSeleccionado = null;
-
-        descuentosAplicables = new ArrayList<>();
-    }
-
-    private void limpiarDatosFormulario() {
-
+    private void limpiarFormulario() {
         idEmpleadoRolSeleccionado = null;
-
-        limpiarSeleccionProducto();
-        limpiarSeleccionDescuento();
-
+        idPromocionSeleccionada = null;
         ordenSeleccionadaConsulta = null;
-
         productosConsulta = new ArrayList<>();
+        promocionesDisponibles = new ArrayList<>();
+        limpiarSeleccionProducto();
     }
-
-    /*
-     * =========================================================
-     * TOTALES
-     * =========================================================
-     */
-    public BigDecimal getTotalOrden() {
-
-        return calcularTotal(
-                productosOrden
-        );
-    }
-
-    public BigDecimal getTotalConsulta() {
-
-        return calcularTotal(
-                productosConsulta
-        );
-    }
-
-    private BigDecimal calcularTotal(
-            List<OrdenProducto> productos) {
-
-        if (productos == null
-                || productos.isEmpty()) {
-
-            return BigDecimal.ZERO;
+    private static BigDecimal sumar(List<OrdenProducto> productos) {
+        BigDecimal total = BigDecimal.ZERO;
+        if (productos != null) {
+            for (OrdenProducto detalle : productos) {
+                if (detalle != null && detalle.getPrecio() != null) {
+                    total = total.add(detalle.getPrecio());
+                }
+            }
         }
-
-        return productos.stream()
-                .map(
-                        OrdenProducto::getPrecio
-                )
-                .filter(
-                        precio -> precio != null
-                )
-                .reduce(
-                        BigDecimal.ZERO,
-                        BigDecimal::add
-                );
+        return total.setScale(2, RoundingMode.HALF_UP);
     }
 
-    /*
-     * =========================================================
-     * PROPIEDADES DE ESTADO
-     * =========================================================
-     */
     public boolean isPuedeGestionarProductos() {
-
-        return registro != null
-                && registro.getIdOrden() != null
-                && editando
-                && !nuevo;
+        return registro != null && registro.getIdOrden() != null && editando && !nuevo;
     }
-
-    /*
-     * =========================================================
-     * GETTERS Y SETTERS
-     * =========================================================
-     */
-    public List<EmpleadoRol> getEmpleadosRol() {
-        return empleadosRol;
-    }
-
-    public List<Producto> getProductosDisponibles() {
-        return productosDisponibles;
-    }
-
-    public List<OrdenProducto> getProductosOrden() {
-        return productosOrden;
-    }
-
-    public String getIdEmpleadoRolSeleccionado() {
-        return idEmpleadoRolSeleccionado;
-    }
-
-    public String getIdProductoSeleccionado() {
-        return idProductoSeleccionado;
-    }
-
-    public BigDecimal getPrecioProducto() {
-        return precioProducto;
-    }
-
-    public void setPrecioProducto(
-            BigDecimal precioProducto) {
-
-        this.precioProducto
-                = precioProducto;
-    }
-
-    public String getObservacionesProducto() {
-        return observacionesProducto;
-    }
-
-    public void setObservacionesProducto(
-            String observacionesProducto) {
-
-        this.observacionesProducto
-                = observacionesProducto;
-    }
-
-    public OrdenProducto getProductoOrdenSeleccionado() {
-        return productoOrdenSeleccionado;
-    }
-
-    public List<DescuentoProducto> getDescuentosAplicables() {
-        return descuentosAplicables;
-    }
-
-    public String getIdDescuentoProductoSeleccionado() {
-        return idDescuentoProductoSeleccionado;
-    }
-
-    public void setIdDescuentoProductoSeleccionado(
-            String idDescuentoProductoSeleccionado) {
-
-        this.idDescuentoProductoSeleccionado
-                = idDescuentoProductoSeleccionado;
-    }
-
-    public Orden getOrdenSeleccionadaConsulta() {
-        return ordenSeleccionadaConsulta;
-    }
-
-    public void setOrdenSeleccionadaConsulta(
-            Orden ordenSeleccionadaConsulta) {
-
-        this.ordenSeleccionadaConsulta
-                = ordenSeleccionadaConsulta;
-
-        this.registro
-                = ordenSeleccionadaConsulta;
-
-        if (ordenSeleccionadaConsulta != null) {
-
-            this.nuevo = false;
-            this.editando = false;
-
-            prepararOrdenSeleccionada();
+    public List<EmpleadoRol> getEmpleadosRol() { return empleadosRol; }
+    public List<Producto> getProductosDisponibles() { return productosDisponibles; }
+    public List<OrdenProducto> getProductosOrden() { return productosOrden; }
+    public List<Descuento> getPromocionesDisponibles() { return promocionesDisponibles; }
+    public List<OrdenProducto> getProductosConsulta() { return productosConsulta; }
+    public String getIdEmpleadoRolSeleccionado() { return idEmpleadoRolSeleccionado; }
+    public String getIdProductoSeleccionado() { return idProductoSeleccionado; }
+    public String getIdPromocionSeleccionada() { return idPromocionSeleccionada; }
+    public void setIdPromocionSeleccionada(String valor) { idPromocionSeleccionada = valor; }
+    public BigDecimal getPrecioProducto() { return precioProducto; }
+    public void setPrecioProducto(BigDecimal valor) { precioProducto = valor; }
+    public String getObservacionesProducto() { return observacionesProducto; }
+    public void setObservacionesProducto(String v) { observacionesProducto = v; }
+    public Orden getOrdenSeleccionadaConsulta() { return ordenSeleccionadaConsulta; }
+    public void setOrdenSeleccionadaConsulta(Orden valor) {
+        ordenSeleccionadaConsulta = valor;
+        registro = valor;
+        if (valor != null) {
+            nuevo = false;
+            editando = false;
         }
     }
-
-    public List<OrdenProducto> getProductosConsulta() {
-        return productosConsulta;
-    }
+    public BigDecimal getTotalOrden() { return sumar(productosOrden); }
+    public BigDecimal getTotalConsulta() { return sumar(productosConsulta); }
 }

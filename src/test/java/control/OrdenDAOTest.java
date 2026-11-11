@@ -1,11 +1,16 @@
 package control;
 
+import entity.Descuento;
 import entity.DescuentoProducto;
 import entity.EmpleadoRol;
 import entity.Orden;
 import entity.OrdenProducto;
+import entity.Producto;
 import jakarta.persistence.EntityManager;
+import jakarta.persistence.LockModeType;
 import jakarta.persistence.TypedQuery;
+import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.UUID;
@@ -13,184 +18,384 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.InOrder;
 import org.mockito.junit.jupiter.MockitoExtension;
+
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
+/** Pruebas de NamedQueries, validaciones y descuento colectivo acumulativo. */
 @ExtendWith(MockitoExtension.class)
-public class OrdenDAOTest {
+class OrdenDAOTest {
+
     @Mock private EntityManager em;
     @InjectMocks private OrdenDAO dao;
 
-    @Test
-    void debeBuscarConLaEntidadYEntityManagerDelDAO() {
-        UUID id = UUID.randomUUID();
-        Orden registro = new Orden();
-        when(em.find(Orden.class, id)).thenReturn(registro);
-        assertSame(registro, dao.findById(id));
-        verify(em).find(Orden.class, id);
+    private static Orden orden() {
+        Orden o = new Orden(UUID.randomUUID());
+        o.setFechaCreacion(new Date(1794000000000L));
+        return o;
+    }
+
+    private static OrdenProducto fila(Orden orden, String precio) {
+        OrdenProducto f = new OrdenProducto(UUID.randomUUID());
+        f.setIdOrden(orden);
+        Producto producto = new Producto(UUID.randomUUID());
+        producto.setActivo(true);
+        f.setIdProducto(producto);
+        f.setPrecio(new BigDecimal(precio));
+        return f;
+    }
+
+    private static DescuentoProducto relacion(Producto producto, Descuento descuento, int porcentaje) {
+        DescuentoProducto dp = new DescuentoProducto(UUID.randomUUID());
+        dp.setIdProducto(producto);
+        dp.setIdDescuento(descuento);
+        dp.setValor(porcentaje);
+        return dp;
+    }
+
+    private static Descuento promocion(String nombre) {
+        Descuento d = new Descuento(UUID.randomUUID());
+        d.setNombre(nombre);
+        return d;
+    }
+
+    private static <T> TypedQuery<T> consulta(Class<T> tipo) {
+        @SuppressWarnings("unchecked")
+        TypedQuery<T> q = mock(TypedQuery.class);
+        return q;
+    }
+
+    private TypedQuery<DescuentoProducto> configurarRelacionesOrden(
+            List<DescuentoProducto> relaciones) {
+        TypedQuery<DescuentoProducto> q = consulta(DescuentoProducto.class);
+        when(em.createNamedQuery("DescuentoProducto.findAplicablesOrden", DescuentoProducto.class))
+                .thenReturn(q);
+        when(q.setParameter(eq("idOrden"), any(UUID.class))).thenReturn(q);
+        when(q.setParameter(eq("inicioDia"), any(Date.class))).thenReturn(q);
+        when(q.setParameter(eq("finDia"), any(Date.class))).thenReturn(q);
+        when(q.getResultList()).thenReturn(relaciones);
+        return q;
+    }
+
+    private TypedQuery<OrdenProducto> configurarFilas(UUID id, List<OrdenProducto> filas) {
+        TypedQuery<OrdenProducto> q = consulta(OrdenProducto.class);
+        when(em.createNamedQuery("OrdenProducto.findByOrdenConProducto", OrdenProducto.class))
+                .thenReturn(q);
+        when(q.setParameter("idOrden", id)).thenReturn(q);
+        when(q.getResultList()).thenReturn(filas);
+        return q;
+    }
+
+    private TypedQuery<Long> configurarConteoFactura(long conteo) {
+        TypedQuery<Long> q = consulta(Long.class);
+        when(em.createNamedQuery("OrdenProducto.countFacturado", Long.class))
+                .thenReturn(q);
+        when(q.setParameter(eq("idOrdenProducto"), any(UUID.class))).thenReturn(q);
+        when(q.getSingleResult()).thenReturn(conteo);
+        return q;
     }
 
     @Test
-    void debeConsultarEmpleadosConRolCamareroYMantenerCompatibilidad() {
-        TypedQuery<EmpleadoRol> query = mock(TypedQuery.class);
-        String jpql = "SELECT er FROM EmpleadoRol er JOIN FETCH er.idEmpleado e JOIN FETCH er.idRol r WHERE LOWER(TRIM(r.nombre)) = :nombreRol ORDER BY e.nombre, e.apellido";
-        when(em.createQuery(jpql, EmpleadoRol.class)).thenReturn(query);
-        when(query.setParameter("nombreRol", "camarero")).thenReturn(query);
-        List<EmpleadoRol> empleados = List.of(new EmpleadoRol());
-        when(query.getResultList()).thenReturn(empleados, empleados, List.of());
-        assertSame(empleados, dao.findCamarerosActivos());
-        assertSame(empleados, dao.findEmpleadosRolActivos());
-        assertTrue(dao.findCamarerosActivos().isEmpty());
-        verify(em, times(3)).createQuery(jpql, EmpleadoRol.class);
-        verify(query, times(3)).setParameter("nombreRol", "camarero");
-        verify(query, times(3)).getResultList();
+    void buscarCamarerosUsaNamedQueryYNoJPQLEnDAO() {
+        TypedQuery<EmpleadoRol> q = consulta(EmpleadoRol.class);
+        List<EmpleadoRol> activos = List.of(new EmpleadoRol());
+        when(em.createNamedQuery("Orden.findCamarerosActivos", EmpleadoRol.class)).thenReturn(q);
+        when(q.setParameter("nombreRol", "camarero")).thenReturn(q);
+        when(q.getResultList()).thenReturn(activos);
+        assertSame(activos, dao.findCamarerosActivos());
+        assertSame(activos, dao.findEmpleadosRolActivos());
+        verify(em, never()).createQuery(anyString(), eq(EmpleadoRol.class));
     }
 
     @Test
-    void debeDevolverPrimerCamareroONullSiNoHayCoincidencias() {
+    void camareroInexistenteDevuelveNull() {
+        TypedQuery<EmpleadoRol> q = consulta(EmpleadoRol.class);
         UUID id = UUID.randomUUID();
-        TypedQuery<EmpleadoRol> query = mock(TypedQuery.class);
-        String jpql = "SELECT er FROM EmpleadoRol er JOIN FETCH er.idEmpleado e JOIN FETCH er.idRol r WHERE er.idEmpleadoRol = :idEmpleadoRol AND er.activo = true AND e.activo = true AND r.activo = true AND LOWER(TRIM(r.nombre)) = :nombreRol";
-        when(em.createQuery(jpql, EmpleadoRol.class)).thenReturn(query);
-        when(query.setParameter("idEmpleadoRol", id)).thenReturn(query);
-        when(query.setParameter("nombreRol", "camarero")).thenReturn(query);
-        EmpleadoRol primero = new EmpleadoRol();
-        when(query.getResultList()).thenReturn(List.of(primero, new EmpleadoRol()), List.of());
-        assertSame(primero, dao.findCamareroActivoById(id));
+        when(em.createNamedQuery("Orden.findCamareroActivoById", EmpleadoRol.class)).thenReturn(q);
+        when(q.setParameter("idEmpleadoRol", id)).thenReturn(q);
+        when(q.setParameter("nombreRol", "camarero")).thenReturn(q);
+        when(q.getResultList()).thenReturn(List.of());
         assertNull(dao.findCamareroActivoById(id));
-        verify(query, times(2)).setParameter("idEmpleadoRol", id);
-        verify(query, times(2)).setParameter("nombreRol", "camarero");
+        assertNull(dao.findCamareroActivoById(null));
     }
 
     @Test
-    void debeBuscarEmpleadoRolPorIdODevolverNull() {
-        UUID id = UUID.randomUUID();
-        EmpleadoRol registro = new EmpleadoRol();
-        when(em.find(EmpleadoRol.class, id)).thenReturn(registro).thenReturn(null);
-        assertSame(registro, dao.findEmpleadoRolById(id));
-        assertNull(dao.findEmpleadoRolById(id));
-        verify(em, times(2)).find(EmpleadoRol.class, id);
-    }
-
-    @Test
-    void debePersistirProducto() {
-        OrdenProducto producto = new OrdenProducto();
-        dao.agregarProducto(producto);
-        verify(em).persist(same(producto));
-    }
-
-    @Test
-    void debeDevolverProductoAdministradoAlActualizar() {
-        OrdenProducto original = new OrdenProducto();
-        OrdenProducto administrado = new OrdenProducto();
-        when(em.merge(original)).thenReturn(administrado);
-        assertSame(administrado, dao.actualizarProducto(original));
-        verify(em).merge(same(original));
-    }
-
-    @Test
-    void noDebeInteractuarConPersistenciaAlEliminarNull() {
-        dao.eliminarProducto(null);
+    void noCreaOrdenSinFechaNiCamarero() {
+        Orden o = new Orden(UUID.randomUUID());
+        assertThrows(IllegalArgumentException.class, () -> dao.crear(o));
+        o.setFechaCreacion(new Date());
+        assertThrows(IllegalArgumentException.class, () -> dao.crear(o));
         verifyNoInteractions(em);
     }
 
     @Test
-    void debeEliminarProductoAdministradoSinMerge() {
-        OrdenProducto producto = new OrdenProducto();
-        when(em.contains(producto)).thenReturn(true);
-        dao.eliminarProducto(producto);
-        verify(em).contains(same(producto));
-        verify(em).remove(same(producto));
-        verifyNoMoreInteractions(em);
+    void permiteGuardarOrdenConFechaPasada() {
+        Orden o = orden();
+        o.setFechaCreacion(new Date(946684800000L)); // Año 2000.
+        EmpleadoRol camarero = new EmpleadoRol(UUID.randomUUID());
+        o.setIdEmpleadoRol(camarero);
+        TypedQuery<EmpleadoRol> q = consulta(EmpleadoRol.class);
+        when(em.createNamedQuery("Orden.findCamareroActivoById", EmpleadoRol.class)).thenReturn(q);
+        when(q.setParameter("idEmpleadoRol", camarero.getIdEmpleadoRol())).thenReturn(q);
+        when(q.setParameter("nombreRol", "camarero")).thenReturn(q);
+        when(q.getResultList()).thenReturn(List.of(camarero));
+        dao.crear(o);
+        verify(em).persist(o);
+        verify(em).flush();
     }
 
     @Test
-    void debeAdministrarProductoSeparadoAntesDeEliminar() {
-        OrdenProducto original = new OrdenProducto();
-        OrdenProducto administrado = new OrdenProducto();
-        when(em.contains(original)).thenReturn(false);
-        when(em.merge(original)).thenReturn(administrado);
-        dao.eliminarProducto(original);
-        InOrder orden = inOrder(em);
-        orden.verify(em).contains(same(original));
-        orden.verify(em).merge(same(original));
-        orden.verify(em).remove(same(administrado));
-        verifyNoMoreInteractions(em);
+    void rechazaOrdenConCamareroInactivo() {
+        Orden o = orden();
+        o.setIdEmpleadoRol(new EmpleadoRol(UUID.randomUUID()));
+        TypedQuery<EmpleadoRol> q = consulta(EmpleadoRol.class);
+        when(em.createNamedQuery("Orden.findCamareroActivoById", EmpleadoRol.class)).thenReturn(q);
+        when(q.setParameter("idEmpleadoRol", o.getIdEmpleadoRol().getIdEmpleadoRol())).thenReturn(q);
+        when(q.setParameter("nombreRol", "camarero")).thenReturn(q);
+        when(q.getResultList()).thenReturn(List.of());
+        assertThrows(IllegalArgumentException.class, () -> dao.crear(o));
+        verify(em, never()).persist(any());
     }
 
     @Test
-    void debeBuscarProductosDeOrden() {
+    void buscaFilasConNamedQuery() {
         UUID id = UUID.randomUUID();
-        TypedQuery<OrdenProducto> query = mock(TypedQuery.class);
-        String jpql = "SELECT op FROM OrdenProducto op JOIN FETCH op.idProducto WHERE op.idOrden.idOrden = :idOrden";
-        when(em.createQuery(jpql, OrdenProducto.class)).thenReturn(query);
-        when(query.setParameter("idOrden", id)).thenReturn(query);
-        List<OrdenProducto> registros = List.of(new OrdenProducto(), new OrdenProducto());
-        when(query.getResultList()).thenReturn(registros, List.of());
-        assertSame(registros, dao.findProductosByOrden(id));
-        assertTrue(dao.findProductosByOrden(id).isEmpty());
-        verify(em, times(2)).createQuery(jpql, OrdenProducto.class);
-        verify(query, times(2)).setParameter("idOrden", id);
-        verify(query, times(2)).getResultList();
+        List<OrdenProducto> filas = List.of(new OrdenProducto());
+        configurarFilas(id, filas);
+        assertSame(filas, dao.findProductosByOrden(id));
+        assertThrows(IllegalArgumentException.class, () -> dao.findProductosByOrden(null));
     }
 
     @Test
-    void debeDevolverConteoCeroYPositivo() {
-        UUID id = UUID.randomUUID();
-        TypedQuery<Long> query = mock(TypedQuery.class);
-        when(em.createQuery("SELECT COUNT(op) FROM OrdenProducto op WHERE op.idOrden.idOrden = :idOrden", Long.class)).thenReturn(query);
-        when(query.setParameter("idOrden", id)).thenReturn(query);
-        when(query.getSingleResult()).thenReturn(0L, 4L);
-        assertEquals(0L, dao.countProductosByOrden(id));
-        assertEquals(4L, dao.countProductosByOrden(id));
-        verify(query, times(2)).setParameter("idOrden", id);
-        verify(query, times(2)).getSingleResult();
+    void promocionesNoAparecenSiLaOrdenNoTieneAsociaciones() {
+        Orden o = orden();
+        configurarRelacionesOrden(List.of());
+        assertTrue(dao.findPromocionesAplicables(o.getIdOrden(), o.getFechaCreacion()).isEmpty());
     }
 
     @Test
-    void debeConsultarDescuentosPorProductoYVigencia() {
-        UUID id = UUID.randomUUID();
-        Date fecha = new Date(1700000000000L);
-        TypedQuery<DescuentoProducto> query = mock(TypedQuery.class);
-        String jpql = "SELECT dp FROM DescuentoProducto dp JOIN FETCH dp.idProducto p JOIN FETCH dp.idDescuento d WHERE p.idProducto = :idProducto AND dp.fechaDesde <= :fechaOrden AND (dp.fechaHasta IS NULL      OR dp.fechaHasta >= :fechaOrden) AND d.fechaDesde <= :fechaOrden AND (d.fechaHasta IS NULL      OR d.fechaHasta >= :fechaOrden) ORDER BY d.nombre";
-        when(em.createQuery(jpql, DescuentoProducto.class)).thenReturn(query);
-        when(query.setParameter("idProducto", id)).thenReturn(query);
-        when(query.setParameter("fechaOrden", fecha)).thenReturn(query);
-        List<DescuentoProducto> descuentos = List.of(new DescuentoProducto());
-        when(query.getResultList()).thenReturn(descuentos, List.of());
-        assertSame(descuentos, dao.findDescuentosAplicables(id, fecha));
-        assertTrue(dao.findDescuentosAplicables(id, fecha).isEmpty());
-        verify(query, times(2)).setParameter("idProducto", id);
-        verify(query, times(2)).setParameter("fechaOrden", fecha);
+    void promocionApareceUnaSolaVezAunqueApliqueADosProductos() {
+        Orden o = orden();
+        Descuento zeta = promocion("Zeta");
+        Descuento alfa = promocion("Alfa");
+        Producto p1 = new Producto(UUID.randomUUID());
+        Producto p2 = new Producto(UUID.randomUUID());
+        configurarRelacionesOrden(List.of(
+                relacion(p1, zeta, 20), relacion(p2, zeta, 15),
+                relacion(p1, alfa, 10)));
+        List<Descuento> lista = dao.findPromocionesAplicables(o.getIdOrden(), o.getFechaCreacion());
+        assertEquals(2, lista.size());
+        assertSame(alfa, lista.get(0));
+        assertSame(zeta, lista.get(1));
     }
 
     @Test
-    void debeCrearOrdenYAsociarTodosLosDetallesAntesDePersistir() {
-        Orden cabecera = new Orden();
-        OrdenProducto primero = new OrdenProducto();
-        OrdenProducto segundo = new OrdenProducto();
-        doAnswer(invocacion -> {
-            Object registro = invocacion.getArgument(0);
-            if (registro instanceof OrdenProducto detalle) {
-                assertSame(cabecera, detalle.getIdOrden());
-            }
-            return null;
-        }).when(em).persist(any());
-        dao.crearOrdenCompleta(cabecera, List.of(primero, segundo));
-        InOrder orden = inOrder(em);
-        orden.verify(em).persist(same(cabecera));
-        orden.verify(em).persist(same(primero));
-        orden.verify(em).persist(same(segundo));
-        verifyNoMoreInteractions(em);
+    void promocionesRequierenOrdenYFecha() {
+        assertThrows(IllegalArgumentException.class,
+                () -> dao.findPromocionesAplicables(null, new Date()));
+        assertThrows(IllegalArgumentException.class,
+                () -> dao.findPromocionesAplicables(UUID.randomUUID(), null));
+        verifyNoInteractions(em);
     }
 
     @Test
-    void debeCrearOrdenSinDetalles() {
-        Orden cabecera = new Orden();
-        dao.crearOrdenCompleta(cabecera, List.of());
-        verify(em).persist(same(cabecera));
-        verifyNoMoreInteractions(em);
+    void aplicaPromocionSoloAElegiblesYLaRepiteSobrePrecioActual() {
+        Orden o = orden();
+        OrdenProducto cafe = fila(o, "5.00");
+        OrdenProducto pastel = fila(o, "4.00");
+        OrdenProducto te = fila(o, "3.00");
+        Descuento promo = promocion("PROMO20");
+        when(em.find(Orden.class, o.getIdOrden(), LockModeType.PESSIMISTIC_WRITE))
+                .thenReturn(o);
+        configurarFilas(o.getIdOrden(), List.of(cafe, pastel, te));
+        configurarRelacionesOrden(List.of(
+                relacion(cafe.getIdProducto(), promo, 20),
+                relacion(pastel.getIdProducto(), promo, 20)));
+        configurarConteoFactura(0);
+
+        OrdenDAO.ResultadoPromocion uno = dao.aplicarPromocion(o.getIdOrden(), promo.getIdDescuento());
+        assertEquals(2, uno.getProductosAfectados());
+        assertEquals(new BigDecimal("1.80"), uno.getDescuentoTotal());
+        assertEquals(new BigDecimal("4.00"), cafe.getPrecio());
+        assertEquals(new BigDecimal("3.20"), pastel.getPrecio());
+        assertEquals(new BigDecimal("3.00"), te.getPrecio());
+
+        OrdenDAO.ResultadoPromocion dos = dao.aplicarPromocion(o.getIdOrden(), promo.getIdDescuento());
+        assertEquals(2, dos.getProductosAfectados());
+        assertEquals(new BigDecimal("1.44"), dos.getDescuentoTotal());
+        assertEquals(new BigDecimal("3.20"), cafe.getPrecio());
+        assertEquals(new BigDecimal("2.56"), pastel.getPrecio());
+        assertEquals(new BigDecimal("3.00"), te.getPrecio());
+        assertTrue(cafe.getObservaciones().contains("sobre $4.00"));
+        verify(em, times(2)).flush();
+        verify(em, times(4)).lock(any(OrdenProducto.class), eq(LockModeType.PESSIMISTIC_WRITE));
+    }
+
+    @Test
+    void admiteDiferentePorcentajeParaCadaProductoDeLaMismaPromocion() {
+        Orden o = orden();
+        OrdenProducto cafe = fila(o, "10.00");
+        OrdenProducto pastel = fila(o, "10.00");
+        Descuento promo = promocion("Promoción combinada");
+        when(em.find(Orden.class, o.getIdOrden(), LockModeType.PESSIMISTIC_WRITE))
+                .thenReturn(o);
+        configurarFilas(o.getIdOrden(), List.of(cafe, pastel));
+        configurarRelacionesOrden(List.of(
+                relacion(cafe.getIdProducto(), promo, 10),
+                relacion(pastel.getIdProducto(), promo, 30)));
+        configurarConteoFactura(0);
+        OrdenDAO.ResultadoPromocion r = dao.aplicarPromocion(o.getIdOrden(), promo.getIdDescuento());
+        assertEquals(2, r.getProductosAfectados());
+        assertEquals(new BigDecimal("9.00"), cafe.getPrecio());
+        assertEquals(new BigDecimal("7.00"), pastel.getPrecio());
+        assertEquals(new BigDecimal("4.00"), r.getDescuentoTotal());
+    }
+
+    @Test
+    void productosRepetidosRecibenLaMismaPromocionPorFila() {
+        Orden o = orden();
+        OrdenProducto fila1 = fila(o, "10.00");
+        OrdenProducto fila2 = fila(o, "10.00");
+        fila2.setIdProducto(fila1.getIdProducto());
+        Descuento promo = promocion("Mitad");
+        when(em.find(Orden.class, o.getIdOrden(), LockModeType.PESSIMISTIC_WRITE)).thenReturn(o);
+        configurarFilas(o.getIdOrden(), List.of(fila1, fila2));
+        configurarRelacionesOrden(List.of(relacion(fila1.getIdProducto(), promo, 50)));
+        configurarConteoFactura(0);
+        OrdenDAO.ResultadoPromocion r = dao.aplicarPromocion(o.getIdOrden(), promo.getIdDescuento());
+        assertEquals(2, r.getProductosAfectados());
+        assertEquals(new BigDecimal("5.00"), fila1.getPrecio());
+        assertEquals(new BigDecimal("5.00"), fila2.getPrecio());
+    }
+
+    @Test
+    void descuentaCorrectamenteCentavosConRedondeo() {
+        Orden o = orden();
+        OrdenProducto linea = fila(o, "0.05");
+        Descuento promo = promocion("10");
+        when(em.find(Orden.class, o.getIdOrden(), LockModeType.PESSIMISTIC_WRITE)).thenReturn(o);
+        configurarFilas(o.getIdOrden(), List.of(linea));
+        configurarRelacionesOrden(List.of(relacion(linea.getIdProducto(), promo, 10)));
+        configurarConteoFactura(0);
+        dao.aplicarPromocion(o.getIdOrden(), promo.getIdDescuento());
+        assertEquals(new BigDecimal("0.04"), linea.getPrecio());
+    }
+
+    @Test
+    void noDescuentaSiLaPromocionNoAplica() {
+        Orden o = orden();
+        OrdenProducto linea = fila(o, "5.00");
+        when(em.find(Orden.class, o.getIdOrden(), LockModeType.PESSIMISTIC_WRITE)).thenReturn(o);
+        configurarFilas(o.getIdOrden(), List.of(linea));
+        configurarRelacionesOrden(List.of());
+        assertThrows(IllegalArgumentException.class,
+                () -> dao.aplicarPromocion(o.getIdOrden(), UUID.randomUUID()));
+        assertEquals(new BigDecimal("5.00"), linea.getPrecio());
+        verify(em, never()).flush();
+    }
+
+    @Test
+    void siHayProductoFacturadoNoDescuentaNinguno() {
+        Orden o = orden();
+        OrdenProducto cafe = fila(o, "5.00");
+        OrdenProducto pastel = fila(o, "4.00");
+        Descuento promo = promocion("Oferta");
+        when(em.find(Orden.class, o.getIdOrden(), LockModeType.PESSIMISTIC_WRITE)).thenReturn(o);
+        configurarFilas(o.getIdOrden(), List.of(cafe, pastel));
+        configurarRelacionesOrden(List.of(
+                relacion(cafe.getIdProducto(), promo, 20),
+                relacion(pastel.getIdProducto(), promo, 20)));
+        configurarConteoFactura(1);
+        assertThrows(IllegalArgumentException.class,
+                () -> dao.aplicarPromocion(o.getIdOrden(), promo.getIdDescuento()));
+        assertEquals(new BigDecimal("5.00"), cafe.getPrecio());
+        assertEquals(new BigDecimal("4.00"), pastel.getPrecio());
+        verify(em, never()).flush();
+    }
+
+    @Test
+    void siPrecioEsInvalidoNoAplicaNiGuarda() {
+        Orden o = orden();
+        OrdenProducto linea = fila(o, "-1.00");
+        Descuento promo = promocion("Oferta");
+        when(em.find(Orden.class, o.getIdOrden(), LockModeType.PESSIMISTIC_WRITE)).thenReturn(o);
+        configurarFilas(o.getIdOrden(), List.of(linea));
+        configurarRelacionesOrden(List.of(relacion(linea.getIdProducto(), promo, 20)));
+        configurarConteoFactura(0);
+        assertThrows(IllegalArgumentException.class,
+                () -> dao.aplicarPromocion(o.getIdOrden(), promo.getIdDescuento()));
+        assertEquals(new BigDecimal("-1.00"), linea.getPrecio());
+        verify(em, never()).flush();
+    }
+
+    @Test
+    void siFlushFallaSePropagaExcepcionYSeRestauranObjetos() {
+        Orden o = orden();
+        OrdenProducto linea = fila(o, "5.00");
+        Descuento promo = promocion("Oferta");
+        linea.setObservaciones("Sin hielo");
+        when(em.find(Orden.class, o.getIdOrden(), LockModeType.PESSIMISTIC_WRITE)).thenReturn(o);
+        configurarFilas(o.getIdOrden(), List.of(linea));
+        configurarRelacionesOrden(List.of(relacion(linea.getIdProducto(), promo, 20)));
+        configurarConteoFactura(0);
+        doThrow(new IllegalStateException("BD fuera de servicio")).when(em).flush();
+        assertThrows(IllegalStateException.class,
+                () -> dao.aplicarPromocion(o.getIdOrden(), promo.getIdDescuento()));
+        assertEquals(new BigDecimal("5.00"), linea.getPrecio());
+        assertEquals("Sin hielo", linea.getObservaciones());
+    }
+
+    @Test
+    void rechazoIdentificadoresInvalidosSinPersistencia() {
+        assertThrows(IllegalArgumentException.class,
+                () -> dao.aplicarPromocion(null, UUID.randomUUID()));
+        assertThrows(IllegalArgumentException.class,
+                () -> dao.aplicarPromocion(UUID.randomUUID(), null));
+        verifyNoInteractions(em);
+    }
+
+    @Test
+    void noBorraFilaFacturada() {
+        OrdenProducto fila = new OrdenProducto(UUID.randomUUID());
+        when(em.find(OrdenProducto.class, fila.getIdOrdenProducto(), LockModeType.PESSIMISTIC_WRITE))
+                .thenReturn(fila);
+        configurarConteoFactura(1);
+        assertThrows(IllegalArgumentException.class, () -> dao.eliminarProducto(fila));
+        verify(em, never()).remove(any());
+    }
+
+    @Test
+    void eliminacionValidaFilaYLaRemueve() {
+        OrdenProducto fila = new OrdenProducto(UUID.randomUUID());
+        when(em.find(OrdenProducto.class, fila.getIdOrdenProducto(), LockModeType.PESSIMISTIC_WRITE))
+                .thenReturn(fila);
+        configurarConteoFactura(0);
+        dao.eliminarProducto(fila);
+        verify(em).remove(fila);
+        verify(em).flush();
+    }
+
+    @Test
+    void noBorraOrdenConProductos() {
+        Orden o = orden();
+        when(em.find(Orden.class, o.getIdOrden(), LockModeType.PESSIMISTIC_WRITE)).thenReturn(o);
+        TypedQuery<Long> q = consulta(Long.class);
+        when(em.createNamedQuery("OrdenProducto.countByOrden", Long.class)).thenReturn(q);
+        when(q.setParameter("idOrden", o.getIdOrden())).thenReturn(q);
+        when(q.getSingleResult()).thenReturn(2L);
+        assertThrows(IllegalArgumentException.class, () -> dao.eliminar(o));
+        verify(em, never()).remove(any());
+    }
+
+    @Test
+    void noCreaFilasSiListaCompletaContieneUnElementoInvalido() {
+        Orden o = orden();
+        List<OrdenProducto> lista = new ArrayList<>();
+        lista.add(fila(o, "5.00"));
+        lista.add(null);
+        assertThrows(IllegalArgumentException.class, () -> dao.crearOrdenCompleta(o, lista));
+        verifyNoInteractions(em);
     }
 }

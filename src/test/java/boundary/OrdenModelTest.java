@@ -3,7 +3,6 @@ package boundary;
 import control.OrdenDAO;
 import control.ProductoDAO;
 import entity.Descuento;
-import entity.DescuentoProducto;
 import entity.EmpleadoRol;
 import entity.Orden;
 import entity.OrdenProducto;
@@ -11,11 +10,13 @@ import entity.Producto;
 import java.lang.reflect.Field;
 import java.math.BigDecimal;
 import java.util.ArrayList;
-import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
-import java.util.TimeZone;
 import java.util.UUID;
+import java.util.logging.Handler;
+import java.util.logging.Level;
+import java.util.logging.LogRecord;
+import java.util.logging.Logger;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -23,759 +24,282 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
+/** Pruebas de validaciones y orquestación de descuentos generales. */
 @ExtendWith(MockitoExtension.class)
 class OrdenModelTest {
 
-    @Mock
-    private OrdenDAO ordenDAO;
+    @Mock private OrdenDAO ordenDAO;
+    @Mock private ProductoDAO productoDAO;
+    private Modelo modelo;
 
-    @Mock
-    private ProductoDAO productoDAO;
-
-    private OrdenModel ordenModel;
-
-    /*
-     * =========================================================
-     * MODEL DE PRUEBA
-     * =========================================================
-     *
-     * Evitamos depender de FacesContext.
-     *
-     * En producción, AbstractModel utiliza FacesContext
-     * para mostrar mensajes PrimeFaces.
-     *
-     * En una prueba unitaria únicamente nos interesa
-     * comprobar la lógica de negocio.
-     */
-    private static class OrdenModelPrueba
-            extends OrdenModel {
-
-        @Override
-        protected void mostrarExito(
-                String detalle) {
-            // No se necesita FacesContext en pruebas.
-        }
-
-        @Override
-        protected void mostrarAdvertencia(
-                String detalle) {
-            // No se necesita FacesContext en pruebas.
-        }
-
-        @Override
-        protected void mostrarError(
-                String detalle) {
-            // No se necesita FacesContext en pruebas.
-        }
+    private static final class Modelo extends OrdenModel {
+        String exito;
+        String aviso;
+        String error;
+        @Override protected void mostrarExito(String s) { exito = s; }
+        @Override protected void mostrarAdvertencia(String s) { aviso = s; }
+        @Override protected void mostrarError(String s) { error = s; }
     }
 
     @BeforeEach
-    void setUp() throws Exception {
-
-        ordenModel
-                = new OrdenModelPrueba();
-
-        /*
-         * Los campos están inyectados por CDI en producción.
-         *
-         * En la prueba los colocamos manualmente
-         * utilizando reflexión.
-         */
-        inyectarCampo(
-                ordenModel,
-                "ordenDAO",
-                ordenDAO
-        );
-
-        inyectarCampo(
-                ordenModel,
-                "productoDAO",
-                productoDAO
-        );
-
-        /*
-         * Datos utilizados durante init().
-         */
-        when(ordenDAO.findAll())
-                .thenReturn(
-                        new ArrayList<>()
-                );
-
-        when(ordenDAO.findCamarerosActivos())
-                .thenReturn(
-                        new ArrayList<>()
-                );
-
-        when(productoDAO.findAll())
-                .thenReturn(
-                        new ArrayList<>()
-                );
-
-        ordenModel.init();
+    void preparar() throws Exception {
+        modelo = new Modelo();
+        inyectar("ordenDAO", ordenDAO);
+        inyectar("productoDAO", productoDAO);
+        when(ordenDAO.findAll()).thenReturn(new ArrayList<>());
+        when(ordenDAO.findCamarerosActivos()).thenReturn(new ArrayList<>());
+        when(productoDAO.findAll()).thenReturn(new ArrayList<>());
+        modelo.init();
     }
 
-    /*
-     * =========================================================
-     * CAMAREROS
-     * =========================================================
-     */
+    private void inyectar(String campo, Object valor) throws Exception {
+        Field f = OrdenModel.class.getDeclaredField(campo);
+        f.setAccessible(true);
+        f.set(modelo, valor);
+    }
+
+    private static Orden orden() {
+        Orden o = new Orden(UUID.randomUUID());
+        o.setFechaCreacion(new Date());
+        return o;
+    }
+
+    private static Producto producto(String precio) {
+        Producto p = new Producto(UUID.randomUUID());
+        p.setNombre("Café de prueba");
+        p.setActivo(true);
+        p.setPrecioSugerido(new BigDecimal(precio));
+        return p;
+    }
+
+    private static OrdenProducto detalle(Orden o) {
+        OrdenProducto d = new OrdenProducto(UUID.randomUUID());
+        d.setIdOrden(o);
+        d.setIdProducto(producto("5.00"));
+        d.setPrecio(new BigDecimal("5.00"));
+        return d;
+    }
+
+    private static Descuento promo() {
+        Descuento d = new Descuento(UUID.randomUUID());
+        d.setNombre("Promoción café");
+        return d;
+    }
+
+    private void habilitarEdicion(Orden o, List<OrdenProducto> productos, List<Descuento> descuentos) {
+        when(ordenDAO.findProductosByOrden(o.getIdOrden())).thenReturn(productos);
+        when(ordenDAO.findPromocionesAplicables(o.getIdOrden(), o.getFechaCreacion()))
+                .thenReturn(descuentos);
+        modelo.setRegistro(o);
+        modelo.btnModificarHandler(null);
+    }
+
     @Test
-    void cargarEmpleadosDebeUsarCamarerosActivos() {
-
-        EmpleadoRol camarero
-                = new EmpleadoRol();
-
-        camarero.setIdEmpleadoRol(
-                UUID.randomUUID()
-        );
-
-        when(ordenDAO.findCamarerosActivos())
-                .thenReturn(
-                        List.of(camarero)
-                );
-
-        ordenModel.init();
-
-        assertEquals(
-                1,
-                ordenModel
-                        .getEmpleadosRol()
-                        .size()
-        );
-
-        assertSame(
-                camarero,
-                ordenModel
-                        .getEmpleadosRol()
-                        .get(0)
-        );
-
-        verify(
-                ordenDAO,
-                atLeastOnce()
-        ).findCamarerosActivos();
+    void creaOrdenConFechaAnterior() {
+        modelo.btnNuevoHandler(null);
+        Orden orden = modelo.getRegistro();
+        orden.setFechaCreacion(new Date(946684800000L));
+        EmpleadoRol camarero = new EmpleadoRol(UUID.randomUUID());
+        orden.setIdEmpleadoRol(camarero);
+        modelo.btnGuardarHandler(null);
+        verify(ordenDAO).crear(orden);
+        assertNotNull(modelo.exito);
     }
 
-    /*
-     * =========================================================
-     * PRECIO SUGERIDO
-     * =========================================================
-     */
     @Test
-    void seleccionarProductoDebeCargarPrecioSugerido() {
-
-        UUID idProducto
-                = UUID.randomUUID();
-
-        Producto producto
-                = mock(Producto.class);
-
-        when(producto.getActivo())
-                .thenReturn(true);
-
-        when(producto.getPrecioSugerido())
-                .thenReturn(
-                        new BigDecimal("5.00")
-                );
-
-        when(productoDAO.findById(idProducto))
-                .thenReturn(producto);
-
-        ordenModel
-                .setIdProductoSeleccionado(
-                        idProducto.toString()
-                );
-
-        assertEquals(
-                new BigDecimal("5.00"),
-                ordenModel.getPrecioProducto()
-        );
+    void sinFechaNoGuardaLaOrden() {
+        modelo.btnNuevoHandler(null);
+        Orden orden = modelo.getRegistro();
+        orden.setFechaCreacion(null);
+        orden.setIdEmpleadoRol(new EmpleadoRol(UUID.randomUUID()));
+        modelo.btnGuardarHandler(null);
+        assertNotNull(modelo.aviso);
+        verify(ordenDAO, never()).crear(any());
     }
 
-    /*
-     * =========================================================
-     * DESCUENTOS APLICABLES
-     * =========================================================
-     */
     @Test
-    void seleccionarProductoDebeCargarDescuentosAplicables() {
-
-        UUID idOrden
-                = UUID.randomUUID();
-
-        UUID idProducto
-                = UUID.randomUUID();
-
-        Date fechaOrden
-                = new Date();
-
-        Orden orden
-                = new Orden();
-
-        orden.setIdOrden(
-                idOrden
-        );
-
-        orden.setFechaCreacion(
-                fechaOrden
-        );
-
-        Producto producto
-                = mock(Producto.class);
-
-        when(producto.getIdProducto())
-                .thenReturn(
-                        idProducto
-                );
-
-        OrdenProducto ordenProducto
-                = new OrdenProducto();
-
-        ordenProducto.setIdOrdenProducto(
-                UUID.randomUUID()
-        );
-
-        ordenProducto.setIdOrden(
-                orden
-        );
-
-        ordenProducto.setIdProducto(
-                producto
-        );
-
-        ordenProducto.setPrecio(
-                new BigDecimal("5.00")
-        );
-
-        DescuentoProducto descuento
-                = mock(
-                        DescuentoProducto.class
-                );
-
-        when(
-                ordenDAO.findDescuentosAplicables(
-                        idProducto,
-                        fechaOrden
-                )
-        ).thenReturn(
-                List.of(descuento)
-        );
-
-        ordenModel.setRegistro(
-                orden
-        );
-
-        ordenModel
-                .seleccionarProductoParaDescuento(
-                        ordenProducto
-                );
-
-        assertEquals(
-                1,
-                ordenModel
-                        .getDescuentosAplicables()
-                        .size()
-        );
-
-        assertSame(
-                descuento,
-                ordenModel
-                        .getDescuentosAplicables()
-                        .get(0)
-        );
+    void sinCamareroNoGuardaLaOrden() {
+        modelo.btnNuevoHandler(null);
+        modelo.btnGuardarHandler(null);
+        assertNotNull(modelo.aviso);
+        verify(ordenDAO, never()).crear(any());
     }
 
-    /*
-     * =========================================================
-     * DESCUENTOS ACUMULATIVOS
-     * =========================================================
-     */
     @Test
-    void aplicarDosDescuentosDebeUsarPrecioActual() {
-
-        UUID idOrden
-                = UUID.randomUUID();
-
-        UUID idProducto
-                = UUID.randomUUID();
-
-        UUID idDescuento10
-                = UUID.randomUUID();
-
-        UUID idDescuento20
-                = UUID.randomUUID();
-
-        Date fechaOrden
-                = new Date();
-
-        /*
-         * Orden.
-         */
-        Orden orden
-                = new Orden();
-
-        orden.setIdOrden(
-                idOrden
-        );
-
-        orden.setFechaCreacion(
-                fechaOrden
-        );
-
-        /*
-         * Producto.
-         */
-        Producto producto
-                = mock(Producto.class);
-
-        when(producto.getIdProducto())
-                .thenReturn(
-                        idProducto
-                );
-
-        /*
-         * Producto dentro de la orden.
-         *
-         * Precio inicial: $5.00
-         */
-        OrdenProducto ordenProducto
-                = new OrdenProducto();
-
-        ordenProducto.setIdOrdenProducto(
-                UUID.randomUUID()
-        );
-
-        ordenProducto.setIdOrden(
-                orden
-        );
-
-        ordenProducto.setIdProducto(
-                producto
-        );
-
-        ordenProducto.setPrecio(
-                new BigDecimal("5.00")
-        );
-
-        /*
-         * =====================================================
-         * DESCUENTO 10 %
-         * =====================================================
-         */
-        Descuento descuento10
-                = mock(
-                        Descuento.class
-                );
-
-        when(descuento10.getNombre())
-                .thenReturn(
-                        "Descuento 10"
-                );
-
-        DescuentoProducto descuentoProducto10
-                = mock(
-                        DescuentoProducto.class
-                );
-
-        when(
-                descuentoProducto10
-                        .getIdDescuentoProducto()
-        ).thenReturn(
-                idDescuento10
-        );
-
-        when(
-                descuentoProducto10.getValor()
-        ).thenReturn(
-                10
-        );
-
-        when(
-                descuentoProducto10
-                        .getIdDescuento()
-        ).thenReturn(
-                descuento10
-        );
-
-        /*
-         * =====================================================
-         * DESCUENTO 20 %
-         * =====================================================
-         */
-        Descuento descuento20
-                = mock(
-                        Descuento.class
-                );
-
-        when(descuento20.getNombre())
-                .thenReturn(
-                        "Descuento 20"
-                );
-
-        DescuentoProducto descuentoProducto20
-                = mock(
-                        DescuentoProducto.class
-                );
-
-        when(
-                descuentoProducto20
-                        .getIdDescuentoProducto()
-        ).thenReturn(
-                idDescuento20
-        );
-
-        when(
-                descuentoProducto20.getValor()
-        ).thenReturn(
-                20
-        );
-
-        when(
-                descuentoProducto20
-                        .getIdDescuento()
-        ).thenReturn(
-                descuento20
-        );
-
-        List<DescuentoProducto> descuentos
-                = List.of(
-                        descuentoProducto10,
-                        descuentoProducto20
-                );
-
-        /*
-         * El Model vuelve a consultar los productos
-         * después de aplicar cada descuento.
-         */
-        when(
-                ordenDAO.findProductosByOrden(
-                        idOrden
-                )
-        ).thenReturn(
-                List.of(ordenProducto)
-        );
-
-        when(
-                ordenDAO.findDescuentosAplicables(
-                        idProducto,
-                        fechaOrden
-                )
-        ).thenReturn(
-                descuentos
-        );
-
-        /*
-         * Entramos a edición.
-         */
-        ordenModel.setRegistro(
-                orden
-        );
-
-        ordenModel.btnModificarHandler(
-                null
-        );
-
-        /*
-         * Seleccionamos el producto.
-         */
-        ordenModel
-                .seleccionarProductoParaDescuento(
-                        ordenProducto
-                );
-
-        /*
-         * =====================================================
-         * PRIMER DESCUENTO
-         *
-         * $5.00 - 10 % = $4.50
-         * =====================================================
-         */
-        ordenModel
-                .setIdDescuentoProductoSeleccionado(
-                        idDescuento10.toString()
-                );
-
-        ordenModel.aplicarDescuento();
-
-        assertEquals(
-                new BigDecimal("4.50"),
-                ordenProducto.getPrecio()
-        );
-
-        /*
-         * =====================================================
-         * SEGUNDO DESCUENTO
-         *
-         * Debe utilizar $4.50 como base:
-         *
-         * $4.50 - 20 % = $3.60
-         *
-         * NO debe utilizar nuevamente $5.00.
-         * =====================================================
-         */
-        ordenModel
-                .setIdDescuentoProductoSeleccionado(
-                        idDescuento20.toString()
-                );
-
-        ordenModel.aplicarDescuento();
-
-        assertEquals(
-                new BigDecimal("3.60"),
-                ordenProducto.getPrecio()
-        );
-
-        /*
-         * =====================================================
-         * HISTORIAL
-         * =====================================================
-         */
-        assertNotNull(
-                ordenProducto
-                        .getObservaciones()
-        );
-
-        /*
-         * Primer descuento:
-         *
-         * 10 % de $5.00 = $0.50
-         */
-        assertTrue(
-                ordenProducto
-                        .getObservaciones()
-                        .contains(
-                                "Monto: $0.50"
-                        )
-        );
-
-        /*
-         * Segundo descuento:
-         *
-         * 20 % de $4.50 = $0.90
-         */
-        assertTrue(
-                ordenProducto
-                        .getObservaciones()
-                        .contains(
-                                "Monto: $0.90"
-                        )
-        );
-
-        assertTrue(
-                ordenProducto
-                        .getObservaciones()
-                        .contains(
-                                "Nuevo precio: $4.50"
-                        )
-        );
-
-        assertTrue(
-                ordenProducto
-                        .getObservaciones()
-                        .contains(
-                                "Nuevo precio: $3.60"
-                        )
-        );
-
-        /*
-         * El producto debe actualizarse dos veces:
-         * una por cada descuento.
-         */
-        verify(
-                ordenDAO,
-                times(2)
-        ).actualizarProducto(
-                ordenProducto
-        );
+    void alEditarSeCarganProductosYDescuentosGenerales() {
+        Orden o = orden();
+        OrdenProducto linea = detalle(o);
+        Descuento descuento = promo();
+        habilitarEdicion(o, List.of(linea), List.of(descuento));
+        assertEquals(1, modelo.getProductosOrden().size());
+        assertSame(descuento, modelo.getPromocionesDisponibles().get(0));
+        assertEquals(new BigDecimal("5.00"), modelo.getTotalOrden());
     }
 
-    /*
-     * =========================================================
-     * TOTAL
-     * =========================================================
-     */
     @Test
-    void totalDebeUsarPreciosActuales() {
-
-        UUID idOrden
-                = UUID.randomUUID();
-
-        Orden orden
-                = new Orden();
-
-        orden.setIdOrden(
-                idOrden
-        );
-
-        OrdenProducto producto1
-                = new OrdenProducto();
-
-        producto1.setPrecio(
-                new BigDecimal("3.60")
-        );
-
-        OrdenProducto producto2
-                = new OrdenProducto();
-
-        producto2.setPrecio(
-                new BigDecimal("2.50")
-        );
-
-        when(
-                ordenDAO.findProductosByOrden(
-                        idOrden
-                )
-        ).thenReturn(
-                List.of(
-                        producto1,
-                        producto2
-                )
-        );
-
-        ordenModel.setRegistro(
-                orden
-        );
-
-        ordenModel.btnModificarHandler(
-                null
-        );
-
-        assertEquals(
-                new BigDecimal("6.10"),
-                ordenModel.getTotalOrden()
-        );
+    void noHayOpcionesSiNingunaPromocionAplica() {
+        Orden o = orden();
+        habilitarEdicion(o, List.of(detalle(o)), List.of());
+        assertTrue(modelo.getPromocionesDisponibles().isEmpty());
     }
 
-    /*
-     * =========================================================
-     * ELIMINACIÓN DE ORDEN
-     * =========================================================
-     */
     @Test
-    void noDebeEliminarOrdenMientrasTengaProductos() {
-
-        UUID idOrden
-                = UUID.randomUUID();
-
-        Orden orden
-                = new Orden();
-
-        orden.setIdOrden(
-                idOrden
-        );
-
-        ordenModel.setRegistro(
-                orden
-        );
-
-        when(
-                ordenDAO.countProductosByOrden(
-                        idOrden
-                )
-        ).thenReturn(
-                2L
-        );
-
-        ordenModel.btnEliminarHandler(
-                null
-        );
-
-        /*
-         * Mientras tenga productos,
-         * la orden no debe eliminarse.
-         */
-        verify(
-                ordenDAO,
-                never()
-        ).eliminar(
-                any(Orden.class)
-        );
-
-        /*
-         * La selección debe mantenerse.
-         */
-        assertSame(
-                orden,
-                ordenModel.getRegistro()
-        );
+    void noAplicaPromocionSinEstarEditando() {
+        modelo.setRegistro(orden());
+        modelo.setIdPromocionSeleccionada(UUID.randomUUID().toString());
+        modelo.aplicarPromocion();
+        assertNotNull(modelo.aviso);
+        verify(ordenDAO, never()).aplicarPromocion(any(), any());
     }
 
-    /*
-     * =========================================================
-     * FECHA PASADA
-     * =========================================================
-     */
     @Test
-    void noDebeCrearOrdenConFechaPasada() {
-
-        ordenModel.btnNuevoHandler(
-                null
-        );
-
-        Calendar calendario
-                = Calendar.getInstance(
-                        TimeZone.getTimeZone(
-                                "America/El_Salvador"
-                        )
-                );
-
-        calendario.add(
-                Calendar.DAY_OF_MONTH,
-                -1
-        );
-
-        ordenModel
-                .getRegistro()
-                .setFechaCreacion(
-                        calendario.getTime()
-                );
-
-        /*
-         * La validación de fecha ocurre antes
-         * de persistir la orden.
-         */
-        ordenModel.btnGuardarHandler(
-                null
-        );
-
-        verify(
-                ordenDAO,
-                never()
-        ).crear(
-                any(Orden.class)
-        );
+    void noAplicaPromocionSinSeleccion() {
+        Orden o = orden();
+        habilitarEdicion(o, List.of(detalle(o)), List.of(promo()));
+        modelo.aplicarPromocion();
+        assertNotNull(modelo.aviso);
+        verify(ordenDAO, never()).aplicarPromocion(any(), any());
     }
 
-    /*
-     * =========================================================
-     * UTILIDAD PARA SIMULAR @Inject
-     * =========================================================
-     */
-    private void inyectarCampo(
-            Object objeto,
-            String nombreCampo,
-            Object valor)
-            throws Exception {
+    @Test
+    void noAplicaPromocionNoDisponible() {
+        Orden o = orden();
+        habilitarEdicion(o, List.of(detalle(o)), List.of(promo()));
+        modelo.setIdPromocionSeleccionada(UUID.randomUUID().toString());
+        modelo.aplicarPromocion();
+        assertNotNull(modelo.aviso);
+        verify(ordenDAO, never()).aplicarPromocion(any(), any());
+    }
 
-        Field campo
-                = objeto
-                        .getClass()
-                        .getSuperclass()
-                        .getDeclaredField(
-                                nombreCampo
-                        );
+    @Test
+    void noAplicaIdentificadorQueNoEsUUID() {
+        Orden o = orden();
+        habilitarEdicion(o, List.of(detalle(o)), List.of(promo()));
+        modelo.setIdPromocionSeleccionada("xyz");
+        modelo.aplicarPromocion();
+        assertNotNull(modelo.aviso);
+        verify(ordenDAO, never()).aplicarPromocion(any(), any());
+    }
 
-        campo.setAccessible(
-                true
-        );
+    @Test
+    void seleccionGeneralDelegaTransaccionYRefrescaLista() {
+        Orden o = orden();
+        Descuento descuento = promo();
+        habilitarEdicion(o, List.of(detalle(o)), List.of(descuento));
+        when(ordenDAO.aplicarPromocion(o.getIdOrden(), descuento.getIdDescuento()))
+                .thenReturn(new OrdenDAO.ResultadoPromocion(2, new BigDecimal("1.80")));
+        modelo.setIdPromocionSeleccionada(descuento.getIdDescuento().toString());
+        modelo.aplicarPromocion();
+        assertTrue(modelo.exito.contains("2 producto(s)"));
+        assertNull(modelo.getIdPromocionSeleccionada());
+        verify(ordenDAO).aplicarPromocion(o.getIdOrden(), descuento.getIdDescuento());
+        verify(ordenDAO, times(2)).findProductosByOrden(o.getIdOrden());
+        verify(ordenDAO, times(2)).findPromocionesAplicables(o.getIdOrden(), o.getFechaCreacion());
+    }
 
-        campo.set(
-                objeto,
-                valor
-        );
+    @Test
+    void permiteElegirLaMismaPromocionDeNuevo() {
+        Orden o = orden();
+        Descuento descuento = promo();
+        habilitarEdicion(o, List.of(detalle(o)), List.of(descuento));
+        when(ordenDAO.aplicarPromocion(o.getIdOrden(), descuento.getIdDescuento()))
+                .thenReturn(new OrdenDAO.ResultadoPromocion(1, new BigDecimal("1.00")));
+        modelo.setIdPromocionSeleccionada(descuento.getIdDescuento().toString());
+        modelo.aplicarPromocion();
+        modelo.setIdPromocionSeleccionada(descuento.getIdDescuento().toString());
+        modelo.aplicarPromocion();
+        verify(ordenDAO, times(2)).aplicarPromocion(o.getIdOrden(), descuento.getIdDescuento());
+    }
+
+    @Test
+    void errorDeNegocioNoLlamaRecarga() {
+        Orden o = orden();
+        Descuento descuento = promo();
+        habilitarEdicion(o, List.of(detalle(o)), List.of(descuento));
+        when(ordenDAO.aplicarPromocion(o.getIdOrden(), descuento.getIdDescuento()))
+                .thenThrow(new IllegalArgumentException("Producto facturado"));
+        modelo.setIdPromocionSeleccionada(descuento.getIdDescuento().toString());
+        modelo.aplicarPromocion();
+        assertEquals("Producto facturado", modelo.aviso);
+        assertEquals(descuento.getIdDescuento().toString(), modelo.getIdPromocionSeleccionada());
+        verify(ordenDAO, times(1)).findProductosByOrden(o.getIdOrden());
+    }
+
+    @Test
+    void errorTecnicoSeNotificaYSeRegistraEnLog() {
+        Orden o = orden();
+        Descuento descuento = promo();
+        habilitarEdicion(o, List.of(detalle(o)), List.of(descuento));
+        when(ordenDAO.aplicarPromocion(o.getIdOrden(), descuento.getIdDescuento()))
+                .thenThrow(new IllegalStateException("BD desconectada"));
+        modelo.setIdPromocionSeleccionada(descuento.getIdDescuento().toString());
+        Logger logger = Logger.getLogger(OrdenModel.class.getName());
+        List<LogRecord> eventos = new ArrayList<>();
+        Handler handler = new Handler() {
+            @Override public void publish(LogRecord record) { eventos.add(record); }
+            @Override public void flush() { }
+            @Override public void close() { }
+        };
+        logger.addHandler(handler);
+        try {
+            modelo.aplicarPromocion();
+        } finally {
+            logger.removeHandler(handler);
+        }
+        assertEquals("No se pudo aplicar la promoción", modelo.error);
+        assertTrue(eventos.stream().anyMatch(x -> x.getLevel().intValue() >= Level.SEVERE.intValue()
+                && x.getThrown() instanceof IllegalStateException));
+    }
+
+    @Test
+    void recargaFallidaDespuesDeAplicarNoDiceQueFalloGuardado() {
+        Orden o = orden();
+        Descuento descuento = promo();
+        habilitarEdicion(o, List.of(detalle(o)), List.of(descuento));
+        when(ordenDAO.aplicarPromocion(o.getIdOrden(), descuento.getIdDescuento()))
+                .thenReturn(new OrdenDAO.ResultadoPromocion(1, new BigDecimal("1.00")));
+        doThrow(new IllegalStateException("Fallo de recarga"))
+                .when(ordenDAO).findPromocionesAplicables(o.getIdOrden(), o.getFechaCreacion());
+        modelo.setIdPromocionSeleccionada(descuento.getIdDescuento().toString());
+        modelo.aplicarPromocion();
+        assertNotNull(modelo.exito);
+        assertTrue(modelo.exito.contains("Promoción aplicada"));
+        assertNotNull(modelo.aviso);
+        assertTrue(modelo.aviso.contains("Operación realizada"));
+        assertNull(modelo.error);
+    }
+
+    @Test
+    void guardaProductoDesdeSeleccionYRecargaPromociones() {
+        Orden o = orden();
+        habilitarEdicion(o, List.of(), List.of());
+        Producto p = producto("5.00");
+        when(productoDAO.findById(p.getIdProducto())).thenReturn(p);
+        modelo.setIdProductoSeleccionado(p.getIdProducto().toString());
+        modelo.agregarProducto();
+        verify(ordenDAO).agregarProducto(any(OrdenProducto.class));
+        verify(ordenDAO, times(2)).findPromocionesAplicables(o.getIdOrden(), o.getFechaCreacion());
+    }
+
+    @Test
+    void noEliminaProductoQuePerteneceAOtraOrden() {
+        Orden o = orden();
+        habilitarEdicion(o, List.of(), List.of());
+        modelo.quitarProducto(detalle(orden()));
+        assertNotNull(modelo.aviso);
+        verify(ordenDAO, never()).eliminarProducto(any());
+    }
+
+    @Test
+    void eliminarOrdenConErrorDeNegocioConservaSeleccion() {
+        Orden o = orden();
+        modelo.setRegistro(o);
+        doThrow(new IllegalArgumentException("Orden con productos"))
+                .when(ordenDAO).eliminar(o);
+        modelo.btnEliminarHandler(null);
+        assertEquals("Orden con productos", modelo.aviso);
+        assertSame(o, modelo.getRegistro());
     }
 }
-
