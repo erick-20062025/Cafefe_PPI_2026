@@ -74,6 +74,7 @@ public class TipoCaracteristicaModelTest {
         TipoCaracteristicaModelPrueba model = crearModelPrueba();
         model.btnNuevoHandler(null);
         TipoCaracteristica tipo = model.getRegistro();
+        tipo.setNombre("Temperatura");
         tipo.setExpresionRegular("[");
 
         model.btnGuardarHandler(null);
@@ -89,6 +90,7 @@ public class TipoCaracteristicaModelTest {
         TipoCaracteristicaModelPrueba model = crearModelPrueba();
         model.btnNuevoHandler(null);
         TipoCaracteristica tipo = model.getRegistro();
+        tipo.setNombre("Cantidad");
         tipo.setExpresionRegular("^[0-9]+(?:\\.[0-9]+)?$");
 
         model.btnGuardarHandler(null);
@@ -109,6 +111,7 @@ public class TipoCaracteristicaModelTest {
         for (String expresion : new String[]{null, "", "   "}) {
             model.btnNuevoHandler(null);
             TipoCaracteristica tipo = model.getRegistro();
+            tipo.setNombre("Tamaño");
             tipo.setExpresionRegular(expresion);
 
             model.btnGuardarHandler(null);
@@ -128,6 +131,7 @@ public class TipoCaracteristicaModelTest {
     }
 
     private static class TipoCaracteristicaModelPrueba extends TipoCaracteristicaModel {
+
         private String advertencia;
         private String exito;
 

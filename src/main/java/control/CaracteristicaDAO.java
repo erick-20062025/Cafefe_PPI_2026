@@ -1,9 +1,11 @@
+
 package control;
 
 import entity.Caracteristica;
 import jakarta.ejb.Stateless;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
+import validation.CaracteristicaValidator;
 
 @Stateless
 public class CaracteristicaDAO extends DefaultDAO<Caracteristica> {
@@ -18,5 +20,17 @@ public class CaracteristicaDAO extends DefaultDAO<Caracteristica> {
     @Override
     protected EntityManager getEntityManager() {
         return em;
+    }
+
+    @Override
+    public void crear(Caracteristica reg) {
+        CaracteristicaValidator.validar(reg);
+        super.crear(reg);
+    }
+
+    @Override
+    public void modificar(Caracteristica reg) {
+        CaracteristicaValidator.validar(reg);
+        super.modificar(reg);
     }
 }

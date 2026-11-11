@@ -82,12 +82,16 @@
             <p:outputLabel for="txtNombre"
                            value="Nombre:" />
 
+
             <p:inputText id="txtNombre"
                          value="#{rolModel.registro.nombre}"
                          required="true"
-                         requiredMessage="El campo Nombre es obligatorio"
-                         validatorMessage="El campo Nombre debe tener al menos 2 caracteres">
-                <f:validateLength minimum="2" />
+                         requiredMessage="El nombre es obligatorio"
+                         maxlength="155"
+                         validatorMessage="El nombre debe tener entre 2 y 155 caracteres">
+
+                <f:validateLength minimum="2" maximum="155" />
+
             </p:inputText>
 
 

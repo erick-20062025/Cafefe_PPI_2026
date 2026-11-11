@@ -1,3 +1,4 @@
+
 package boundary;
 
 import control.DAOInterface;
@@ -9,17 +10,31 @@ import jakarta.faces.view.ViewScoped;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
 import java.util.UUID;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.primefaces.event.TabChangeEvent;
 
+/**
+ * Modelo JSF para la administración de empleados.
+ *
+ * Coordina los datos del empleado y la gestión
+ * de roles mediante EmpleadoRolModel.
+ */
 @Named("empleadoModel")
 @ViewScoped
 public class EmpleadoModel extends AbstractModel<Empleado> {
+
+    private static final long serialVersionUID = 1L;
+
+    private static final Logger LOGGER =
+            Logger.getLogger(EmpleadoModel.class.getName());
 
     @Inject
     private EmpleadoDAO empleadoDAO;
 
     @Inject
     private EmpleadoRolModel empleadoRolModel;
+
     private int indiceTab;
 
     @PostConstruct
@@ -32,105 +47,249 @@ public class EmpleadoModel extends AbstractModel<Empleado> {
         return empleadoDAO;
     }
 
+    /**
+     * Prepara un empleado nuevo con UUID y estado activo.
+     */
     @Override
     protected Empleado crearNuevoRegistro() {
 
         Empleado empleado = new Empleado();
-
         empleado.setIdEmpleado(UUID.randomUUID());
         empleado.setActivo(true);
 
         return empleado;
     }
 
-    /*
-     * Cuando se crea un empleado nuevo todavía no permitimos
-     * administrar roles hasta que el empleado sea guardado.
+    /**
+     * Valida los campos recibidos del formulario.
+     *
+     * @return descripción del error o null si es válido
      */
+    private String validarFormulario() {
+
+        if (registro == null
+                || registro.getIdEmpleado() == null) {
+            return "Debe seleccionar un empleado válido";
+        }
+
+        String nombre = registro.getNombre();
+        String apellido = registro.getApellido();
+
+        if (nombre == null || nombre.isBlank()) {
+            return "El nombre es obligatorio";
+        }
+
+        if (apellido == null || apellido.isBlank()) {
+            return "El apellido es obligatorio";
+        }
+
+        nombre = nombre.trim();
+        apellido = apellido.trim();
+
+        if (nombre.length() < 2 || nombre.length() > 255) {
+            return "El nombre debe tener entre 2 y 255 caracteres";
+        }
+
+        if (apellido.length() < 2 || apellido.length() > 255) {
+            return "El apellido debe tener entre 2 y 255 caracteres";
+        }
+
+        if (registro.getActivo() == null) {
+            return "Debe indicar el estado del empleado";
+        }
+
+        registro.setNombre(nombre);
+        registro.setApellido(apellido);
+
+        return null;
+    }
+
     @Override
     public void btnNuevoHandler(ActionEvent ae) {
 
         super.btnNuevoHandler(ae);
-        this.indiceTab = 0;
+        indiceTab = 0;
         limpiarRelaciones();
     }
 
-    /*
-     * Cuando seleccionamos un empleado,
-     * cargamos sus roles.
-     */
     @Override
     public void onRowSelect() {
 
         super.onRowSelect();
-        this.indiceTab = 0;
-        cargarRelacionesEmpleado();
+        indiceTab = 0;
+
+        try {
+            cargarRelacionesEmpleado();
+        } catch (RuntimeException e) {
+            LOGGER.log(Level.SEVERE,
+                    "Error al consultar roles del empleado", e);
+            limpiarRelaciones();
+            mostrarError(
+                    "No se pudieron consultar los roles del empleado");
+        }
     }
 
-    /*
-     * Si se quita la selección,
-     * limpiamos también el modelo de roles.
-     */
     @Override
     public void onRowUnselect() {
 
         super.onRowUnselect();
-        this.indiceTab = 0;
+        indiceTab = 0;
         limpiarRelaciones();
     }
 
-    /*
-     * Al cancelar limpiamos Empleado
-     * y sus relaciones.
+    /**
+     * Guarda el empleado y notifica el resultado.
+     *
+     * Conserva los datos del formulario si falla
+     * la operación de persistencia.
+     */
+    @Override
+    public void btnGuardarHandler(ActionEvent ae) {
+
+        if (!nuevo && !editando) {
+            mostrarAdvertencia(
+                    "Primero debe crear o editar un empleado");
+            return;
+        }
+
+        String error = validarFormulario();
+
+        if (error != null) {
+            mostrarAdvertencia(error);
+            return;
+        }
+
+        try {
+
+            if (nuevo) {
+                empleadoDAO.crear(registro);
+            } else {
+                empleadoDAO.modificar(registro);
+            }
+
+        } catch (IllegalArgumentException e) {
+
+            mostrarAdvertencia(e.getMessage());
+            return;
+
+        } catch (RuntimeException e) {
+
+            LOGGER.log(Level.SEVERE,
+                    "Error al guardar el empleado", e);
+            mostrarError("No se pudo guardar el empleado");
+            return;
+        }
+
+        limpiarEstado();
+        indiceTab = 0;
+        limpiarRelaciones();
+
+        try {
+            cargarDatos();
+        } catch (RuntimeException e) {
+
+            LOGGER.log(Level.WARNING,
+                    "Empleado guardado; falló la recarga", e);
+            mostrarAdvertencia(
+                    "El empleado se guardó, pero no se pudo "
+                    + "actualizar la lista. Recargue la página");
+            return;
+        }
+
+        mostrarExito("Empleado guardado correctamente");
+    }
+
+    /**
+     * Elimina un empleado cuando no tiene relaciones.
+     */
+    @Override
+    public void btnEliminarHandler(ActionEvent ae) {
+
+        if (registro == null) {
+            mostrarAdvertencia(
+                    "Debe seleccionar un empleado");
+            return;
+        }
+
+        try {
+            empleadoDAO.eliminar(registro);
+
+        } catch (IllegalArgumentException e) {
+
+            mostrarAdvertencia(e.getMessage());
+            return;
+
+        } catch (RuntimeException e) {
+
+            LOGGER.log(Level.SEVERE,
+                    "Error al eliminar el empleado", e);
+            mostrarError(
+                    "No se pudo eliminar el empleado. "
+                    + "Verifique sus relaciones");
+            return;
+        }
+
+        limpiarEstado();
+        indiceTab = 0;
+        limpiarRelaciones();
+
+        try {
+            cargarDatos();
+        } catch (RuntimeException e) {
+
+            LOGGER.log(Level.WARNING,
+                    "Empleado eliminado; falló la recarga", e);
+            mostrarAdvertencia(
+                    "El empleado se eliminó, pero no se pudo "
+                    + "actualizar la lista. Recargue la página");
+            return;
+        }
+
+        mostrarExito("Empleado eliminado correctamente");
+    }
+
+    /**
+     * Cancela la edición sin guardar cambios.
+     * Recarga los registros si se estaba editando.
      */
     @Override
     public void btnCancelarHandler(ActionEvent ae) {
 
+        boolean estabaEditando = editando;
+
         super.btnCancelarHandler(ae);
-        this.indiceTab = 0;
+        indiceTab = 0;
         limpiarRelaciones();
-    }
 
-    @Override
-    public void btnGuardarHandler(ActionEvent ae) {
+        if (estabaEditando) {
+            try {
+                cargarDatos();
+            } catch (RuntimeException e) {
 
-        super.btnGuardarHandler(ae);
-
-        this.indiceTab = 0;
-
-        if (this.registro == null) {
-            limpiarRelaciones();
+                LOGGER.log(Level.WARNING,
+                        "Error al recargar empleados", e);
+                mostrarAdvertencia(
+                        "No se pudo actualizar la lista de empleados");
+            }
         }
     }
 
-    /*
-     * Carga las relaciones del empleado seleccionado.
-     */
     private void cargarRelacionesEmpleado() {
-
-        empleadoRolModel
-                .cargarEmpleado(this.registro);
+        empleadoRolModel.cargarEmpleado(registro);
     }
 
-    /*
-     * Limpia las relaciones cuando
-     * no existe un empleado seleccionado.
-     */
     private void limpiarRelaciones() {
-
-        empleadoRolModel
-                .cargarEmpleado(null);
+        empleadoRolModel.cargarEmpleado(null);
     }
 
-    /*
-     * Indica si ya podemos administrar
-     * las relaciones del Empleado.
+    /**
+     * Solo permite gestionar roles de empleados
+     * que ya están registrados.
      */
     public boolean isPuedeGestionarRelaciones() {
-
-        return this.registro != null
-                && this.registro.getIdEmpleado() != null
-                && !this.nuevo;
+        return registro != null
+                && registro.getIdEmpleado() != null
+                && !nuevo;
     }
 
     public int getIndiceTab() {
@@ -140,12 +299,17 @@ public class EmpleadoModel extends AbstractModel<Empleado> {
     public void setIndiceTab(int indiceTab) {
         this.indiceTab = indiceTab;
     }
+
+    /**
+     * Mantiene sincronizada la pestaña seleccionada.
+     */
     public void onTabChange(TabChangeEvent event) {
 
-if ("Asignar roles".equals(event.getTab().getTitle())) {
-    this.indiceTab = 1;
-} else {
-    this.indiceTab = 0;
-}
-}
+        if (event == null || event.getTab() == null) {
+            return;
+        }
+
+        indiceTab = "Asignar roles".equals(
+                event.getTab().getTitle()) ? 1 : 0;
+    }
 }

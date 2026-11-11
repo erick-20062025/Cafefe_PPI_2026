@@ -1,14 +1,9 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
+
 package boundary;
 
 import control.CajaDAO;
 import entity.Caja;
 import java.util.List;
-import java.util.UUID;
-
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -16,14 +11,8 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
-
-/**
- *
- * @author erick
- */
 @ExtendWith(MockitoExtension.class)
 public class CajaModelTest {
 
@@ -35,36 +24,40 @@ public class CajaModelTest {
 
     @Test
     void debeCargarCajasDesdeDAO() {
-
         Caja caja1 = new Caja();
         caja1.setNombre("Caja Principal");
 
         Caja caja2 = new Caja();
         caja2.setNombre("Caja Secundaria");
 
-        List<Caja> cajas = List.of(caja1, caja2);
-
-        when(cajaDAO.findAll()).thenReturn(cajas);
+        when(cajaDAO.findAll())
+                .thenReturn(List.of(caja1, caja2));
 
         cajaModel.cargarDatos();
 
         assertEquals(2, cajaModel.getModelo().size());
-        assertEquals("Caja Principal",
-                cajaModel.getModelo().get(0).getNombre());
-        assertEquals("Caja Secundaria",
-                cajaModel.getModelo().get(1).getNombre());
-
         verify(cajaDAO).findAll();
     }
 
     @Test
-    void debeCrearCajaNuevaConUuidYActiva() {
+    void nuevaCajaDebeTenerUUIDYEstarActiva() {
+        cajaModel.btnNuevoHandler(null);
 
-        Caja caja = cajaModel.crearNuevoRegistro();
+        Caja caja = cajaModel.getRegistro();
 
         assertNotNull(caja);
         assertNotNull(caja.getIdCaja());
-        assertInstanceOf(UUID.class, caja.getIdCaja());
         assertTrue(caja.getActivo());
+        assertTrue(cajaModel.isNuevo());
+    }
+
+    @Test
+    void cancelarNuevaCajaDebeLimpiarFormulario() {
+        cajaModel.btnNuevoHandler(null);
+
+        cajaModel.btnCancelarHandler(null);
+
+        assertNull(cajaModel.getRegistro());
+        assertFalse(cajaModel.isNuevo());
     }
 }

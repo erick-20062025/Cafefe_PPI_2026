@@ -86,18 +86,19 @@
                                value="Nombre"
                                styleClass="font-semibold block mb-2" />
 
-                <p:inputText id="txtNombre"
-                             value="#{cajaModel.registro.nombre}"
-                             required="true"
-                             requiredMessage="El campo Nombre es obligatorio"
-                             validatorMessage="El nombre debe contener al menos 2 caracteres"
-                             maxlength="155"
-                             style="width: 100%;">
+                
+        <p:inputText id="txtNombre"
+             value="#{cajaModel.registro.nombre}"
+             required="true"
+             requiredMessage="El nombre es obligatorio"
+             validatorMessage="El nombre debe tener entre 2 y 155 caracteres"
+             maxlength="155"
+             style="width: 100%;">
 
-                    <f:validateLength minimum="2"
-                                      maximum="155" />
+            <f:validateLength minimum="2" maximum="155" />
 
-                </p:inputText>
+        </p:inputText>
+
 
             </div>
 
