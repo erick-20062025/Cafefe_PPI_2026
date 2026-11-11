@@ -40,8 +40,8 @@ public class CaracteristicaModelTest {
         Caracteristica libras = new Caracteristica();
         libras.setNombre("Libras");
 
-        List<Caracteristica> caracteristicas =
-                List.of(kilogramos, libras);
+        List<Caracteristica> caracteristicas
+                = List.of(kilogramos, libras);
 
         when(caracteristicaDAO.findAll())
                 .thenReturn(caracteristicas);
@@ -101,6 +101,7 @@ public class CaracteristicaModelTest {
         CaracteristicaModelPrueba model = crearModelPrueba();
         model.btnNuevoHandler(null);
         Caracteristica registro = model.getRegistro();
+        registro.setNombre("Grande");
 
         model.btnGuardarHandler(null);
 
@@ -114,6 +115,8 @@ public class CaracteristicaModelTest {
     void noDebeGuardarCaracteristicaConTipoInactivoOSinEstado() throws Exception {
         CaracteristicaModelPrueba model = crearModelPrueba();
         model.btnNuevoHandler(null);
+        model.getRegistro().setNombre("Grande");
+
         TipoCaracteristica tipo = new TipoCaracteristica();
         model.getRegistro().setIdTipoCaracteristica(tipo);
 
@@ -133,6 +136,7 @@ public class CaracteristicaModelTest {
         CaracteristicaModelPrueba model = crearModelPrueba();
         model.btnNuevoHandler(null);
         Caracteristica registro = model.getRegistro();
+        registro.setNombre("Grande");
         registro.setIdTipoCaracteristica(tipoActivo());
         when(caracteristicaDAO.findAll()).thenReturn(List.of(registro));
 
@@ -167,6 +171,7 @@ public class CaracteristicaModelTest {
     }
 
     private static class CaracteristicaModelPrueba extends CaracteristicaModel {
+
         private String advertencia;
         private String exito;
 

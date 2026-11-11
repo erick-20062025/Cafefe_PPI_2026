@@ -10,6 +10,7 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import java.util.List;
 import java.util.UUID;
+import validation.ProductoCaracteristicaValidator;
 
 /**
  *
@@ -30,6 +31,28 @@ public class ProductoCaracteristicaDAO extends DefaultDAO<ProductoCaracteristica
         return em;
     }
 
+    @Override
+    public void crear(ProductoCaracteristica reg) {
+        ProductoCaracteristicaValidator.validar(reg);
+
+        UUID idProducto = reg.getIdProducto().getIdProducto();
+        UUID idCaracteristica
+                = reg.getIdCaracteristica().getIdCaracteristica();
+
+        if (existeRelacion(idProducto, idCaracteristica)) {
+            throw new IllegalArgumentException(
+                    "La característica ya está asociada al producto");
+        }
+
+        super.crear(reg);
+    }
+
+    @Override
+    public void modificar(ProductoCaracteristica reg) {
+        ProductoCaracteristicaValidator.validar(reg);
+        super.modificar(reg);
+    }
+
     /*
      * Obtiene todas las características
      * asociadas a un Producto.
@@ -43,8 +66,8 @@ public class ProductoCaracteristicaDAO extends DefaultDAO<ProductoCaracteristica
                 + "WHERE pc.idProducto.idProducto = :idProducto",
                 ProductoCaracteristica.class
         )
-        .setParameter("idProducto", idProducto)
-        .getResultList();
+                .setParameter("idProducto", idProducto)
+                .getResultList();
     }
 
     /*
@@ -62,9 +85,9 @@ public class ProductoCaracteristicaDAO extends DefaultDAO<ProductoCaracteristica
                 + "AND pc.idCaracteristica.idCaracteristica = :idCaracteristica",
                 Long.class
         )
-        .setParameter("idProducto", idProducto)
-        .setParameter("idCaracteristica", idCaracteristica)
-        .getSingleResult();
+                .setParameter("idProducto", idProducto)
+                .setParameter("idCaracteristica", idCaracteristica)
+                .getSingleResult();
 
         return cantidad > 0;
     }

@@ -12,6 +12,7 @@ import jakarta.inject.Named;
 import java.util.List;
 import java.util.UUID;
 import jakarta.faces.event.ActionEvent;
+import validation.CaracteristicaValidator;
 
 @Named("caracteristicaModel")
 @ViewScoped
@@ -49,22 +50,14 @@ public class CaracteristicaModel extends AbstractModel<Caracteristica> {
 
     @Override
     public void btnGuardarHandler(ActionEvent ae) {
-
         if (registro == null) {
             return;
         }
 
-        TipoCaracteristica tipo = registro.getIdTipoCaracteristica();
-
-        if (tipo == null) {
-            mostrarAdvertencia("Debe seleccionar un tipo de característica");
-            return;
-        }
-
-        if (!Boolean.TRUE.equals(tipo.getActivo())) {
-            mostrarAdvertencia(
-                    "No se puede asignar un tipo de característica inactivo"
-            );
+        try {
+            CaracteristicaValidator.validar(registro);
+        } catch (IllegalArgumentException e) {
+            mostrarAdvertencia(e.getMessage());
             return;
         }
 
