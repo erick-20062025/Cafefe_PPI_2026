@@ -8,6 +8,7 @@ import entity.TipoProducto;
 import jakarta.ejb.Stateless;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
+import validation.TipoProductoValidator;
 
 /**
  *
@@ -27,4 +28,17 @@ public class TipoProductoDAO extends DefaultDAO<TipoProducto> {
     protected EntityManager getEntityManager() {
         return em;
     }
+
+    @Override
+    public void crear(TipoProducto reg) {
+        TipoProductoValidator.validar(reg);
+        super.crear(reg);
+    }
+
+    @Override
+    public void modificar(TipoProducto reg) {
+        TipoProductoValidator.validar(reg);
+        super.modificar(reg);
+    }
+
 }
