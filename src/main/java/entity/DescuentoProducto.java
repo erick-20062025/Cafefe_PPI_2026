@@ -42,6 +42,33 @@ import java.util.UUID;
                   + "JOIN FETCH dp.idDescuento d "
                   + "WHERE dp.idProducto.idProducto = :idProducto "
                   + "ORDER BY d.nombre"),
+    /** Descuentos válidos para la fecha comercial y asociados a una orden. */
+    @NamedQuery(name = "DescuentoProducto.findAplicablesOrden",
+            query = "SELECT DISTINCT dp FROM DescuentoProducto dp, OrdenProducto op, TipoDescuento t "
+                  + "WHERE op.idOrden.idOrden = :idOrden "
+                  + "AND op.idProducto = dp.idProducto "
+                  + "AND dp.idProducto.activo = TRUE "
+                  + "AND t.idTipoDescuento = dp.idDescuento.idTipoDescuento "
+                  + "AND t.activo = TRUE AND dp.valor > 0 "
+                  + "AND dp.valor <= 100 AND dp.valor <= t.descuentoMaximo "
+                  + "AND dp.fechaDesde < :finDia "
+                  + "AND (dp.fechaHasta IS NULL OR dp.fechaHasta >= :inicioDia) "
+                  + "AND dp.idDescuento.fechaDesde < :finDia "
+                  + "AND (dp.idDescuento.fechaHasta IS NULL "
+                  + "     OR dp.idDescuento.fechaHasta >= :inicioDia)"),
+    /** Compatibilidad: promociones válidas para un único producto. */
+    @NamedQuery(name = "DescuentoProducto.findAplicables",
+            query = "SELECT dp FROM DescuentoProducto dp, TipoDescuento t "
+                  + "WHERE dp.idProducto.idProducto = :idProducto "
+                  + "AND dp.idProducto.activo = TRUE "
+                  + "AND t.idTipoDescuento = dp.idDescuento.idTipoDescuento "
+                  + "AND t.activo = TRUE AND dp.valor > 0 "
+                  + "AND dp.valor <= 100 AND dp.valor <= t.descuentoMaximo "
+                  + "AND dp.fechaDesde < :finDia "
+                  + "AND (dp.fechaHasta IS NULL OR dp.fechaHasta >= :inicioDia) "
+                  + "AND dp.idDescuento.fechaDesde < :finDia "
+                  + "AND (dp.idDescuento.fechaHasta IS NULL "
+                  + "     OR dp.idDescuento.fechaHasta >= :inicioDia)"),
     @NamedQuery(name = "DescuentoProducto.countByProductoAndDescuento",
             query = "SELECT COUNT(dp) FROM DescuentoProducto dp "
                   + "WHERE dp.idProducto.idProducto = :idProducto "

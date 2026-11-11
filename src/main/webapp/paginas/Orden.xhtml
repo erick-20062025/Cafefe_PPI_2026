@@ -293,6 +293,11 @@
                         disabled="#{ordenModel.editando}"
                         required="true"
                         requiredMessage="Debe seleccionar un empleado con rol camarero"
+                        filter="true"
+                        filterMatchMode="contains"
+                        caseSensitive="false"
+                        filterNormalize="true"
+                        filterPlaceholder="Buscar..."
                         style="width: 100%;">
 
                         <f:selectItem
@@ -331,7 +336,6 @@
                         value="#{ordenModel.registro.fechaCreacion}"
                         pattern="dd/MM/yyyy"
                         showIcon="true"
-                        mindate="#{ordenModel.fechaMinimaOrden}"
                         disabled="#{ordenModel.editando}"
                         required="true"
                         requiredMessage="Debe indicar la fecha de la orden"
@@ -341,7 +345,7 @@
 
                         <h:outputText
                             rendered="#{ordenModel.nuevo}"
-                            value="Solo puede seleccionar la fecha de hoy o una fecha futura."/>
+                            value="Puede seleccionar fechas pasadas, de hoy o futuras."/>
 
                         <h:outputText
                             rendered="#{ordenModel.editando}"
@@ -416,6 +420,11 @@
                         <p:selectOneMenu
                             id="cmbProducto"
                             value="#{ordenModel.idProductoSeleccionado}"
+                        filter="true"
+                        filterMatchMode="contains"
+                        caseSensitive="false"
+                        filterNormalize="true"
+                        filterPlaceholder="Buscar..."
                             style="width: 100%;">
 
                             <f:selectItem
@@ -561,20 +570,9 @@
 
                     <p:column
                         headerText="Acciones"
-                        style="width: 230px; text-align: center;">
+                        style="width: 130px; text-align: center;">
 
 
-                        <!-- ABRIR MODAL DE DESCUENTO -->
-
-                        <p:commandButton
-                            value="Descuento"
-                            icon="pi pi-percentage"
-                            title="Aplicar descuento"
-                            action="#{ordenModel.seleccionarProductoParaDescuento(detalle)}"
-                            process="@this"
-                            update=":frmPrincipal:dlgAplicarDescuento"
-                            oncomplete="PF('dlgAplicarDescuentoWV').show();"
-                            styleClass="ui-button-help mr-2"/>
 
 
                         <!-- QUITAR PRODUCTO -->
@@ -598,6 +596,58 @@
 
                 </p:dataTable>
 
+
+                <!-- ================================================= -->
+                <!-- PROMOCIONES GENERALES DE LA ORDEN                  -->
+                <!-- ================================================= -->
+                <p:panel header="Aplicar descuento a la orden" styleClass="mt-4 mb-4">
+                    <h:panelGroup rendered="#{empty ordenModel.promocionesDisponibles}">
+                        <h:outputText value="No hay descuentos aplicables a los productos de esta orden en la fecha seleccionada."/>
+                    </h:panelGroup>
+
+                    <h:panelGroup rendered="#{not empty ordenModel.promocionesDisponibles}">
+                        <div class="formgrid grid">
+                            <div class="field col-12 md:col-8">
+                                <p:outputLabel for="cmbPromocion" value="Descuento para la orden"/>
+                                <p:selectOneMenu
+                                    id="cmbPromocion"
+                                    value="#{ordenModel.idPromocionSeleccionada}"
+                                    filter="true"
+                                    filterMatchMode="contains"
+                                    caseSensitive="false"
+                                    filterNormalize="true"
+                                    filterPlaceholder="Buscar descuento..."
+                                    style="width: 100%;">
+                                    <f:selectItem itemLabel="Seleccione un descuento"
+                                                  itemValue="#{null}" noSelectionOption="true"/>
+                                    <f:selectItems value="#{ordenModel.promocionesDisponibles}"
+                                                   var="promocion"
+                                                   itemLabel="#{promocion.nombre}"
+                                                   itemValue="#{promocion.idDescuento.toString()}"/>
+                                </p:selectOneMenu>
+                            </div>
+                            <div class="field col-12 md:col-4">
+                                <p:outputLabel value="Acción"/>
+                                <p:commandButton value="Aplicar descuento"
+                                                 icon="pi pi-percentage"
+                                                 action="#{ordenModel.aplicarPromocion}"
+                                                 process="@this cmbPromocion"
+                                                 update="@form"
+                                                 styleClass="ui-button-warning"
+                                                 style="width:100%;">
+                                    <p:confirm header="Confirmar descuento"
+                                               message="¿Aplicar esta promoción a todos los productos elegibles de la orden? Si ya se aplicó antes, se calculará sobre los precios actuales."
+                                               icon="pi pi-exclamation-triangle"/>
+                                </p:commandButton>
+                            </div>
+                        </div>
+                        <small class="text-color-secondary">
+                            La promoción se aplica a todos los productos asociados y vigentes.
+                            Los productos no elegibles conservan su precio.
+                            Puede aplicar la misma promoción otra vez sobre los importes ya rebajados.
+                        </small>
+                    </h:panelGroup>
+                </p:panel>
 
                 <!-- TOTAL -->
 
@@ -628,210 +678,7 @@
             </p:panel>
 
 
-            <!-- ============================================= -->
-            <!-- MODAL: APLICAR DESCUENTO                      -->
-            <!-- ============================================= -->
 
-            <p:dialog
-                id="dlgAplicarDescuento"
-                widgetVar="dlgAplicarDescuentoWV"
-                header="Aplicar descuento"
-                modal="true"
-                responsive="true"
-                width="700"
-                closable="true"
-                resizable="false">
-
-                <div style="max-height: 65vh; overflow-y: auto; padding-right: 0.5rem;">
-
-                    <h:panelGroup
-                        rendered="#{ordenModel.productoOrdenSeleccionado != null}">
-
-                        <div class="formgrid grid">
-
-
-                            <!-- PRODUCTO -->
-
-                            <div class="field col-12 md:col-5">
-
-                                <p:outputLabel
-                                    value="Producto seleccionado"/>
-
-                                <br/>
-
-                                <h:outputText
-                                    value="#{ordenModel.productoOrdenSeleccionado.idProducto.nombre}"
-                                    style="font-weight: bold;"/>
-
-                            </div>
-
-
-                            <!-- PRECIO ACTUAL -->
-
-                            <div class="field col-12 md:col-3">
-
-                                <p:outputLabel
-                                    value="Precio actual"/>
-
-                                <br/>
-
-                                <h:outputText
-                                    value="#{ordenModel.productoOrdenSeleccionado.precio}"
-                                    style="font-weight: bold;">
-
-                                    <f:convertNumber
-                                        type="currency"
-                                        currencySymbol="$"
-                                        minFractionDigits="2"
-                                        maxFractionDigits="2"/>
-
-                                </h:outputText>
-
-                            </div>
-
-
-                            <!-- FECHA -->
-
-                            <div class="field col-12 md:col-4">
-
-                                <p:outputLabel
-                                    value="Fecha de la orden"/>
-
-                                <br/>
-
-                                <h:outputText
-                                    value="#{ordenModel.registro.fechaCreacion}">
-
-                                    <f:convertDateTime
-                                        pattern="dd/MM/yyyy"
-                                        timeZone="America/El_Salvador"/>
-
-                                </h:outputText>
-
-                            </div>
-
-
-                            <!-- SIN DESCUENTOS VÁLIDOS -->
-
-                            <h:panelGroup
-                                layout="block"
-                                styleClass="field col-12"
-                                rendered="#{empty ordenModel.descuentosAplicables}">
-
-                                <div style="
-                                     padding: 1rem;
-                                     border: 1px solid #d6d6d6;
-                                     border-radius: 6px;
-                                     background-color: #f8f9fa;">
-
-                                    <i
-                                        class="pi pi-info-circle"
-                                        style="margin-right: 0.5rem;"></i>
-
-                                    <h:outputText
-                                        value="Este producto no posee descuentos aplicables para la fecha de la orden."/>
-
-                                </div>
-
-                            </h:panelGroup>
-
-
-                            <!-- LISTA DE DESCUENTOS -->
-
-                            <h:panelGroup
-                                layout="block"
-                                styleClass="field col-12"
-                                rendered="#{not empty ordenModel.descuentosAplicables}">
-
-                                <p:outputLabel
-                                    for="cmbDescuento"
-                                    value="Descuento aplicable"/>
-
-                                <p:selectOneMenu
-                                    id="cmbDescuento"
-                                    value="#{ordenModel.idDescuentoProductoSeleccionado}"
-                                    style="width: 100%;">
-
-                                    <f:selectItem
-                                        itemLabel="Seleccione un descuento"
-                                        itemValue="#{null}"
-                                        noSelectionOption="true"/>
-
-                                    <f:selectItems
-                                        value="#{ordenModel.descuentosAplicables}"
-                                        var="descuentoProducto"
-                                        itemLabel="#{descuentoProducto.idDescuento.nombre} - #{descuentoProducto.valor}%"
-                                        itemValue="#{descuentoProducto.idDescuentoProducto.toString()}"/>
-
-                                </p:selectOneMenu>
-
-                                <small class="text-color-secondary">
-                                    Solo aparecen descuentos asociados al producto
-                                    y válidos para la fecha de esta orden.
-                                </small>
-
-                            </h:panelGroup>
-
-                        </div>
-
-
-                        <p:divider/>
-
-
-                        <!-- APLICAR DESCUENTO -->
-
-                        <h:panelGroup
-                            layout="block"
-                            rendered="#{not empty ordenModel.descuentosAplicables}">
-
-                            <p:commandButton
-                                value="Aplicar descuento"
-                                icon="pi pi-percentage"
-                                action="#{ordenModel.aplicarDescuento}"
-                                process="cmbDescuento"
-                                update=":frmPrincipal:tablaProductosOrden
-                                :frmPrincipal:txtTotalOrden
-                                :frmPrincipal:dlgAplicarDescuento"
-                                oncomplete="PF('dlgAplicarDescuentoWV').show();"
-                                styleClass="ui-button-warning mr-2">
-
-                                <p:confirm
-                                    header="Aplicar descuento"
-                                    message="¿Desea aplicar este descuento sobre el precio actual del producto?"
-                                    icon="pi pi-exclamation-triangle"/>
-
-                            </p:commandButton>
-
-                        </h:panelGroup>
-
-
-                        <!-- CERRAR -->
-
-                        <p:commandButton
-                            value="Cerrar"
-                            type="button"
-                            icon="pi pi-times"
-                            onclick="PF('dlgAplicarDescuentoWV').hide();"
-                            styleClass="ui-button-secondary"/>
-
-
-                        <!-- EXPLICACIÓN -->
-
-                        <div class="mt-3">
-
-                            <small class="text-color-secondary">
-                                Cada descuento se calcula sobre el precio actual
-                                del producto. Si aplica otro descuento después,
-                                se calculará sobre el precio ya rebajado.
-                            </small>
-
-                        </div>
-
-                    </h:panelGroup>
-
-                </div>
-
-            </p:dialog>
 
         </h:panelGroup>
 
