@@ -532,6 +532,116 @@
 
                 </p:panel>
 
+
+                <!-- ================================================= -->
+                <!-- DESCUENTOS ASOCIADOS AL PRODUCTO                  -->
+                <!-- ================================================= -->
+                <p:panel header="Descuentos del producto" styleClass="mb-3">
+                    <p:panel header="Asignar descuento existente" styleClass="mb-3">
+                        <div class="formgrid grid">
+                            <div class="field col-12 md:col-6">
+                                <p:outputLabel for="cmbDescuentoProducto" value="Descuento"/>
+                                <p:selectOneMenu id="cmbDescuentoProducto"
+                                                 value="#{productoDescuentoModel.idDescuentoSeleccionado}"
+                                                 style="width: 100%;">
+                                    <f:selectItem itemLabel="Seleccione un descuento"
+                                                  itemValue="" noSelectionOption="true"/>
+                                    <f:selectItems value="#{productoDescuentoModel.descuentoList}"
+                                                   var="descuento"
+                                                   itemLabel="#{descuento.nombre}"
+                                                   itemValue="#{descuento.idDescuento.toString()}"/>
+                                    <p:ajax event="change"
+                                            listener="#{productoDescuentoModel.cambiarDescuento}"
+                                            process="@this" update="@form"/>
+                                </p:selectOneMenu>
+                            </div>
+                            <div class="field col-12 md:col-6">
+                                <p:outputLabel for="txtPorcentajeProducto" value="Porcentaje aplicado"/>
+                                <p:inputNumber id="txtPorcentajeProducto"
+                                               value="#{productoDescuentoModel.valor}"
+                                               decimalPlaces="0" symbol=" %" symbolPosition="s"
+                                               style="width: 100%;"/>
+                                <h:outputText value="Máximo permitido: #{productoDescuentoModel.descuentoMaximo} %"
+                                              rendered="#{not empty productoDescuentoModel.descuentoMaximo}"/>
+                            </div>
+                            <div class="field col-12 md:col-6">
+                                <p:outputLabel for="fechaDescuentoProductoDesde" value="Fecha desde"/>
+                                <p:datePicker id="fechaDescuentoProductoDesde"
+                                              value="#{productoDescuentoModel.fechaDesde}"
+                                              pattern="dd/MM/yyyy" showIcon="true"
+                                              disabled="#{empty productoDescuentoModel.idDescuentoSeleccionado}"
+                                              mindate="#{productoDescuentoModel.fechaMinimaPermitida}"
+                                              maxdate="#{productoDescuentoModel.fechaMaximaPermitida}"
+                                              style="width: 100%;"/>
+                            </div>
+                            <div class="field col-12 md:col-6">
+                                <p:outputLabel for="fechaDescuentoProductoHasta"
+                                               value="#{productoDescuentoModel.rangoAbierto ? 'Fecha hasta (opcional)' : 'Fecha hasta'}"/>
+                                <p:datePicker id="fechaDescuentoProductoHasta"
+                                              value="#{productoDescuentoModel.fechaHasta}"
+                                              pattern="dd/MM/yyyy" showIcon="true"
+                                              disabled="#{empty productoDescuentoModel.fechaDesde}"
+                                              mindate="#{productoDescuentoModel.fechaDesde}"
+                                              maxdate="#{productoDescuentoModel.fechaMaximaPermitida}"
+                                              style="width: 100%;"/>
+                            </div>
+                            <div class="field col-12">
+                                <p:outputLabel for="txtObsDescuentoProducto" value="Observaciones"/>
+                                <p:inputTextarea id="txtObsDescuentoProducto"
+                                                 value="#{productoDescuentoModel.observaciones}"
+                                                 rows="3" autoResize="false" style="width: 100%;"/>
+                            </div>
+                            <div class="field col-12">
+                                <p:commandButton value="Agregar descuento" icon="pi pi-plus"
+                                                 action="#{productoDescuentoModel.agregarDescuento}"
+                                                 process="@this cmbDescuentoProducto txtPorcentajeProducto fechaDescuentoProductoDesde fechaDescuentoProductoHasta txtObsDescuentoProducto"
+                                                 update="@form"/>
+                                <p:commandButton value="Actualizar descuentos" icon="pi pi-refresh"
+                                                 action="#{productoDescuentoModel.cargarDescuentos}"
+                                                 process="@this" update="cmbDescuentoProducto"
+                                                 styleClass="ml-2"/>
+                            </div>
+                        </div>
+                    </p:panel>
+
+                    <p:dataTable id="tablaDescuentosProducto"
+                                 value="#{productoDescuentoModel.modelo}"
+                                 var="relacionDescuento"
+                                 emptyMessage="Este producto no tiene descuentos asociados"
+                                 paginator="true" rows="10">
+                        <p:column headerText="Descuento">
+                            <h:outputText value="#{relacionDescuento.idDescuento.nombre}"/>
+                        </p:column>
+                        <p:column headerText="Porcentaje">
+                            <h:outputText value="#{relacionDescuento.valor} %"/>
+                        </p:column>
+                        <p:column headerText="Desde">
+                            <h:outputText value="#{relacionDescuento.fechaDesde}">
+                                <f:convertDateTime pattern="dd/MM/yyyy" timeZone="America/El_Salvador"/>
+                            </h:outputText>
+                        </p:column>
+                        <p:column headerText="Hasta">
+                            <h:outputText value="Sin límite" rendered="#{empty relacionDescuento.fechaHasta}"/>
+                            <h:outputText value="#{relacionDescuento.fechaHasta}"
+                                          rendered="#{not empty relacionDescuento.fechaHasta}">
+                                <f:convertDateTime pattern="dd/MM/yyyy" timeZone="America/El_Salvador"/>
+                            </h:outputText>
+                        </p:column>
+                        <p:column headerText="Observaciones">
+                            <h:outputText value="#{relacionDescuento.observaciones}"/>
+                        </p:column>
+                        <p:column headerText="Acciones" style="width:120px; text-align:center;">
+                            <p:commandButton icon="pi pi-trash" title="Quitar descuento"
+                                             action="#{productoDescuentoModel.quitarDescuento(relacionDescuento)}"
+                                             process="@this" update="@form">
+                                <p:confirm header="Confirmación"
+                                           message="¿Desea quitar este descuento del producto?"
+                                           icon="pi pi-exclamation-triangle"/>
+                            </p:commandButton>
+                        </p:column>
+                    </p:dataTable>
+                </p:panel>
+
             </p:tab>
 
         </p:tabView>

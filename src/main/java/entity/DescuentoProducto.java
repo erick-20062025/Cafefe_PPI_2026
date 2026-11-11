@@ -1,7 +1,3 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package entity;
 
 import jakarta.persistence.Basic;
@@ -22,129 +18,103 @@ import java.util.Date;
 import java.util.UUID;
 
 /**
- *
- * @author erick
+ * Asociación entre un producto y un descuento, con porcentaje y vigencia.
+ * Las consultas se reutilizan desde la administración de productos.
  */
 @Entity
 @Table(name = "descuento_producto")
 @NamedQueries({
-    @NamedQuery(name = "DescuentoProducto.findAll", query = "SELECT d FROM DescuentoProducto d"),
-    @NamedQuery(name = "DescuentoProducto.findByFechaDesde", query = "SELECT d FROM DescuentoProducto d WHERE d.fechaDesde = :fechaDesde"),
-    @NamedQuery(name = "DescuentoProducto.findByFechaHasta", query = "SELECT d FROM DescuentoProducto d WHERE d.fechaHasta = :fechaHasta"),
-    @NamedQuery(name = "DescuentoProducto.findByValor", query = "SELECT d FROM DescuentoProducto d WHERE d.valor = :valor"),
-    @NamedQuery(name = "DescuentoProducto.findByObservaciones", query = "SELECT d FROM DescuentoProducto d WHERE d.observaciones = :observaciones")})
+    @NamedQuery(name = "DescuentoProducto.findAll",
+            query = "SELECT dp FROM DescuentoProducto dp"),
+    @NamedQuery(name = "DescuentoProducto.findByFechaDesde",
+            query = "SELECT dp FROM DescuentoProducto dp WHERE dp.fechaDesde = :fechaDesde"),
+    @NamedQuery(name = "DescuentoProducto.findByFechaHasta",
+            query = "SELECT dp FROM DescuentoProducto dp WHERE dp.fechaHasta = :fechaHasta"),
+    @NamedQuery(name = "DescuentoProducto.findByValor",
+            query = "SELECT dp FROM DescuentoProducto dp WHERE dp.valor = :valor"),
+    @NamedQuery(name = "DescuentoProducto.findByObservaciones",
+            query = "SELECT dp FROM DescuentoProducto dp WHERE dp.observaciones = :observaciones"),
+    @NamedQuery(name = "DescuentoProducto.findByIdDescuento",
+            query = "SELECT dp FROM DescuentoProducto dp "
+                  + "WHERE dp.idDescuento.idDescuento = :idDescuento"),
+    @NamedQuery(name = "DescuentoProducto.findByIdProducto",
+            query = "SELECT dp FROM DescuentoProducto dp "
+                  + "JOIN FETCH dp.idDescuento d "
+                  + "WHERE dp.idProducto.idProducto = :idProducto "
+                  + "ORDER BY d.nombre"),
+    @NamedQuery(name = "DescuentoProducto.countByProductoAndDescuento",
+            query = "SELECT COUNT(dp) FROM DescuentoProducto dp "
+                  + "WHERE dp.idProducto.idProducto = :idProducto "
+                  + "AND dp.idDescuento.idDescuento = :idDescuento")
+})
 public class DescuentoProducto implements Serializable {
 
     private static final long serialVersionUID = 1L;
+
     @Id
     @Basic(optional = false)
     @NotNull
     @Column(name = "id_descuento_producto")
     private UUID idDescuentoProducto;
+
     @Column(name = "fecha_desde")
     @Temporal(TemporalType.TIMESTAMP)
     private Date fechaDesde;
+
     @Column(name = "fecha_hasta")
     @Temporal(TemporalType.TIMESTAMP)
     private Date fechaHasta;
+
     @Column(name = "valor")
     private Integer valor;
+
     @Size(max = 2147483647)
     @Column(name = "observaciones")
     private String observaciones;
+
     @JoinColumn(name = "id_descuento", referencedColumnName = "id_descuento")
     @ManyToOne
     private Descuento idDescuento;
+
     @JoinColumn(name = "id_producto", referencedColumnName = "id_producto")
     @ManyToOne
     private Producto idProducto;
 
-    public DescuentoProducto() {
-    }
+    public DescuentoProducto() { }
 
     public DescuentoProducto(UUID idDescuentoProducto) {
         this.idDescuentoProducto = idDescuentoProducto;
     }
 
-    public UUID getIdDescuentoProducto() {
-        return idDescuentoProducto;
-    }
-
-    public void setIdDescuentoProducto(UUID idDescuentoProducto) {
-        this.idDescuentoProducto = idDescuentoProducto;
-    }
-
-    public Date getFechaDesde() {
-        return fechaDesde;
-    }
-
-    public void setFechaDesde(Date fechaDesde) {
-        this.fechaDesde = fechaDesde;
-    }
-
-    public Date getFechaHasta() {
-        return fechaHasta;
-    }
-
-    public void setFechaHasta(Date fechaHasta) {
-        this.fechaHasta = fechaHasta;
-    }
-
-    public Integer getValor() {
-        return valor;
-    }
-
-    public void setValor(Integer valor) {
-        this.valor = valor;
-    }
-
-    public String getObservaciones() {
-        return observaciones;
-    }
-
-    public void setObservaciones(String observaciones) {
-        this.observaciones = observaciones;
-    }
-
-    public Descuento getIdDescuento() {
-        return idDescuento;
-    }
-
-    public void setIdDescuento(Descuento idDescuento) {
-        this.idDescuento = idDescuento;
-    }
-
-    public Producto getIdProducto() {
-        return idProducto;
-    }
-
-    public void setIdProducto(Producto idProducto) {
-        this.idProducto = idProducto;
-    }
+    public UUID getIdDescuentoProducto() { return idDescuentoProducto; }
+    public void setIdDescuentoProducto(UUID id) { this.idDescuentoProducto = id; }
+    public Date getFechaDesde() { return fechaDesde; }
+    public void setFechaDesde(Date fechaDesde) { this.fechaDesde = fechaDesde; }
+    public Date getFechaHasta() { return fechaHasta; }
+    public void setFechaHasta(Date fechaHasta) { this.fechaHasta = fechaHasta; }
+    public Integer getValor() { return valor; }
+    public void setValor(Integer valor) { this.valor = valor; }
+    public String getObservaciones() { return observaciones; }
+    public void setObservaciones(String observaciones) { this.observaciones = observaciones; }
+    public Descuento getIdDescuento() { return idDescuento; }
+    public void setIdDescuento(Descuento idDescuento) { this.idDescuento = idDescuento; }
+    public Producto getIdProducto() { return idProducto; }
+    public void setIdProducto(Producto idProducto) { this.idProducto = idProducto; }
 
     @Override
-    public int hashCode() {
-        int hash = 0;
-        hash += (idDescuentoProducto != null ? idDescuentoProducto.hashCode() : 0);
-        return hash;
-    }
+    public int hashCode() { return idDescuentoProducto != null ? idDescuentoProducto.hashCode() : 0; }
 
     @Override
     public boolean equals(Object object) {
-        // TODO: Warning - this method won't work in the case the id fields are not set
-        if (!(object instanceof DescuentoProducto)) {
-            return false;
-        }
+        if (!(object instanceof DescuentoProducto)) { return false; }
         DescuentoProducto other = (DescuentoProducto) object;
-        if ((this.idDescuentoProducto == null && other.idDescuentoProducto != null) || (this.idDescuentoProducto != null && !this.idDescuentoProducto.equals(other.idDescuentoProducto))) {
-            return false;
-        }
-        return true;
+        return idDescuentoProducto == null
+                ? other.idDescuentoProducto == null
+                : idDescuentoProducto.equals(other.idDescuentoProducto);
     }
 
     @Override
     public String toString() {
         return "entity.DescuentoProducto[ idDescuentoProducto=" + idDescuentoProducto + " ]";
     }
-    
 }
