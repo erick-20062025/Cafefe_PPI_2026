@@ -20,14 +20,16 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 /**
- * Pruebas de DescuentoProductoDAO desde el flujo de Producto.
- * No requieren PostgreSQL: EntityManager y las consultas se simulan con Mockito.
+ * Pruebas de DescuentoProductoDAO desde el flujo de Producto. No requieren
+ * PostgreSQL: EntityManager y las consultas se simulan con Mockito.
  */
 @ExtendWith(MockitoExtension.class)
 class DescuentoProductoDesdeProductoDAOTest {
 
-    @Mock private EntityManager em;
-    @InjectMocks private DescuentoProductoDAO dao;
+    @Mock
+    private EntityManager em;
+    @InjectMocks
+    private DescuentoProductoDAO dao;
 
     @Test
     void buscarPorProductoUsaNamedQueryYDevuelveResultado() {
@@ -157,6 +159,24 @@ class DescuentoProductoDesdeProductoDAOTest {
         assertThrows(IllegalArgumentException.class, () -> dao.crear(relacion));
         relacion.setValor(-10);
         assertThrows(IllegalArgumentException.class, () -> dao.crear(relacion));
+        verifyNoInteractions(em);
+    }
+
+    @Test
+    void rechazaPorcentajeSuperiorACienSinConsultarBD() {
+        DescuentoProducto relacion = relacionValida();
+        relacion.setValor(101);
+
+        IllegalArgumentException error = assertThrows(
+                IllegalArgumentException.class,
+                () -> dao.crear(relacion)
+        );
+
+        assertEquals(
+                "El descuento no puede superar 100 %",
+                error.getMessage()
+        );
+
         verifyNoInteractions(em);
     }
 
@@ -376,14 +396,14 @@ class DescuentoProductoDesdeProductoDAOTest {
     }
 
     /**
-     * Un único stub de EntityManager.find() resuelve todas las entidades.
-     * Esto evita PotentialStubbingProblem al consultar distintas clases con find().
+     * Un único stub de EntityManager.find() resuelve todas las entidades. Esto
+     * evita PotentialStubbingProblem al consultar distintas clases con find().
      */
     private void prepararEntidades(DescuentoProducto relacion,
-                                  boolean productoExiste,
-                                  boolean descuentoExiste,
-                                  Integer maximo,
-                                  DescuentoProducto asociacionExistente) {
+            boolean productoExiste,
+            boolean descuentoExiste,
+            Integer maximo,
+            DescuentoProducto asociacionExistente) {
         Producto producto = relacion.getIdProducto();
         Descuento descuento = relacion.getIdDescuento();
         TipoDescuento tipo = new TipoDescuento();
