@@ -10,6 +10,7 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import java.util.List;
 import java.util.UUID;
+import validation.ProductoTipoProductoValidator;
 
 /**
  *
@@ -28,6 +29,30 @@ public class ProductoTipoProductoDAO extends DefaultDAO<ProductoTipoProducto> {
     @Override
     protected EntityManager getEntityManager() {
         return em;
+    }
+
+    @Override
+    public void crear(ProductoTipoProducto reg) {
+
+        ProductoTipoProductoValidator.validar(reg);
+
+        UUID idProducto = reg.getProducto().getIdProducto();
+        UUID idTipoProducto
+                = reg.getIdTipoProducto().getIdTipoProducto();
+
+        if (existeRelacion(idProducto, idTipoProducto)) {
+            throw new IllegalArgumentException(
+                    "Este tipo de producto ya está asignado al producto");
+        }
+
+        super.crear(reg);
+    }
+
+    @Override
+    public void modificar(ProductoTipoProducto reg) {
+        throw new UnsupportedOperationException(
+                "La relación producto-tipo no admite modificación; "
+                + "debe eliminarse y crearse nuevamente");
     }
 
     public List<ProductoTipoProducto> findByIdProducto(UUID idProducto) {

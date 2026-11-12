@@ -11,11 +11,12 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 import java.util.UUID;
+import validation.DescuentoProductoValidator;
 
 /**
- * Persistencia de asociaciones entre productos y descuentos.
- * La asociación es única por combinación producto-descuento.
- * Las validaciones de este DAO se aplican aunque la llamada no provenga de JSF.
+ * Persistencia de asociaciones entre productos y descuentos. La asociación es
+ * única por combinación producto-descuento. Las validaciones de este DAO se
+ * aplican aunque la llamada no provenga de JSF.
  */
 @Stateless
 public class DescuentoProductoDAO extends DefaultDAO<DescuentoProducto> {
@@ -28,9 +29,13 @@ public class DescuentoProductoDAO extends DefaultDAO<DescuentoProducto> {
     }
 
     @Override
-    protected EntityManager getEntityManager() { return em; }
+    protected EntityManager getEntityManager() {
+        return em;
+    }
 
-    /** Lista los productos asociados a un descuento (compatibilidad). */
+    /**
+     * Lista los productos asociados a un descuento (compatibilidad).
+     */
     public List<DescuentoProducto> findByIdDescuento(UUID idDescuento) {
         exigirId(idDescuento, "descuento");
         return em.createNamedQuery("DescuentoProducto.findByIdDescuento", DescuentoProducto.class)
@@ -38,7 +43,9 @@ public class DescuentoProductoDAO extends DefaultDAO<DescuentoProducto> {
                 .getResultList();
     }
 
-    /** Lista los descuentos de un producto guardado. */
+    /**
+     * Lista los descuentos de un producto guardado.
+     */
     public List<DescuentoProducto> findByIdProducto(UUID idProducto) {
         exigirId(idProducto, "producto");
         return em.createNamedQuery("DescuentoProducto.findByIdProducto", DescuentoProducto.class)
@@ -46,7 +53,10 @@ public class DescuentoProductoDAO extends DefaultDAO<DescuentoProducto> {
                 .getResultList();
     }
 
-    /** Verifica si ya existe esta combinación, incluyendo las asociaciones antiguas. */
+    /**
+     * Verifica si ya existe esta combinación, incluyendo las asociaciones
+     * antiguas.
+     */
     public boolean existeRelacion(UUID idProducto, UUID idDescuento) {
         exigirId(idProducto, "producto");
         exigirId(idDescuento, "descuento");
@@ -59,12 +69,12 @@ public class DescuentoProductoDAO extends DefaultDAO<DescuentoProducto> {
     }
 
     /**
-     * Crea una asociación válida sin repetir producto y descuento.
-     * La transacción la administra el contenedor EJB.
+     * Crea una asociación válida sin repetir producto y descuento. La
+     * transacción la administra el contenedor EJB.
      */
     @Override
     public void crear(DescuentoProducto relacion) {
-        validarEstructura(relacion);
+        DescuentoProductoValidator.validar(relacion);
         UUID idProducto = relacion.getIdProducto().getIdProducto();
         UUID idDescuento = relacion.getIdDescuento().getIdDescuento();
 
@@ -109,7 +119,9 @@ public class DescuentoProductoDAO extends DefaultDAO<DescuentoProducto> {
         em.flush();
     }
 
-    /** Elimina exclusivamente la asociación, no el producto ni el descuento. */
+    /**
+     * Elimina exclusivamente la asociación, no el producto ni el descuento.
+     */
     @Override
     public void eliminar(DescuentoProducto relacion) {
         if (relacion == null || relacion.getIdDescuentoProducto() == null) {
@@ -127,24 +139,6 @@ public class DescuentoProductoDAO extends DefaultDAO<DescuentoProducto> {
     private static void exigirId(UUID id, String concepto) {
         if (id == null) {
             throw new IllegalArgumentException("El identificador de " + concepto + " es obligatorio");
-        }
-    }
-
-    private static void validarEstructura(DescuentoProducto r) {
-        if (r == null || r.getIdDescuentoProducto() == null) {
-            throw new IllegalArgumentException("La asociación debe tener un identificador");
-        }
-        if (r.getIdProducto() == null || r.getIdProducto().getIdProducto() == null) {
-            throw new IllegalArgumentException("Debe seleccionar un producto válido");
-        }
-        if (r.getIdDescuento() == null || r.getIdDescuento().getIdDescuento() == null) {
-            throw new IllegalArgumentException("Debe seleccionar un descuento válido");
-        }
-        if (r.getValor() == null || r.getValor() <= 0) {
-            throw new IllegalArgumentException("El descuento debe ser mayor que 0 %");
-        }
-        if (r.getFechaDesde() == null) {
-            throw new IllegalArgumentException("Debe indicar la fecha desde");
         }
     }
 

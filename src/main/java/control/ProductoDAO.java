@@ -8,6 +8,8 @@ import entity.Producto;
 import jakarta.ejb.Stateless;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
+import validation.ProductoValidator;
+
 /**
  *
  * @author erick
@@ -26,4 +28,17 @@ public class ProductoDAO extends DefaultDAO<Producto> {
     protected EntityManager getEntityManager() {
         return em;
     }
+
+    @Override
+    public void crear(Producto reg) {
+        ProductoValidator.validar(reg);
+        super.crear(reg);
+    }
+
+    @Override
+    public void modificar(Producto reg) {
+        ProductoValidator.validar(reg);
+        super.modificar(reg);
+    }
+
 }
