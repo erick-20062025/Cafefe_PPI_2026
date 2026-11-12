@@ -28,6 +28,12 @@ import java.util.UUID;
             query = "SELECT o FROM Orden o WHERE o.fechaCreacion = :fechaCreacion"),
     // Consultas auxiliares de la pantalla de órdenes. Toda la JPQL se declara
     // en las entidades, no se construye mediante cadenas en el DAO.
+    @NamedQuery(name = "Orden.findPendientesPago",
+            query = "SELECT DISTINCT o FROM Orden o JOIN o.ordenProductoCollection op "
+            + "WHERE NOT EXISTS (SELECT fp FROM FacturaOrdenProducto fp "
+            + "WHERE fp.idOrdenProducto = op "
+            + "AND UPPER(fp.idFactura.estado) = 'PAGADA') "
+            + "ORDER BY o.fechaCreacion DESC"),
     @NamedQuery(name = "Orden.findCamarerosActivos",
             query = "SELECT er FROM EmpleadoRol er "
             + "JOIN FETCH er.idEmpleado e JOIN FETCH er.idRol r "
