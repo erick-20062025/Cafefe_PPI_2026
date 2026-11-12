@@ -254,4 +254,83 @@ class PagoModelTest {
             logger.removeHandler(handler);
         }
     }
+
+    @Test
+    void alIniciarDebeConsultarFacturasPagadas() {
+        Factura pagada = factura();
+        pagada.setEstado("PAGADA");
+        when(pagoDAO.listarFacturasPagadas()).thenReturn(List.of(pagada));
+        modelo.init();
+        assertEquals(List.of(pagada), modelo.getFacturasPagadas());
+    }
+
+    @Test
+    void verFacturaPagadaDebeAbrirPestanaSinRegistrarAbonos() {
+        Factura pagada = factura();
+        pagada.setEstado("PAGADA");
+        UUID id = pagada.getIdFactura();
+        when(pagoDAO.consultarResumen(id))
+                .thenReturn(resumen("15.00", "15.00", "0.00", true));
+        when(pagoDAO.obtenerDetallesFactura(id))
+                .thenReturn(List.of(new FacturaOrdenProducto(UUID.randomUUID())));
+        when(pagoDetalleDAO.findByFactura(id))
+                .thenReturn(List.of(new PagoDetalle(UUID.randomUUID())));
+        modelo.verFactura(pagada);
+        assertEquals(3, modelo.getIndicePestana());
+        assertSame(pagada, modelo.getFacturaConsulta());
+        assertEquals(1, modelo.getProductosConsulta().size());
+        assertEquals(1, modelo.getAbonosConsulta().size());
+        assertTrue(modelo.isConsultaImprimible());
+        verify(pagoDAO, never()).registrarAbono(any(), any(), any(), any(), any());
+    }
+
+    @Test
+    void noDebeMostrarComoPagadaFacturaPendiente() {
+        Factura pendiente = factura();
+        modelo.verFactura(pendiente);
+        assertNotNull(modelo.advertencia);
+        assertNull(modelo.getFacturaConsulta());
+        assertFalse(modelo.isConsultaImprimible());
+        verifyNoInteractions(pagoDAO, pagoDetalleDAO);
+    }
+
+    @Test
+    void facturaPagadaSinAbonosCompletosSoloPuedeConsultarse() {
+        Factura pagada = factura();
+        pagada.setEstado("PAGADA");
+        UUID id = pagada.getIdFactura();
+        when(pagoDAO.consultarResumen(id))
+                .thenReturn(resumen("15.00", "0.00", "15.00", true));
+        modelo.verFactura(pagada);
+        assertEquals(3, modelo.getIndicePestana());
+        assertFalse(modelo.isConsultaImprimible());
+        assertNotNull(modelo.advertencia);
+    }
+
+    @Test
+    void volverAPagadasNoDebeModificarLaFactura() {
+        Factura pagada = factura();
+        pagada.setEstado("PAGADA");
+        UUID id = pagada.getIdFactura();
+        when(pagoDAO.consultarResumen(id))
+                .thenReturn(resumen("15.00", "15.00", "0.00", true));
+        modelo.verFactura(pagada);
+        modelo.volverAFacturasPagadas();
+        assertEquals(2, modelo.getIndicePestana());
+        assertNull(modelo.getFacturaConsulta());
+        verify(pagoDAO, never()).registrarAbono(any(), any(), any(), any(), any());
+    }
+
+    @Test
+    void falloDeConsultaNoDebeDejarReciboAnterior() {
+        Factura pagada = factura();
+        pagada.setEstado("PAGADA");
+        UUID id = pagada.getIdFactura();
+        when(pagoDAO.consultarResumen(id))
+                .thenThrow(new RuntimeException("Fallo de BD"));
+        modelo.verFactura(pagada);
+        assertNull(modelo.getFacturaConsulta());
+        assertNotNull(modelo.error);
+        assertFalse(modelo.isConsultaImprimible());
+    }
 }

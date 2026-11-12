@@ -43,6 +43,12 @@ public class PagoDAO extends DefaultDAO<Pago> {
                 .getResultList();
     }
 
+    /** Facturas pagadas disponibles para consultar y reimprimir su comprobante. */
+    public List<Factura> listarFacturasPagadas() {
+        return em.createNamedQuery("Pago.facturasPagadas", Factura.class)
+                .getResultList();
+    }
+
     /** Detalles con el precio propio de la factura (no el precio actual de Orden). */
     public List<FacturaOrdenProducto> obtenerDetallesFactura(UUID idFactura) {
         validarId(idFactura);

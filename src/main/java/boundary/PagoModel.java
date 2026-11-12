@@ -36,12 +36,18 @@ public class PagoModel implements Serializable {
     private PagoDetalleDAO pagoDetalleDAO;
 
     private List<Factura> facturasPendientes = new ArrayList<>();
+    private List<Factura> facturasPagadas = new ArrayList<>();
     private Factura facturaSeleccionada;
+    // Consulta independiente del cobro; nunca registra abonos ni modifica Factura.
+    private Factura facturaConsulta;
+    private List<FacturaOrdenProducto> productosConsulta = new ArrayList<>();
+    private List<PagoDetalle> abonosConsulta = new ArrayList<>();
+    private PagoDAO.ResumenPago resumenConsulta;
     private List<FacturaOrdenProducto> productosFactura = new ArrayList<>();
     private List<PagoDetalle> abonos = new ArrayList<>();
     private PagoDAO.ResumenPago resumen;
 
-    // 0: facturas pendientes; 1: cobro de factura seleccionada.
+    // 0: pendientes; 1: cobrar; 2: pagadas; 3: ver/reimprimir factura.
     private int indicePestana;
 
     private String tipoPago;
@@ -57,8 +63,10 @@ public class PagoModel implements Serializable {
     /** Recarga las facturas pendientes sin seleccionar ninguna automáticamente. */
     public void actualizarFacturas() {
         try {
-            List<Factura> resultados = pagoDAO.listarFacturasPendientes();
-            facturasPendientes = resultados != null ? resultados : new ArrayList<>();
+            List<Factura> pendientes = pagoDAO.listarFacturasPendientes();
+            List<Factura> pagadas = pagoDAO.listarFacturasPagadas();
+            facturasPendientes = pendientes != null ? pendientes : new ArrayList<>();
+            facturasPagadas = pagadas != null ? pagadas : new ArrayList<>();
         } catch (RuntimeException e) {
             LOGGER.log(Level.SEVERE, "No se pudieron consultar las facturas pendientes", e);
             mostrarError("No se pudieron cargar las facturas pendientes");
@@ -129,16 +137,88 @@ public class PagoModel implements Serializable {
             UUID idFactura = facturaSeleccionada.getIdFactura();
             List<PagoDetalle> nuevosAbonos = pagoDetalleDAO.findByFactura(idFactura);
             abonos = nuevosAbonos != null ? nuevosAbonos : new ArrayList<>();
-            List<Factura> facturas = pagoDAO.listarFacturasPendientes();
-            facturasPendientes = facturas != null ? facturas : new ArrayList<>();
+            List<Factura> pendientes = pagoDAO.listarFacturasPendientes();
+            List<Factura> pagadas = pagoDAO.listarFacturasPagadas();
+            facturasPendientes = pendientes != null ? pendientes : new ArrayList<>();
+            facturasPagadas = pagadas != null ? pagadas : new ArrayList<>();
         } catch (RuntimeException e) {
             LOGGER.log(Level.WARNING, "Abono guardado, pero falló la recarga de pantalla", e);
             mostrarAdvertencia("El abono se guardó; actualice la pantalla para consultar el historial");
         }
     }
 
+    /**
+     * Consulta una factura pagada y abre la pestaña de impresión. No guarda
+     * información ni modifica el estado de ninguna factura.
+     *
+     * @param factura factura seleccionada del listado de facturas pagadas
+     */
+    public void verFactura(Factura factura) {
+        if (factura == null || factura.getIdFactura() == null) {
+            mostrarAdvertencia("Debe seleccionar una factura válida");
+            return;
+        }
+        if (!"PAGADA".equalsIgnoreCase(factura.getEstado())) {
+            mostrarAdvertencia("Solo se pueden consultar aquí facturas pagadas");
+            return;
+        }
+
+        // Evita mostrar información anterior si la consulta nueva falla.
+        limpiarConsulta();
+        try {
+            UUID idFactura = factura.getIdFactura();
+            PagoDAO.ResumenPago nuevoResumen = pagoDAO.consultarResumen(idFactura);
+            if (!nuevoResumen.isCompletado()) {
+                mostrarAdvertencia("La factura ya no se encuentra pagada; actualice el listado");
+                return;
+            }
+            List<FacturaOrdenProducto> detalles = pagoDAO.obtenerDetallesFactura(idFactura);
+            List<PagoDetalle> historial = pagoDetalleDAO.findByFactura(idFactura);
+
+            facturaConsulta = factura;
+            resumenConsulta = nuevoResumen;
+            productosConsulta = detalles != null ? detalles : new ArrayList<>();
+            abonosConsulta = historial != null ? historial : new ArrayList<>();
+            indicePestana = 3;
+
+            if (!isConsultaImprimible()) {
+                mostrarAdvertencia("Esta factura figura como pagada, pero sus abonos no cubren el total. "
+                        + "Puede consultarla, pero no imprimirla como pagada hasta corregir la inconsistencia.");
+            }
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            mostrarAdvertencia(e.getMessage());
+        } catch (RuntimeException e) {
+            LOGGER.log(Level.SEVERE, "No se pudo consultar el comprobante", e);
+            mostrarError("No se pudo recuperar la factura para impresión");
+        }
+    }
+
+    /** Solo permite imprimir un recibo cuando el saldo coincide con el pago total. */
+    public boolean isConsultaImprimible() {
+        return facturaConsulta != null
+                && "PAGADA".equalsIgnoreCase(facturaConsulta.getEstado())
+                && resumenConsulta != null
+                && resumenConsulta.isCompletado()
+                && BigDecimal.ZERO.compareTo(resumenConsulta.getSaldo()) == 0;
+    }
+
+    /** Vuelve al historial sin borrar registros de la base de datos. */
+    public void volverAFacturasPagadas() {
+        limpiarConsulta();
+        indicePestana = 2;
+        actualizarFacturas();
+    }
+
+    private void limpiarConsulta() {
+        facturaConsulta = null;
+        productosConsulta = new ArrayList<>();
+        abonosConsulta = new ArrayList<>();
+        resumenConsulta = null;
+    }
+
     /** Cierra el detalle sin revertir abonos ya registrados. */
     public void cancelarSeleccion() {
+        limpiarConsulta();
         facturaSeleccionada = null;
         productosFactura = new ArrayList<>();
         abonos = new ArrayList<>();
@@ -193,10 +273,15 @@ public class PagoModel implements Serializable {
     public int getIndicePestana() { return indicePestana; }
 
     public void setIndicePestana(int indicePestana) {
-        this.indicePestana = indicePestana == 1 ? 1 : 0;
+        this.indicePestana = indicePestana >= 0 && indicePestana <= 3 ? indicePestana : 0;
     }
 
     public List<Factura> getFacturasPendientes() { return facturasPendientes; }
+    public List<Factura> getFacturasPagadas() { return facturasPagadas; }
+    public Factura getFacturaConsulta() { return facturaConsulta; }
+    public List<FacturaOrdenProducto> getProductosConsulta() { return productosConsulta; }
+    public List<PagoDetalle> getAbonosConsulta() { return abonosConsulta; }
+    public PagoDAO.ResumenPago getResumenConsulta() { return resumenConsulta; }
     public Factura getFacturaSeleccionada() { return facturaSeleccionada; }
     public List<FacturaOrdenProducto> getProductosFactura() { return productosFactura; }
     public List<PagoDetalle> getAbonos() { return abonos; }

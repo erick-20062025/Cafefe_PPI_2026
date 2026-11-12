@@ -300,4 +300,17 @@ class PagoDAOTest {
         assertEquals(1, dao.obtenerDetallesFactura(idFactura).size());
         verify(em).createNamedQuery("Pago.detallesFactura", FacturaOrdenProducto.class);
     }
+
+    @Test
+    void debeListarFacturasPagadasUsandoNamedQuerySinEditarFacturas() {
+        TypedQuery<Factura> query = mock(TypedQuery.class);
+        List<Factura> pagadas = List.of(new Factura(UUID.randomUUID()));
+        when(em.createNamedQuery("Pago.facturasPagadas", Factura.class)).thenReturn(query);
+        when(query.getResultList()).thenReturn(pagadas);
+        assertSame(pagadas, dao.listarFacturasPagadas());
+        verify(em).createNamedQuery("Pago.facturasPagadas", Factura.class);
+        verify(em, never()).merge(any());
+        verify(em, never()).persist(any());
+        verify(em, never()).remove(any());
+    }
 }
