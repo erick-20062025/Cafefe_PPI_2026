@@ -96,6 +96,8 @@
                 flex: 1;
             }
         </style>
+        <!-- Estilos adicionales exclusivos de pantallas especiales, como Pago -->
+        <ui:insert name="estilosExtra" />
 
     </h:head>
     <script type="text/javascript">
@@ -136,7 +138,7 @@
             <div class="grid p-3">
 
                 <!-- ENCABEZADO SUPERIOR -->
-                <div class="col-12 flex align-items-center justify-content-between pb-3 border-bottom-1 surface-border">
+                <div class="col-12 flex align-items-center justify-content-between pb-3 border-bottom-1 surface-border cafefe-cabecera-global">
 
                     <div class="flex align-items-center">
                         <h:graphicImage name="imagenes/200LogoCafefe.png"
@@ -209,6 +211,11 @@
                                           icon="pi pi-file"
                                           styleClass="boton-menu" />
 
+                                <p:button value="Pagos"
+                                          outcome="/paginas/Pago.xhtml"
+                                          icon="pi pi-credit-card"
+                                          styleClass="boton-menu" />
+
 
                                 <!-- CATÁLOGO -->
                                 <div class="menu-seccion">
@@ -274,10 +281,17 @@
                     <div id="areaPrincipal"
                          class="col-12 md:col-10">
 
+                        <!-- Vista especializada: Pago no utiliza AbstractModel ni botones CRUD -->
+                        <h:panelGroup id="pnlContenidoEspecial"
+                                      layout="block"
+                                      rendered="#{vistaEspecial eq true}">
+                            <ui:insert name="contenidoEspecial" />
+                        </h:panelGroup>
+
                         <!-- TABLA -->
                         <h:panelGroup id="pnlTablaContainer"
                                       layout="block"
-                                      rendered="#{!controller.nuevo and !controller.editando and !controller.consultando}">
+                                      rendered="#{vistaEspecial ne true and !controller.nuevo and !controller.editando and !controller.consultando}">
 
 
 
@@ -339,7 +353,7 @@
                         <!-- FORMULARIO NUEVO / EDICIÓN -->
                         <h:panelGroup id="pnlFormularioContainer"
                                       layout="block"
-                                      rendered="#{controller.nuevo or controller.editando or controller.consultando}">
+                                      rendered="#{vistaEspecial ne true and (controller.nuevo or controller.editando or controller.consultando)}">
 
                             <p:panel header="Datos de #{nombreEntidad}">
 
@@ -413,7 +427,7 @@
 
 
                 <!-- PIE DE PÁGINA -->
-                <div class="col-12 mt-5 pt-3 border-top-1 surface-border text-color-secondary text-sm">
+                <div class="col-12 mt-5 pt-3 border-top-1 surface-border text-color-secondary text-sm cafefe-pie-global">
 
                     © Todos los derechos reservados CAFEFE 2026
 
