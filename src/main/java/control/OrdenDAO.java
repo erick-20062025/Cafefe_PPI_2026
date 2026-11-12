@@ -40,6 +40,15 @@ public class OrdenDAO extends DefaultDAO<Orden> {
     public OrdenDAO() { super(Orden.class); }
     @Override protected EntityManager getEntityManager() { return em; }
 
+    /**
+     * Órdenes con al menos un producto que aún no pertenece a una factura PAGADA.
+     * No modifica el estado de ninguna factura ni añade columnas al esquema.
+     */
+    public List<Orden> findPendientesPago() {
+        return em.createNamedQuery("Orden.findPendientesPago", Orden.class)
+                .getResultList();
+    }
+
     /** Obtiene las relaciones activas para tomar órdenes. */
     public List<EmpleadoRol> findCamarerosActivos() {
         return em.createNamedQuery("Orden.findCamarerosActivos", EmpleadoRol.class)
