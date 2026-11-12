@@ -1,0 +1,271 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html>
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+                xmlns:h="jakarta.faces.html"
+                xmlns:f="jakarta.faces.core"
+                xmlns:ui="jakarta.faces.facelets"
+                xmlns:p="http://primefaces.org/ui"
+                template="/WEB-INF/plantillas/general.xhtml">
+
+    <!-- Evita que la plantilla muestre botones CRUD; Pago tiene su propio flujo. -->
+    <ui:param name="vistaEspecial" value="#{true}"/>
+    <ui:param name="nombreEntidad" value="Pago"/>
+
+    <ui:define name="titulo">Pagos - Cafefe</ui:define>
+    <ui:define name="tituloHeader">Caja · Pagos</ui:define>
+
+    <ui:define name="estilosExtra">
+        <style type="text/css">
+            .pago-principal { max-width: 1180px; margin: 0 auto; }
+            .pago-descripcion { color: #64748b; font-size: .93rem; line-height: 1.5; margin: .25rem 0 1.25rem; }
+            .pago-cabecera { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: .75rem; margin-bottom: .5rem; }
+            .pago-cabecera h2 { font-size: 1.45rem; font-weight: 700; color: #243b32; margin: 0; }
+            .pago-tabs .ui-tabs-nav { border-bottom: 1px solid #dbe4dc !important; margin-bottom: 1rem; }
+            .pago-tabs .ui-tabs-panel { padding: .25rem 0 !important; }
+            .pago-tarjeta { border: 1px solid #e3e9e4; border-radius: 12px; padding: 1.15rem; margin: 1rem 0; background: #fff; }
+            .pago-titulo-seccion { font-weight: 700; font-size: 1.06rem; margin: 0 0 .9rem; color: #264235; }
+            .pago-fila-datos { display: grid; grid-template-columns: repeat(auto-fit,minmax(200px,1fr)); gap: .75rem; }
+            .pago-fila-datos > div { min-width: 0; overflow-wrap: anywhere; }
+            .pago-etiqueta { display:block; font-size: .83rem; color:#64748b; margin-bottom: .25rem; }
+            .pago-resumen { display:grid; grid-template-columns: repeat(auto-fit,minmax(170px,1fr)); gap:.75rem; margin-top:1rem; }
+            .pago-resumen > div { padding: 1rem; background: #f7f9f7; border: 1px solid #e6ede6; border-radius: 10px; }
+            .pago-resumen strong { display:block; font-size:1.45rem; color:#243b32; margin-top:.3rem; }
+            .pago-resumen .pago-saldo { color: #a65313; }
+            .pago-tarjeta-cobro { background:#f9fbfa; }
+            .pago-metodos { display:block; width:100%; margin:.5rem 0 1rem; }
+            .pago-metodos .ui-selectoneradio { width: 100%; }
+            .pago-metodos .ui-selectoneradio td { padding: .58rem .7rem !important; border-bottom: 1px solid #e3ebe5; }
+            .pago-metodos .ui-selectoneradio label { font-size:1rem; font-weight:600; margin-left:.4rem; }
+            .pago-campo { margin:.85rem 0; max-width:520px; }
+            .pago-campo > label { display:block; font-weight:600; margin-bottom:.35rem; }
+            .pago-ayuda { display:block; color:#64748b; font-size:.82rem; margin-top:.35rem; }
+            .pago-acciones { display:flex; flex-wrap:wrap; align-items:center; gap:.6rem; margin-top:1.15rem; }
+            .pago-listado .ui-datatable-tablewrapper { overflow-x:auto; }
+            .pago-recibo { border:1px solid #dce5dc; border-radius:12px; background:#fff; padding:1rem; }
+            .pago-recibo-encabezado { display:none; }
+            .pago-tabla-precios { margin-top: .7rem; }
+            @media print {
+                @page { size: 80mm auto; margin: 6mm; }
+                body { background: white !important; }
+                #contenedorMenu, .cafefe-cabecera-global, .cafefe-pie-global, .menu-superior, .pago-no-imprimir,
+                .pago-tabs .ui-tabs-nav, .ui-growl, .ui-messages, .ui-message,
+                #frmPrincipal\:pnlContenidoEspecial .pago-tarjeta-cobro { display:none !important; }
+                #areaPrincipal { width:100% !important; max-width:100% !important; flex: 0 0 100% !important; }
+                .pago-recibo { border:0 !important; padding:0 !important; }
+                .pago-recibo-encabezado { display:block !important; font-weight:700; text-align:center; }
+                .pago-principal, .pago-tabs, .pago-tabs .ui-tabs-panel { max-width:80mm; width:100% !important; padding:0 !important; margin:0 !important; }
+                .pago-tarjeta { border:0 !important; padding:0 !important; margin:.5rem 0 !important; }
+                .pago-resumen { display:block; }
+                .pago-resumen > div { padding:.2rem 0; border:0; }
+                .pago-resumen strong { font-size:1.1rem; }
+            }
+        </style>
+    </ui:define>
+
+    <!-- Esta vista se inserta dentro del h:form id=frmPrincipal del template. -->
+    <ui:define name="contenidoEspecial">
+        <div class="pago-principal">
+            <div class="pago-cabecera pago-no-imprimir">
+                <h2>Gestión de cobros</h2>
+                <p:commandButton value="Actualizar facturas" icon="pi pi-refresh"
+                                 action="#{pagoModel.actualizarFacturas}" process="@this"
+                                 update=":frmPrincipal:pnlContenidoEspecial :frmPrincipal:growl"
+                                 styleClass="ui-button-secondary"/>
+            </div>
+            <p class="pago-descripcion pago-no-imprimir">
+                Seleccione una factura pendiente y registre uno o varios abonos.
+                La factura se marca pagada únicamente cuando se completa el saldo.
+            </p>
+
+            <p:tabView id="pestanasPago" styleClass="pago-tabs"
+                       activeIndex="#{pagoModel.indicePestana}">
+
+                <p:tab id="tabPendientes" title="Facturas pendientes">
+                    <p:panel header="Pendientes de cobro" styleClass="pago-listado">
+                        <p:dataTable id="tablaPendientes"
+                                     value="#{pagoModel.facturasPendientes}"
+                                     var="factura" paginator="true" rows="10"
+                                     responsiveLayout="scroll"
+                                     emptyMessage="No hay facturas pendientes de cobro">
+                            <p:column headerText="Nombre en factura"
+                                      filterBy="#{empty factura.cliente ? 'Consumidor final' : factura.cliente}"
+                                      filterMatchMode="contains"
+                                      sortBy="#{factura.cliente}">
+                                <h:outputText value="#{empty factura.cliente ? 'Consumidor final' : factura.cliente}"/>
+                            </p:column>
+                            <p:column headerText="Identificador"
+                                      filterBy="#{factura.idFactura}" filterMatchMode="contains">
+                                <h:outputText value="#{factura.idFactura}"/>
+                            </p:column>
+                            <p:column headerText="Fecha" sortBy="#{factura.fechaFacturacion}">
+                                <h:outputText value="#{factura.fechaFacturacion}">
+                                    <f:convertDateTime pattern="dd/MM/yyyy HH:mm"
+                                                       timeZone="America/El_Salvador"/>
+                                </h:outputText>
+                            </p:column>
+                            <p:column headerText="Estado">
+                                <h:outputText value="#{factura.estado}"/>
+                            </p:column>
+                            <p:column headerText="Acción" style="width:145px;">
+                                <p:commandButton value="Cobrar" icon="pi pi-credit-card"
+                                                 action="#{pagoModel.seleccionarFactura(factura)}"
+                                                 process="@this"
+                                                 update=":frmPrincipal:pnlContenidoEspecial :frmPrincipal:growl"/>
+                            </p:column>
+                        </p:dataTable>
+                    </p:panel>
+                </p:tab>
+
+                <p:tab id="tabCobrar" title="Cobrar factura">
+                    <h:panelGroup rendered="#{empty pagoModel.facturaSeleccionada}" layout="block">
+                        <div class="pago-tarjeta">
+                            <h3 class="pago-titulo-seccion">Seleccione una factura</h3>
+                            <p:outputLabel value="Utilice la pestaña 'Facturas pendientes' para seleccionar qué factura desea cobrar."/>
+                        </div>
+                    </h:panelGroup>
+
+                    <h:panelGroup rendered="#{not empty pagoModel.facturaSeleccionada}" layout="block">
+                        <div class="pago-recibo">
+                            <div class="pago-recibo-encabezado">CAFEFE · COMPROBANTE</div>
+                            <div class="pago-tarjeta">
+                                <h3 class="pago-titulo-seccion">Resumen de factura</h3>
+                                <div class="pago-fila-datos">
+                                    <div><span class="pago-etiqueta">Cliente / ticket</span>
+                                        <strong><h:outputText value="#{empty pagoModel.facturaSeleccionada.cliente ? 'Consumidor final' : pagoModel.facturaSeleccionada.cliente}"/></strong>
+                                    </div>
+                                    <div><span class="pago-etiqueta">Estado</span>
+                                        <strong><h:outputText value="#{pagoModel.facturaSeleccionada.estado}"/></strong>
+                                    </div>
+                                    <div><span class="pago-etiqueta">Factura</span>
+                                        <h:outputText value="#{pagoModel.facturaSeleccionada.idFactura}"/>
+                                    </div>
+                                    <div><span class="pago-etiqueta">Fecha</span>
+                                        <h:outputText value="#{pagoModel.facturaSeleccionada.fechaFacturacion}">
+                                            <f:convertDateTime pattern="dd/MM/yyyy HH:mm"
+                                                               timeZone="America/El_Salvador"/>
+                                        </h:outputText>
+                                    </div>
+                                </div>
+                                <h4>Productos facturados</h4>
+                                <p:dataTable id="tablaProductos" value="#{pagoModel.productosFactura}"
+                                             var="detalle" styleClass="pago-tabla-precios"
+                                             emptyMessage="Esta factura no contiene productos">
+                                    <p:column headerText="Producto">
+                                        <h:outputText value="#{detalle.idOrdenProducto.idProducto.nombre}"/>
+                                    </p:column>
+                                    <p:column headerText="Precio facturado" style="width:150px;">
+                                        <h:outputText value="#{detalle.precio}">
+                                            <f:convertNumber type="currency" currencySymbol="$"
+                                                             minFractionDigits="2" maxFractionDigits="2"/>
+                                        </h:outputText>
+                                    </p:column>
+                                </p:dataTable>
+                                <div class="pago-resumen">
+                                    <div><span class="pago-etiqueta">Total de factura</span>
+                                        <strong><h:outputText value="#{pagoModel.resumen.total}">
+                                            <f:convertNumber type="currency" currencySymbol="$"/>
+                                        </h:outputText></strong>
+                                    </div>
+                                    <div><span class="pago-etiqueta">Total abonado</span>
+                                        <strong><h:outputText value="#{pagoModel.resumen.abonado}">
+                                            <f:convertNumber type="currency" currencySymbol="$"/>
+                                        </h:outputText></strong>
+                                    </div>
+                                    <div><span class="pago-etiqueta">Saldo pendiente</span>
+                                        <strong class="pago-saldo"><h:outputText value="#{pagoModel.resumen.saldo}">
+                                            <f:convertNumber type="currency" currencySymbol="$"/>
+                                        </h:outputText></strong>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="pago-tarjeta">
+                                <h3 class="pago-titulo-seccion">Historial de abonos</h3>
+                                <p:dataTable id="tablaAbonos" value="#{pagoModel.abonos}"
+                                             var="abono" emptyMessage="Aún no hay abonos registrados">
+                                    <p:column headerText="Método"><h:outputText value="#{abono.tipoPago}"/></p:column>
+                                    <p:column headerText="Monto">
+                                        <h:outputText value="#{abono.monto}">
+                                            <f:convertNumber type="currency" currencySymbol="$"/>
+                                        </h:outputText>
+                                    </p:column>
+                                    <p:column headerText="Referencia"><h:outputText value="#{abono.referenciaExterna}"/></p:column>
+                                </p:dataTable>
+                            </div>
+                        </div>
+
+                        <h:panelGroup rendered="#{not pagoModel.facturaPagada}" layout="block"
+                                      styleClass="pago-tarjeta pago-tarjeta-cobro pago-no-imprimir">
+                            <h3 class="pago-titulo-seccion">Registrar un abono</h3>
+                            <p class="pago-descripcion">
+                                Puede pagar una parte ahora y completar el resto con otro método.
+                                No se permite abonar más que el saldo pendiente.
+                            </p>
+                            <div class="pago-campo">
+                                <p:outputLabel for="metodoPago" value="Seleccione una forma de pago"/>
+                                <p:selectOneRadio id="metodoPago" value="#{pagoModel.tipoPago}"
+                                                  required="true" requiredMessage="Seleccione una forma de pago"
+                                                  layout="pageDirection" styleClass="pago-metodos">
+                                    <f:selectItem itemLabel="Efectivo" itemValue="EFECTIVO"/>
+                                    <f:selectItem itemLabel="Tarjeta" itemValue="TARJETA"/>
+                                    <f:selectItem itemLabel="Transferencia" itemValue="TRANSFERENCIA"/>
+                                    <f:selectItem itemLabel="QR" itemValue="QR"/>
+                                    <p:ajax event="change" process="@this" update="referenciaContenedor"/>
+                                </p:selectOneRadio>
+                                <p:message for="metodoPago"/>
+                            </div>
+                            <div class="pago-campo">
+                                <p:outputLabel for="txtMonto" value="Monto a abonar"/>
+                                <p:inputNumber id="txtMonto" value="#{pagoModel.monto}"
+                                               decimalPlaces="2" minValue="0.01"
+                                               symbol="$" symbolPosition="p"
+                                               required="true" requiredMessage="Ingrese el monto del abono"
+                                               style="width:100%;"/>
+                                <p:message for="txtMonto"/>
+                                <small class="pago-ayuda">El saldo se recalcula después de cada abono confirmado.</small>
+                            </div>
+                            <p:outputPanel id="referenciaContenedor" layout="block">
+                                <h:panelGroup rendered="#{pagoModel.requiereReferencia}" layout="block"
+                                              styleClass="pago-campo">
+                                    <p:outputLabel for="txtReferencia" value="Referencia del pago"/>
+                                    <p:inputText id="txtReferencia" value="#{pagoModel.referenciaExterna}"
+                                                 required="#{pagoModel.requiereReferencia}"
+                                                 requiredMessage="Debe indicar la referencia del pago"
+                                                 maxlength="120" style="width:100%;"/>
+                                    <p:message for="txtReferencia"/>
+                                    <small class="pago-ayuda">Para tarjeta, transferencia o QR, ingrese una referencia distinta.</small>
+                                </h:panelGroup>
+                            </p:outputPanel>
+                            <div class="pago-campo">
+                                <p:outputLabel for="txtObservaciones" value="Observaciones (opcional)"/>
+                                <p:inputTextarea id="txtObservaciones" value="#{pagoModel.observaciones}"
+                                                 rows="2" maxlength="250" style="width:100%;"/>
+                            </div>
+                            <div class="pago-acciones">
+                                <p:commandButton value="Registrar abono" icon="pi pi-check"
+                                                 action="#{pagoModel.registrarPago}"
+                                                 process="@this metodoPago txtMonto referenciaContenedor txtObservaciones"
+                                                 update=":frmPrincipal:pnlContenidoEspecial :frmPrincipal:growl"
+                                                 styleClass="ui-button-success"/>
+                                <p:commandButton value="Volver al listado" icon="pi pi-arrow-left"
+                                                 action="#{pagoModel.volverAlListado}" process="@this"
+                                                 update=":frmPrincipal:pnlContenidoEspecial :frmPrincipal:growl"
+                                                 styleClass="ui-button-secondary"/>
+                            </div>
+                        </h:panelGroup>
+                        <h:panelGroup rendered="#{pagoModel.facturaPagada}" layout="block"
+                                      styleClass="pago-acciones pago-no-imprimir">
+                            <p:commandButton value="Imprimir / guardar como PDF" type="button"
+                                             icon="pi pi-print" onclick="window.print();"
+                                             styleClass="ui-button-info"/>
+                            <p:commandButton value="Volver a facturas" icon="pi pi-arrow-left"
+                                             action="#{pagoModel.cancelarSeleccion}" process="@this"
+                                             update=":frmPrincipal:pnlContenidoEspecial :frmPrincipal:growl"
+                                             styleClass="ui-button-secondary"/>
+                        </h:panelGroup>
+                    </h:panelGroup>
+                </p:tab>
+            </p:tabView>
+        </div>
+    </ui:define>
+</ui:composition>
