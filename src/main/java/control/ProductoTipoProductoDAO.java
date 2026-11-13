@@ -5,6 +5,9 @@
 package control;
 
 import entity.ProductoTipoProducto;
+import entity.Producto;
+import entity.TipoProducto;
+import jakarta.persistence.LockModeType;
 import jakarta.ejb.Stateless;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
@@ -34,18 +37,54 @@ public class ProductoTipoProductoDAO extends DefaultDAO<ProductoTipoProducto> {
     @Override
     public void crear(ProductoTipoProducto reg) {
 
-        ProductoTipoProductoValidator.validar(reg);
-
-        UUID idProducto = reg.getProducto().getIdProducto();
-        UUID idTipoProducto
-                = reg.getIdTipoProducto().getIdTipoProducto();
-
-        if (existeRelacion(idProducto, idTipoProducto)) {
-            throw new IllegalArgumentException(
-                    "Este tipo de producto ya está asignado al producto");
+        // Reutiliza el validador para referencias incompletas sin consultar la BD.
+        if (reg == null || reg.getProducto() == null || reg.getProducto().getIdProducto() == null
+                || reg.getIdTipoProducto() == null || reg.getIdTipoProducto().getIdTipoProducto() == null) {
+            ProductoTipoProductoValidator.validar(reg);
         }
-
+        if (reg.getIdProductoTipoProducto() == null) {
+            throw new IllegalArgumentException("La asociación debe tener un identificador");
+        }
+        UUID idProducto = reg.getProducto().getIdProducto();
+        UUID idTipo = reg.getIdTipoProducto().getIdTipoProducto();
+        // Orden constante: producto WRITE, tipo READ. Serializa altas del mismo producto.
+        // En READ COMMITTED el conteo posterior ve la insercion de quien libero el bloqueo.
+        Producto producto = em.find(Producto.class, idProducto, LockModeType.PESSIMISTIC_WRITE);
+        if (producto == null) throw new IllegalArgumentException("El producto seleccionado no existe");
+        TipoProducto tipo = em.find(TipoProducto.class, idTipo, LockModeType.PESSIMISTIC_READ);
+        if (tipo == null) throw new IllegalArgumentException("El tipo de producto seleccionado no existe");
+        // Tambien obtiene el estado actual si el padre ya estaba en el contexto JPA.
+        em.refresh(tipo, LockModeType.PESSIMISTIC_READ);
+        reg.setProducto(producto);
+        reg.setIdTipoProducto(tipo);
+        ProductoTipoProductoValidator.validar(reg);
+        if (em.find(ProductoTipoProducto.class, reg.getIdProductoTipoProducto()) != null) {
+            throw new IllegalArgumentException("La asociación ya existe");
+        }
+        if (existeRelacion(idProducto, idTipo)) {
+            throw new IllegalArgumentException("Este tipo de producto ya está asignado al producto");
+        }
         super.crear(reg);
+        em.flush();
+    }
+
+    /** Elimina solo la asociacion administrada, sin mezclar objetos recibidos. */
+    @Override
+    public void eliminar(ProductoTipoProducto reg) {
+        if (reg == null || reg.getIdProductoTipoProducto() == null) {
+            throw new IllegalArgumentException("Debe seleccionar una asociación válida");
+        }
+        ProductoTipoProducto actual = em.find(ProductoTipoProducto.class,
+                reg.getIdProductoTipoProducto(), LockModeType.PESSIMISTIC_WRITE);
+        if (actual == null) throw new IllegalArgumentException("La asociación ya no existe");
+        em.remove(actual);
+        em.flush();
+    }
+
+    public List<ProductoTipoProducto> findByIdTipoProducto(UUID idTipoProducto) {
+        return em.createQuery("SELECT p FROM ProductoTipoProducto p "
+                + "WHERE p.idTipoProducto.idTipoProducto = :idTipoProducto", ProductoTipoProducto.class)
+                .setParameter("idTipoProducto", idTipoProducto).getResultList();
     }
 
     @Override

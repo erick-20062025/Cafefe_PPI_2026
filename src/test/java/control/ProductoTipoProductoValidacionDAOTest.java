@@ -5,6 +5,7 @@ import entity.Producto;
 import entity.ProductoTipoProducto;
 import entity.TipoProducto;
 import jakarta.persistence.EntityManager;
+import jakarta.persistence.LockModeType;
 import jakarta.persistence.TypedQuery;
 import java.lang.reflect.Field;
 import java.util.UUID;
@@ -49,6 +50,8 @@ class ProductoTipoProductoValidacionDAOTest {
         relacion.setProducto(producto);
         relacion.setIdTipoProducto(tipo);
 
+        lenient().when(em.find(Producto.class, producto.getIdProducto(), LockModeType.PESSIMISTIC_WRITE)).thenReturn(producto);
+        lenient().when(em.find(TipoProducto.class, tipo.getIdTipoProducto(), LockModeType.PESSIMISTIC_READ)).thenReturn(tipo);
         return relacion;
     }
 
@@ -153,7 +156,7 @@ class ProductoTipoProductoValidacionDAOTest {
         assertThrows(IllegalArgumentException.class,
                 () -> dao.crear(relacion));
 
-        verifyNoInteractions(em);
+        verify(em, never()).persist(any());
     }
 
     @Test
@@ -164,7 +167,7 @@ class ProductoTipoProductoValidacionDAOTest {
         assertThrows(IllegalArgumentException.class,
                 () -> dao.crear(relacion));
 
-        verifyNoInteractions(em);
+        verify(em, never()).persist(any());
     }
 
     @Test
@@ -194,4 +197,74 @@ void modificarRelacionDebeSerRechazado() {
     verifyNoInteractions(em);
 }
 
+
+    @Test void referenciasRealesYOrdenDeBloqueos() {
+        ProductoTipoProducto r = crearRelacionValida();
+        Producto real = new Producto(r.getProducto().getIdProducto());
+        real.setActivo(false);
+        TipoProducto tipo = new TipoProducto(r.getIdTipoProducto().getIdTipoProducto());
+        tipo.setActivo(true);
+        when(em.find(Producto.class, real.getIdProducto(), LockModeType.PESSIMISTIC_WRITE)).thenReturn(real);
+        when(em.find(TipoProducto.class, tipo.getIdTipoProducto(), LockModeType.PESSIMISTIC_READ)).thenReturn(tipo);
+        r.getIdTipoProducto().setActivo(false); // No confiar en estado antiguo del cliente JSF.
+        simularCantidadRelaciones(0L);
+        dao.crear(r);
+        assertSame(real, r.getProducto());
+        assertSame(tipo, r.getIdTipoProducto());
+        var orden = inOrder(em, query);
+        orden.verify(em).find(Producto.class, real.getIdProducto(), LockModeType.PESSIMISTIC_WRITE);
+        orden.verify(em).find(TipoProducto.class, tipo.getIdTipoProducto(), LockModeType.PESSIMISTIC_READ);
+        orden.verify(em).refresh(tipo, LockModeType.PESSIMISTIC_READ);
+        orden.verify(query).getSingleResult();
+        orden.verify(em).persist(r);
+        orden.verify(em).flush();
+    }
+
+    @Test void estadoRealInactivoRechazaAunqueClienteDigaActivo() {
+        ProductoTipoProducto r = crearRelacionValida();
+        TipoProducto real = new TipoProducto(r.getIdTipoProducto().getIdTipoProducto());
+        real.setActivo(false);
+        when(em.find(TipoProducto.class, real.getIdTipoProducto(), LockModeType.PESSIMISTIC_READ)).thenReturn(real);
+        assertThrows(IllegalArgumentException.class, () -> dao.crear(r));
+        verify(em, never()).persist(any());
+    }
+
+    @Test void referenciasInexistentesNoPersisten() {
+        ProductoTipoProducto r = crearRelacionValida();
+        when(em.find(Producto.class, r.getProducto().getIdProducto(), LockModeType.PESSIMISTIC_WRITE)).thenReturn(null);
+        assertEquals("El producto seleccionado no existe", assertThrows(IllegalArgumentException.class, () -> dao.crear(r)).getMessage());
+        ProductoTipoProducto otra = crearRelacionValida();
+        when(em.find(TipoProducto.class, otra.getIdTipoProducto().getIdTipoProducto(), LockModeType.PESSIMISTIC_READ)).thenReturn(null);
+        assertEquals("El tipo de producto seleccionado no existe", assertThrows(IllegalArgumentException.class, () -> dao.crear(otra)).getMessage());
+        verify(em, never()).persist(any());
+    }
+
+    @Test void identificadorObligatorioYNoRepetido() {
+        ProductoTipoProducto r = crearRelacionValida();
+        when(em.find(ProductoTipoProducto.class, r.getIdProductoTipoProducto())).thenReturn(r);
+        assertThrows(IllegalArgumentException.class, () -> dao.crear(r));
+        r.setIdProductoTipoProducto(null);
+        assertThrows(IllegalArgumentException.class, () -> dao.crear(r));
+        verify(em, never()).persist(any());
+    }
+
+    @Test void eliminaSoloAsociacionAdministrada() {
+        ProductoTipoProducto entrada = crearRelacionValida();
+        ProductoTipoProducto actual = new ProductoTipoProducto(entrada.getIdProductoTipoProducto());
+        when(em.find(ProductoTipoProducto.class, entrada.getIdProductoTipoProducto(), LockModeType.PESSIMISTIC_WRITE)).thenReturn(actual);
+        dao.eliminar(entrada);
+        verify(em).remove(actual);
+        verify(em).flush();
+        verify(em, never()).merge(any());
+        verify(em, never()).remove(isA(Producto.class));
+        verify(em, never()).remove(isA(TipoProducto.class));
+    }
+
+    @Test void eliminarInvalidaOAusenteNoBorra() {
+        assertThrows(IllegalArgumentException.class, () -> dao.eliminar(null));
+        assertThrows(IllegalArgumentException.class, () -> dao.eliminar(new ProductoTipoProducto()));
+        assertEquals("La asociación ya no existe", assertThrows(IllegalArgumentException.class,
+                () -> dao.eliminar(new ProductoTipoProducto(UUID.randomUUID()))).getMessage());
+        verify(em, never()).remove(any());
+    }
 }
