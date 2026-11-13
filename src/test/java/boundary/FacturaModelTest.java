@@ -395,6 +395,8 @@ class FacturaModelTest {
 
     @Test
     void quitarProductoDebeRetirarSoloElDetalleIndicadoEIgnorarNull() {
+        model.btnNuevoHandler(null);
+
         FacturaOrdenProducto primero = detalle(productoOrden());
         FacturaOrdenProducto segundo = detalle(productoOrden());
         model.getProductosFactura().addAll(List.of(primero, segundo));
@@ -481,18 +483,22 @@ class FacturaModelTest {
     }
 
     @Test
-    void guardarFacturaEditadaDebeModificarCabeceraSinExigirNuevosProductos() {
+    void guardarFacturaEditadaDebeBloquearModificacion() {
         Factura factura = facturaCompleta();
         model.setRegistro(factura);
+
+        when(facturaDAO.puedeModificarFactura(factura.getIdFactura()))
+                .thenReturn(false);
+
         model.btnModificarHandler(null);
 
-        model.btnGuardarHandler(null);
+        verify(facturaDAO, never()).modificarFacturaCompleta(
+                any(), any());
 
-        verify(facturaDAO).modificar(factura);
-        verify(facturaDAO, never()).crearFacturaCompleta(any(), any());
-        verify(facturaDAO).findAll();
-        assertEquals("Factura modificada correctamente", model.exito);
-        comprobarEstadoLimpio();
+        assertEquals(
+                "Solo se pueden editar facturas pendientes sin abonos",
+                model.advertencia
+        );
     }
 
     @Test
@@ -523,6 +529,9 @@ class FacturaModelTest {
         Factura factura = facturaPendiente();
         model.setRegistro(factura);
         factura.setEstado("pendiente");
+        when(facturaDAO.puedeModificarFactura(factura.getIdFactura()))
+                .thenAnswer(invocacion
+                        -> "PENDIENTE".equalsIgnoreCase(factura.getEstado()));
         assertTrue(model.isFacturaPendiente());
         assertFalse(model.isFacturaPagada());
         assertTrue(model.isPuedeEditar());

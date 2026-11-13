@@ -370,6 +370,7 @@
                                     <p:commandButton
                                         value="Guardar"
                                         actionListener="#{controller.btnGuardarHandler}"
+                                        rendered="#{!controller.consultando}"
                                         update=":frmPrincipal"
                                         process="@form"
                                         icon="pi pi-check"

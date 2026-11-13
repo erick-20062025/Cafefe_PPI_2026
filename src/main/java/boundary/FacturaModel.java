@@ -169,9 +169,7 @@ public class FacturaModel extends AbstractModel<Factura> {
             }
 
             if (registro.getIdCaja() == null) {
-                mostrarAdvertencia(
-                        "Debe seleccionar una caja"
-                );
+                mostrarAdvertencia("Debe seleccionar una caja");
                 return;
             }
 
@@ -182,33 +180,39 @@ public class FacturaModel extends AbstractModel<Factura> {
                 return;
             }
 
+            if (productosFactura == null || productosFactura.isEmpty()) {
+                mostrarAdvertencia(
+                        "Debe agregar al menos un producto a la factura"
+                );
+                return;
+            }
+
             if (nuevo) {
-
-                if (productosFactura == null
-                        || productosFactura.isEmpty()) {
-
-                    mostrarAdvertencia(
-                            "Debe agregar al menos un producto a la factura"
-                    );
-                    return;
-                }
 
                 facturaDAO.crearFacturaCompleta(
                         registro,
                         productosFactura
                 );
 
-                mostrarExito(
-                        "Factura guardada correctamente"
-                );
+                mostrarExito("Factura guardada correctamente");
 
             } else {
 
-                facturaDAO.modificar(registro);
+                if (!facturaDAO.puedeModificarFactura(
+                        registro.getIdFactura())) {
 
-                mostrarExito(
-                        "Factura modificada correctamente"
+                    mostrarAdvertencia(
+                            "Solo se pueden editar facturas pendientes sin abonos"
+                    );
+                    return;
+                }
+
+                facturaDAO.modificarFacturaCompleta(
+                        registro,
+                        productosFactura
                 );
+
+                mostrarExito("Factura modificada correctamente");
             }
 
             limpiarEstado();
@@ -253,55 +257,82 @@ public class FacturaModel extends AbstractModel<Factura> {
         precioProducto = null;
         observacionesProducto = null;
     }
+
     @Override
-public void btnEliminarHandler(ActionEvent ae) {
+    public void btnEliminarHandler(ActionEvent ae) {
 
-    try {
+        try {
 
-        if (registro == null) {
-            return;
-        }
+            if (registro == null) {
+                return;
+            }
 
-        if (isFacturaPagada()) {
+            if (isFacturaPagada()) {
 
-            mostrarAdvertencia(
-                    "No se puede eliminar una factura pagada"
+                mostrarAdvertencia(
+                        "No se puede eliminar una factura pagada"
+                );
+
+                return;
+            }
+
+            facturaDAO.eliminarFacturaCompleta(registro);
+
+            limpiarEstado();
+
+            productosFactura.clear();
+            productosOrden.clear();
+
+            cargarDatos();
+
+            mostrarExito(
+                    "Factura eliminada correctamente"
             );
 
-            return;
+        } catch (Exception e) {
+
+            e.printStackTrace();
+
+            mostrarError(
+                    "No se pudo eliminar la factura"
+            );
         }
-
-        facturaDAO.eliminarFacturaCompleta(registro);
-
-        limpiarEstado();
-
-        productosFactura.clear();
-        productosOrden.clear();
-
-        cargarDatos();
-
-        mostrarExito(
-                "Factura eliminada correctamente"
-        );
-
-    } catch (Exception e) {
-
-        e.printStackTrace();
-
-        mostrarError(
-                "No se pudo eliminar la factura"
-        );
     }
-}
 
     @Override
     public boolean isPuedeEditar() {
-        return registro != null && !isFacturaPagada();
+        return registro != null
+                && registro.getIdFactura() != null
+                && facturaDAO.puedeModificarFactura(
+                        registro.getIdFactura());
     }
 
     @Override
     public boolean isPuedeEliminar() {
         return registro != null && !isFacturaPagada();
+    }
+
+    @Override
+    public void btnModificarHandler(ActionEvent ae) {
+
+        if (registro == null
+                || registro.getIdFactura() == null
+                || !facturaDAO.puedeModificarFactura(
+                        registro.getIdFactura())) {
+
+            mostrarAdvertencia(
+                    "Solo se pueden editar facturas pendientes sin abonos");
+            return;
+        }
+
+        super.btnModificarHandler(ae);
+
+        productosFactura = facturaOrdenProductoDAO.findByIdFactura(
+                registro.getIdFactura());
+
+        if (productosFactura == null) {
+            productosFactura = new ArrayList<>();
+        }
     }
 
     private void cargarCajas() {
@@ -418,6 +449,103 @@ public void btnEliminarHandler(ActionEvent ae) {
 
             precioProducto = null;
             observacionesProducto = null;
+        }
+    }
+
+    public void agregarTodosLosProductos() {
+
+        if (registro == null || (!nuevo && !editando)) {
+            mostrarAdvertencia(
+                    "Esta acción solo está disponible al crear una factura");
+            return;
+        }
+        if (!nuevo && !facturaDAO.puedeModificarFactura(
+                registro.getIdFactura())) {
+
+            mostrarAdvertencia(
+                    "No se pueden agregar productos a una factura con abonos");
+            return;
+        }
+
+        if (idOrdenSeleccionada == null
+                || idOrdenSeleccionada.isBlank()
+                || productosOrden == null
+                || productosOrden.isEmpty()) {
+
+            mostrarAdvertencia(
+                    "Seleccione una orden que tenga productos");
+            return;
+        }
+
+        if (productosFactura == null) {
+            productosFactura = new ArrayList<>();
+        }
+        if (!productosFactura.isEmpty()) {
+
+            UUID idOrdenActual = UUID.fromString(idOrdenSeleccionada);
+
+            boolean hayOtraOrden = productosFactura.stream()
+                    .anyMatch(detalle
+                            -> detalle.getIdOrdenProducto() != null
+                            && detalle.getIdOrdenProducto().getIdOrden() != null
+                            && !idOrdenActual.equals(
+                                    detalle.getIdOrdenProducto()
+                                            .getIdOrden().getIdOrden()));
+
+            if (hayOtraOrden) {
+                mostrarAdvertencia(
+                        "No se pueden agregar productos de diferentes órdenes "
+                        + "a una misma factura");
+                return;
+            }
+        }
+        int agregados = 0;
+
+        for (OrdenProducto producto : productosOrden) {
+
+            if (producto == null
+                    || producto.getIdOrdenProducto() == null) {
+                continue;
+            }
+
+            UUID idProducto = producto.getIdOrdenProducto();
+
+            boolean yaAgregado = productosFactura.stream()
+                    .anyMatch(detalle
+                            -> detalle.getIdOrdenProducto() != null
+                            && idProducto.equals(
+                                    detalle.getIdOrdenProducto()
+                                            .getIdOrdenProducto()));
+
+            if (yaAgregado) {
+                continue;
+            }
+
+            if (producto.getPrecio() == null
+                    || producto.getPrecio().compareTo(BigDecimal.ZERO) < 0) {
+                mostrarAdvertencia(
+                        "Hay productos sin precio válido. Revise la orden");
+                return;
+            }
+
+            FacturaOrdenProducto detalle = new FacturaOrdenProducto();
+
+            detalle.setIdFacturaOrdenProducto(UUID.randomUUID());
+            detalle.setIdFactura(registro);
+            detalle.setIdOrdenProducto(producto);
+            detalle.setPrecio(producto.getPrecio());
+            detalle.setObservaciones(producto.getObservaciones());
+
+            productosFactura.add(detalle);
+            agregados++;
+        }
+
+        if (agregados == 0) {
+            mostrarAdvertencia(
+                    "No se encontraron productos nuevos para agregar");
+        } else {
+            mostrarExito(
+                    "Se agregaron " + agregados + " productos a la factura");
         }
     }
 
@@ -546,12 +674,25 @@ public void btnEliminarHandler(ActionEvent ae) {
         }
     }
 
-    public void quitarProducto(
-            FacturaOrdenProducto detalle) {
+    public void quitarProducto(FacturaOrdenProducto detalle) {
 
-        if (detalle == null
-                || productosFactura == null) {
+        if (!nuevo && !editando) {
+            mostrarAdvertencia(
+                    "Debe crear o editar una factura para quitar productos");
+            return;
+        }
 
+        if (!nuevo && (registro == null
+                || registro.getIdFactura() == null
+                || !facturaDAO.puedeModificarFactura(
+                        registro.getIdFactura()))) {
+
+            mostrarAdvertencia(
+                    "No se pueden quitar productos de una factura con abonos");
+            return;
+        }
+
+        if (detalle == null || productosFactura == null) {
             return;
         }
 
