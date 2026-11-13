@@ -24,7 +24,9 @@ import java.util.UUID;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-/** Controlador de órdenes: selección de productos y promoción GENERAL. */
+/**
+ * Controlador de órdenes: selección de productos y promoción GENERAL.
+ */
 @Named("ordenModel")
 @ViewScoped
 public class OrdenModel extends AbstractModel<Orden> {
@@ -33,8 +35,10 @@ public class OrdenModel extends AbstractModel<Orden> {
     private static final Logger LOGGER = Logger.getLogger(OrdenModel.class.getName());
     private static final TimeZone ZONA = TimeZone.getTimeZone("America/El_Salvador");
 
-    @Inject private OrdenDAO ordenDAO;
-    @Inject private ProductoDAO productoDAO;
+    @Inject
+    private OrdenDAO ordenDAO;
+    @Inject
+    private ProductoDAO productoDAO;
 
     private List<EmpleadoRol> empleadosRol = new ArrayList<>();
     private List<Producto> productosDisponibles = new ArrayList<>();
@@ -56,7 +60,10 @@ public class OrdenModel extends AbstractModel<Orden> {
         cargarProductosDisponibles();
     }
 
-    @Override protected DAOInterface<Orden> getDAO() { return ordenDAO; }
+    @Override
+    protected DAOInterface<Orden> getDAO() {
+        return ordenDAO;
+    }
 
     @Override
     protected Orden crearNuevoRegistro() {
@@ -93,17 +100,56 @@ public class OrdenModel extends AbstractModel<Orden> {
     }
 
     @Override
+    public boolean isPuedeEditar() {
+        if (registro == null || registro.getIdOrden() == null) {
+            return false;
+        }
+
+        try {
+            return !ordenDAO.tieneProductosFacturados(registro.getIdOrden());
+        } catch (RuntimeException e) {
+            LOGGER.log(Level.SEVERE,
+                    "No se pudo verificar si la orden permite edición", e);
+            return false;
+        }
+    }
+
+    @Override
+    public boolean isPuedeEliminar() {
+        if (registro == null || registro.getIdOrden() == null) {
+            return false;
+        }
+
+        try {
+            return !ordenDAO.tieneProductosFacturados(registro.getIdOrden());
+        } catch (RuntimeException e) {
+            LOGGER.log(Level.SEVERE,
+                    "No se pudo verificar si la orden permite eliminación", e);
+            return false;
+        }
+    }
+
+    @Override
     public void btnModificarHandler(ActionEvent ae) {
         if (registro == null || registro.getIdOrden() == null) {
             mostrarAdvertencia("Debe seleccionar una orden");
             return;
         }
+
         try {
+            if (ordenDAO.tieneProductosFacturados(registro.getIdOrden())) {
+                mostrarAdvertencia(
+                        "Esta orden ya tiene productos facturados. "
+                        + "Solo puede consultarla mediante Ver orden");
+                return;
+            }
+
             super.btnModificarHandler(ae);
             productosOrden = ordenDAO.findProductosByOrden(registro.getIdOrden());
             cargarPromociones();
             cargarProductosDisponibles();
             limpiarSeleccionProducto();
+
         } catch (RuntimeException e) {
             LOGGER.log(Level.SEVERE, "No se pudo cargar la orden para edición", e);
             mostrarError("No se pudo cargar el detalle de la orden");
@@ -121,8 +167,8 @@ public class OrdenModel extends AbstractModel<Orden> {
             return;
         }
         if (!nuevo) {
-            mostrarExito("Edición finalizada. Los cambios en productos ya fueron guardados");
             cerrarEdicionYRefrescar();
+            mostrarExito("Edición de la orden finalizada");
             return;
         }
         if (registro.getFechaCreacion() == null) {
@@ -190,15 +236,22 @@ public class OrdenModel extends AbstractModel<Orden> {
     private void cargarEmpleadosRol() {
         empleadosRol = ordenDAO.findCamarerosActivos();
     }
+
     private void cargarProductosDisponibles() {
         productosDisponibles = productoDAO.findAll();
     }
 
-    /** Se ejecuta al seleccionar el camarero, sin permitir cambios al editar. */
+    /**
+     * Se ejecuta al seleccionar el camarero, sin permitir cambios al editar.
+     */
     public void setIdEmpleadoRolSeleccionado(String valor) {
-        if (editando && !nuevo) return;
+        if (editando && !nuevo) {
+            return;
+        }
         idEmpleadoRolSeleccionado = valor;
-        if (registro == null) return;
+        if (registro == null) {
+            return;
+        }
         if (valor == null || valor.isBlank()) {
             registro.setIdEmpleadoRol(null);
             return;
@@ -206,7 +259,9 @@ public class OrdenModel extends AbstractModel<Orden> {
         try {
             EmpleadoRol seleccionado = ordenDAO.findCamareroActivoById(UUID.fromString(valor));
             registro.setIdEmpleadoRol(seleccionado);
-            if (seleccionado == null) mostrarAdvertencia("El camarero no está activo");
+            if (seleccionado == null) {
+                mostrarAdvertencia("El camarero no está activo");
+            }
         } catch (IllegalArgumentException e) {
             registro.setIdEmpleadoRol(null);
             mostrarAdvertencia("Seleccione un camarero válido");
@@ -217,11 +272,15 @@ public class OrdenModel extends AbstractModel<Orden> {
         }
     }
 
-    /** Al elegir un producto, previsualiza su precio sugerido. */
+    /**
+     * Al elegir un producto, previsualiza su precio sugerido.
+     */
     public void setIdProductoSeleccionado(String valor) {
         idProductoSeleccionado = valor;
         precioProducto = null;
-        if (valor == null || valor.isBlank()) return;
+        if (valor == null || valor.isBlank()) {
+            return;
+        }
         try {
             Producto producto = productoDAO.findById(UUID.fromString(valor));
             if (producto != null && Boolean.TRUE.equals(producto.getActivo())) {
@@ -235,7 +294,9 @@ public class OrdenModel extends AbstractModel<Orden> {
         }
     }
 
-    /** Agrega una fila; permite repetir productos en una orden. */
+    /**
+     * Agrega una fila; permite repetir productos en una orden.
+     */
     public void agregarProducto() {
         if (!isPuedeGestionarProductos()) {
             mostrarAdvertencia("Debe editar una orden guardada");
@@ -270,7 +331,9 @@ public class OrdenModel extends AbstractModel<Orden> {
         recargarProductosYPromociones();
     }
 
-    /** Quita una fila si no está facturada. */
+    /**
+     * Quita una fila si no está facturada.
+     */
     public void quitarProducto(OrdenProducto detalle) {
         if (!isPuedeGestionarProductos() || detalle == null) {
             mostrarAdvertencia("Debe seleccionar una fila de una orden en edición");
@@ -340,10 +403,14 @@ public class OrdenModel extends AbstractModel<Orden> {
         }
         promocionesDisponibles = ordenDAO.findPromocionesAplicables(
                 registro.getIdOrden(), registro.getFechaCreacion());
-        if (promocionesDisponibles == null) promocionesDisponibles = new ArrayList<>();
+        if (promocionesDisponibles == null) {
+            promocionesDisponibles = new ArrayList<>();
+        }
     }
 
-    /** Reconsulta ambas listas sin anunciar erróneamente que falló el guardado. */
+    /**
+     * Reconsulta ambas listas sin anunciar erróneamente que falló el guardado.
+     */
     private void recargarProductosYPromociones() {
         try {
             productosOrden = ordenDAO.findProductosByOrden(registro.getIdOrden());
@@ -355,7 +422,9 @@ public class OrdenModel extends AbstractModel<Orden> {
     }
 
     public void verOrden() {
-        if (registro != null) ordenSeleccionadaConsulta = registro;
+        if (registro != null) {
+            ordenSeleccionadaConsulta = registro;
+        }
         if (ordenSeleccionadaConsulta == null || ordenSeleccionadaConsulta.getIdOrden() == null) {
             mostrarAdvertencia("Debe seleccionar una orden");
             return;
@@ -382,6 +451,7 @@ public class OrdenModel extends AbstractModel<Orden> {
         precioProducto = null;
         observacionesProducto = null;
     }
+
     private void limpiarFormulario() {
         idEmpleadoRolSeleccionado = null;
         idPromocionSeleccionada = null;
@@ -390,6 +460,7 @@ public class OrdenModel extends AbstractModel<Orden> {
         promocionesDisponibles = new ArrayList<>();
         limpiarSeleccionProducto();
     }
+
     private static BigDecimal sumar(List<OrdenProducto> productos) {
         BigDecimal total = BigDecimal.ZERO;
         if (productos != null) {
@@ -403,22 +474,70 @@ public class OrdenModel extends AbstractModel<Orden> {
     }
 
     public boolean isPuedeGestionarProductos() {
-        return registro != null && registro.getIdOrden() != null && editando && !nuevo;
+        if (registro == null || registro.getIdOrden() == null
+                || !editando || nuevo) {
+            return false;
+        }
+
+        return !ordenDAO.tieneProductosFacturados(registro.getIdOrden());
     }
-    public List<EmpleadoRol> getEmpleadosRol() { return empleadosRol; }
-    public List<Producto> getProductosDisponibles() { return productosDisponibles; }
-    public List<OrdenProducto> getProductosOrden() { return productosOrden; }
-    public List<Descuento> getPromocionesDisponibles() { return promocionesDisponibles; }
-    public List<OrdenProducto> getProductosConsulta() { return productosConsulta; }
-    public String getIdEmpleadoRolSeleccionado() { return idEmpleadoRolSeleccionado; }
-    public String getIdProductoSeleccionado() { return idProductoSeleccionado; }
-    public String getIdPromocionSeleccionada() { return idPromocionSeleccionada; }
-    public void setIdPromocionSeleccionada(String valor) { idPromocionSeleccionada = valor; }
-    public BigDecimal getPrecioProducto() { return precioProducto; }
-    public void setPrecioProducto(BigDecimal valor) { precioProducto = valor; }
-    public String getObservacionesProducto() { return observacionesProducto; }
-    public void setObservacionesProducto(String v) { observacionesProducto = v; }
-    public Orden getOrdenSeleccionadaConsulta() { return ordenSeleccionadaConsulta; }
+
+    public List<EmpleadoRol> getEmpleadosRol() {
+        return empleadosRol;
+    }
+
+    public List<Producto> getProductosDisponibles() {
+        return productosDisponibles;
+    }
+
+    public List<OrdenProducto> getProductosOrden() {
+        return productosOrden;
+    }
+
+    public List<Descuento> getPromocionesDisponibles() {
+        return promocionesDisponibles;
+    }
+
+    public List<OrdenProducto> getProductosConsulta() {
+        return productosConsulta;
+    }
+
+    public String getIdEmpleadoRolSeleccionado() {
+        return idEmpleadoRolSeleccionado;
+    }
+
+    public String getIdProductoSeleccionado() {
+        return idProductoSeleccionado;
+    }
+
+    public String getIdPromocionSeleccionada() {
+        return idPromocionSeleccionada;
+    }
+
+    public void setIdPromocionSeleccionada(String valor) {
+        idPromocionSeleccionada = valor;
+    }
+
+    public BigDecimal getPrecioProducto() {
+        return precioProducto;
+    }
+
+    public void setPrecioProducto(BigDecimal valor) {
+        precioProducto = valor;
+    }
+
+    public String getObservacionesProducto() {
+        return observacionesProducto;
+    }
+
+    public void setObservacionesProducto(String v) {
+        observacionesProducto = v;
+    }
+
+    public Orden getOrdenSeleccionadaConsulta() {
+        return ordenSeleccionadaConsulta;
+    }
+
     public void setOrdenSeleccionadaConsulta(Orden valor) {
         ordenSeleccionadaConsulta = valor;
         registro = valor;
@@ -427,6 +546,12 @@ public class OrdenModel extends AbstractModel<Orden> {
             editando = false;
         }
     }
-    public BigDecimal getTotalOrden() { return sumar(productosOrden); }
-    public BigDecimal getTotalConsulta() { return sumar(productosConsulta); }
+
+    public BigDecimal getTotalOrden() {
+        return sumar(productosOrden);
+    }
+
+    public BigDecimal getTotalConsulta() {
+        return sumar(productosConsulta);
+    }
 }

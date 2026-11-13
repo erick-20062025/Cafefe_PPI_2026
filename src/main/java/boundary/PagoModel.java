@@ -20,12 +20,13 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * Pantalla especializada del cajero. No hereda AbstractModel porque el cobro
- * no es un CRUD genérico: cada abono pasa por PagoDAO.registrarAbono().
+ * Pantalla especializada del cajero. No hereda AbstractModel porque el cobro no
+ * es un CRUD genérico: cada abono pasa por PagoDAO.registrarAbono().
  */
 @Named("pagoModel")
 @ViewScoped
 public class PagoModel implements Serializable {
+
     private static final long serialVersionUID = 1L;
     private static final Logger LOGGER = Logger.getLogger(PagoModel.class.getName());
 
@@ -54,13 +55,16 @@ public class PagoModel implements Serializable {
     private BigDecimal monto;
     private String referenciaExterna;
     private String observaciones;
+    private String idFacturaRecibida;
 
     @PostConstruct
     public void init() {
         actualizarFacturas();
     }
 
-    /** Recarga las facturas pendientes sin seleccionar ninguna automáticamente. */
+    /**
+     * Recarga las facturas pendientes sin seleccionar ninguna automáticamente.
+     */
     public void actualizarFacturas() {
         try {
             List<Factura> pendientes = pagoDAO.listarFacturasPendientes();
@@ -73,7 +77,9 @@ public class PagoModel implements Serializable {
         }
     }
 
-    /** Muestra una factura ya emitida, sus productos y sus abonos registrados. */
+    /**
+     * Muestra una factura ya emitida, sus productos y sus abonos registrados.
+     */
     public void seleccionarFactura(Factura factura) {
         if (factura == null || factura.getIdFactura() == null) {
             mostrarAdvertencia("Debe seleccionar una factura válida");
@@ -98,7 +104,35 @@ public class PagoModel implements Serializable {
         }
     }
 
-    /** Confirma un abono. Nunca cambia estado directamente desde la vista. */
+    public void cargarFacturaRecibida() {
+        if (idFacturaRecibida == null || idFacturaRecibida.isBlank()) {
+            return;
+        }
+
+        try {
+            UUID idFactura = UUID.fromString(idFacturaRecibida);
+
+            Factura factura = facturasPendientes.stream()
+                    .filter(f -> idFactura.equals(f.getIdFactura()))
+                    .findFirst()
+                    .orElse(null);
+
+            if (factura == null) {
+                mostrarAdvertencia(
+                        "La factura indicada no está disponible para cobro");
+                return;
+            }
+
+            seleccionarFactura(factura);
+
+        } catch (IllegalArgumentException e) {
+            mostrarAdvertencia("El identificador de factura no es válido");
+        }
+    }
+
+    /**
+     * Confirma un abono. Nunca cambia estado directamente desde la vista.
+     */
     public void registrarPago() {
         if (facturaSeleccionada == null || facturaSeleccionada.getIdFactura() == null) {
             mostrarAdvertencia("Debe seleccionar una factura pendiente");
@@ -193,7 +227,10 @@ public class PagoModel implements Serializable {
         }
     }
 
-    /** Solo permite imprimir un recibo cuando el saldo coincide con el pago total. */
+    /**
+     * Solo permite imprimir un recibo cuando el saldo coincide con el pago
+     * total.
+     */
     public boolean isConsultaImprimible() {
         return facturaConsulta != null
                 && "PAGADA".equalsIgnoreCase(facturaConsulta.getEstado())
@@ -202,7 +239,9 @@ public class PagoModel implements Serializable {
                 && BigDecimal.ZERO.compareTo(resumenConsulta.getSaldo()) == 0;
     }
 
-    /** Vuelve al historial sin borrar registros de la base de datos. */
+    /**
+     * Vuelve al historial sin borrar registros de la base de datos.
+     */
     public void volverAFacturasPagadas() {
         limpiarConsulta();
         indicePestana = 2;
@@ -216,7 +255,9 @@ public class PagoModel implements Serializable {
         resumenConsulta = null;
     }
 
-    /** Cierra el detalle sin revertir abonos ya registrados. */
+    /**
+     * Cierra el detalle sin revertir abonos ya registrados.
+     */
     public void cancelarSeleccion() {
         limpiarConsulta();
         facturaSeleccionada = null;
@@ -227,13 +268,17 @@ public class PagoModel implements Serializable {
         indicePestana = 0;
     }
 
-    /** Regresa al listado sin borrar abonos previamente persistidos. */
+    /**
+     * Regresa al listado sin borrar abonos previamente persistidos.
+     */
     public void volverAlListado() {
         indicePestana = 0;
         actualizarFacturas();
     }
 
-    /** Indica si el método elegido requiere una referencia externa. */
+    /**
+     * Indica si el método elegido requiere una referencia externa.
+     */
     public boolean isRequiereReferencia() {
         return tipoPago != null && !tipoPago.isBlank()
                 && !"EFECTIVO".equalsIgnoreCase(tipoPago.trim());
@@ -270,30 +315,91 @@ public class PagoModel implements Serializable {
         return resumen != null && resumen.isCompletado();
     }
 
-    public int getIndicePestana() { return indicePestana; }
+    public int getIndicePestana() {
+        return indicePestana;
+    }
 
     public void setIndicePestana(int indicePestana) {
         this.indicePestana = indicePestana >= 0 && indicePestana <= 3 ? indicePestana : 0;
     }
 
-    public List<Factura> getFacturasPendientes() { return facturasPendientes; }
-    public List<Factura> getFacturasPagadas() { return facturasPagadas; }
-    public Factura getFacturaConsulta() { return facturaConsulta; }
-    public List<FacturaOrdenProducto> getProductosConsulta() { return productosConsulta; }
-    public List<PagoDetalle> getAbonosConsulta() { return abonosConsulta; }
-    public PagoDAO.ResumenPago getResumenConsulta() { return resumenConsulta; }
-    public Factura getFacturaSeleccionada() { return facturaSeleccionada; }
-    public List<FacturaOrdenProducto> getProductosFactura() { return productosFactura; }
-    public List<PagoDetalle> getAbonos() { return abonos; }
-    public PagoDAO.ResumenPago getResumen() { return resumen; }
-    public String getTipoPago() { return tipoPago; }
-    public void setTipoPago(String tipoPago) { this.tipoPago = tipoPago; }
-    public BigDecimal getMonto() { return monto; }
-    public void setMonto(BigDecimal monto) { this.monto = monto; }
-    public String getReferenciaExterna() { return referenciaExterna; }
+    public List<Factura> getFacturasPendientes() {
+        return facturasPendientes;
+    }
+
+    public List<Factura> getFacturasPagadas() {
+        return facturasPagadas;
+    }
+
+    public Factura getFacturaConsulta() {
+        return facturaConsulta;
+    }
+
+    public List<FacturaOrdenProducto> getProductosConsulta() {
+        return productosConsulta;
+    }
+
+    public List<PagoDetalle> getAbonosConsulta() {
+        return abonosConsulta;
+    }
+
+    public PagoDAO.ResumenPago getResumenConsulta() {
+        return resumenConsulta;
+    }
+
+    public Factura getFacturaSeleccionada() {
+        return facturaSeleccionada;
+    }
+
+    public List<FacturaOrdenProducto> getProductosFactura() {
+        return productosFactura;
+    }
+
+    public List<PagoDetalle> getAbonos() {
+        return abonos;
+    }
+
+    public PagoDAO.ResumenPago getResumen() {
+        return resumen;
+    }
+
+    public String getTipoPago() {
+        return tipoPago;
+    }
+
+    public void setTipoPago(String tipoPago) {
+        this.tipoPago = tipoPago;
+    }
+
+    public BigDecimal getMonto() {
+        return monto;
+    }
+
+    public void setMonto(BigDecimal monto) {
+        this.monto = monto;
+    }
+
+    public String getReferenciaExterna() {
+        return referenciaExterna;
+    }
+
     public void setReferenciaExterna(String referenciaExterna) {
         this.referenciaExterna = referenciaExterna;
     }
-    public String getObservaciones() { return observaciones; }
-    public void setObservaciones(String observaciones) { this.observaciones = observaciones; }
+
+    public String getObservaciones() {
+        return observaciones;
+    }
+
+    public void setObservaciones(String observaciones) {
+        this.observaciones = observaciones;
+    }
+
+    public String getIdFacturaRecibida() {
+        return idFacturaRecibida;
+    }
+
+    public void setIdFacturaRecibida(String idFacturaRecibida) {
+        this.idFacturaRecibida = idFacturaRecibida;
+    }
 }

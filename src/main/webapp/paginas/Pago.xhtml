@@ -6,6 +6,15 @@
                 xmlns:ui="jakarta.faces.facelets"
                 xmlns:p="http://primefaces.org/ui"
                 template="/WEB-INF/plantillas/general.xhtml">
+    <f:metadata>
+    <f:viewParam
+        name="idFactura"
+        value="#{pagoModel.idFacturaRecibida}"/>
+
+    <f:viewAction
+        action="#{pagoModel.cargarFacturaRecibida}"
+        onPostback="false"/>
+</f:metadata>
 
     <!-- Evita que la plantilla muestre botones CRUD; Pago tiene su propio flujo. -->
     <ui:param name="vistaEspecial" value="#{true}"/>

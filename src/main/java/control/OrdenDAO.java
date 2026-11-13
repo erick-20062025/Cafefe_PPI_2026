@@ -24,8 +24,8 @@ import java.util.TimeZone;
 import java.util.UUID;
 
 /**
- * Persistencia y reglas transaccionales de órdenes.
- * Todas las consultas JPQL están declaradas como @NamedQuery en las entidades.
+ * Persistencia y reglas transaccionales de órdenes. Todas las consultas JPQL
+ * están declaradas como @NamedQuery en las entidades.
  */
 @Stateless
 public class OrdenDAO extends DefaultDAO<Orden> {
@@ -37,22 +37,38 @@ public class OrdenDAO extends DefaultDAO<Orden> {
     @PersistenceContext(unitName = "my_persistence_unit")
     private EntityManager em;
 
-    public OrdenDAO() { super(Orden.class); }
-    @Override protected EntityManager getEntityManager() { return em; }
+    public OrdenDAO() {
+        super(Orden.class);
+    }
 
-    /** Obtiene las relaciones activas para tomar órdenes. */
+    @Override
+    protected EntityManager getEntityManager() {
+        return em;
+    }
+
+    /**
+     * Obtiene las relaciones activas para tomar órdenes.
+     */
     public List<EmpleadoRol> findCamarerosActivos() {
         return em.createNamedQuery("Orden.findCamarerosActivos", EmpleadoRol.class)
                 .setParameter("nombreRol", NOMBRE_ROL)
                 .getResultList();
     }
 
-    /** Alias de compatibilidad con el controlador previo. */
-    public List<EmpleadoRol> findEmpleadosRolActivos() { return findCamarerosActivos(); }
+    /**
+     * Alias de compatibilidad con el controlador previo.
+     */
+    public List<EmpleadoRol> findEmpleadosRolActivos() {
+        return findCamarerosActivos();
+    }
 
-    /** Comprueba que la relación, el empleado y el rol siguen activos. */
+    /**
+     * Comprueba que la relación, el empleado y el rol siguen activos.
+     */
     public EmpleadoRol findCamareroActivoById(UUID idEmpleadoRol) {
-        if (idEmpleadoRol == null) return null;
+        if (idEmpleadoRol == null) {
+            return null;
+        }
         List<EmpleadoRol> resultado = em.createNamedQuery(
                 "Orden.findCamareroActivoById", EmpleadoRol.class)
                 .setParameter("idEmpleadoRol", idEmpleadoRol)
@@ -61,12 +77,17 @@ public class OrdenDAO extends DefaultDAO<Orden> {
         return resultado.isEmpty() ? null : resultado.get(0);
     }
 
-    /** Consulta por identificador, conservada para compatibilidad. */
+    /**
+     * Consulta por identificador, conservada para compatibilidad.
+     */
     public EmpleadoRol findEmpleadoRolById(UUID id) {
         return id == null ? null : em.find(EmpleadoRol.class, id);
     }
 
-    /** Valida encabezado y camarero antes de crear la orden. Acepta fechas pasadas. */
+    /**
+     * Valida encabezado y camarero antes de crear la orden. Acepta fechas
+     * pasadas.
+     */
     @Override
     public void crear(Orden orden) {
         if (orden == null || orden.getIdOrden() == null
@@ -87,8 +108,8 @@ public class OrdenDAO extends DefaultDAO<Orden> {
     }
 
     /**
-     * La fecha y el camarero son datos inmutables de una orden ya creada.
-     * Se evita que una llamada externa al DAO los modifique por accidente.
+     * La fecha y el camarero son datos inmutables de una orden ya creada. Se
+     * evita que una llamada externa al DAO los modifique por accidente.
      */
     @Override
     public void modificar(Orden orden) {
@@ -98,7 +119,9 @@ public class OrdenDAO extends DefaultDAO<Orden> {
             throw new IllegalArgumentException("La orden está incompleta");
         }
         Orden actual = em.find(Orden.class, orden.getIdOrden(), LockModeType.PESSIMISTIC_WRITE);
-        if (actual == null) throw new IllegalArgumentException("La orden no existe");
+        if (actual == null) {
+            throw new IllegalArgumentException("La orden no existe");
+        }
         UUID camareroActual = actual.getIdEmpleadoRol() == null ? null
                 : actual.getIdEmpleadoRol().getIdEmpleadoRol();
         if (!actual.getFechaCreacion().equals(orden.getFechaCreacion())
@@ -110,14 +133,18 @@ public class OrdenDAO extends DefaultDAO<Orden> {
         // con operaciones específicas que validan su integridad.
     }
 
-    /** No elimina cabeceras con detalles; mantiene la integridad. */
+    /**
+     * No elimina cabeceras con detalles; mantiene la integridad.
+     */
     @Override
     public void eliminar(Orden orden) {
         if (orden == null || orden.getIdOrden() == null) {
             throw new IllegalArgumentException("Debe indicar una orden guardada");
         }
         Orden administrada = em.find(Orden.class, orden.getIdOrden(), LockModeType.PESSIMISTIC_WRITE);
-        if (administrada == null) throw new IllegalArgumentException("La orden ya no existe");
+        if (administrada == null) {
+            throw new IllegalArgumentException("La orden ya no existe");
+        }
         if (countProductosByOrden(orden.getIdOrden()) > 0) {
             throw new IllegalArgumentException("No se puede eliminar una orden con productos");
         }
@@ -125,7 +152,9 @@ public class OrdenDAO extends DefaultDAO<Orden> {
         em.flush();
     }
 
-    /** Agrega una fila de producto validando referencias y precio. */
+    /**
+     * Agrega una fila de producto validando referencias y precio.
+     */
     public void agregarProducto(OrdenProducto detalle) {
         if (detalle == null || detalle.getIdOrdenProducto() == null
                 || detalle.getIdOrden() == null || detalle.getIdOrden().getIdOrden() == null
@@ -153,7 +182,9 @@ public class OrdenDAO extends DefaultDAO<Orden> {
         em.flush();
     }
 
-    /** Actualiza una fila existente solo si aún no está facturada. */
+    /**
+     * Actualiza una fila existente solo si aún no está facturada.
+     */
     public OrdenProducto actualizarProducto(OrdenProducto detalle) {
         if (detalle == null || detalle.getIdOrdenProducto() == null) {
             throw new IllegalArgumentException("Debe indicar una fila de orden");
@@ -161,7 +192,9 @@ public class OrdenDAO extends DefaultDAO<Orden> {
         BigDecimal precio = validarPrecio(detalle.getPrecio());
         OrdenProducto actual = em.find(OrdenProducto.class, detalle.getIdOrdenProducto(),
                 LockModeType.PESSIMISTIC_WRITE);
-        if (actual == null) throw new IllegalArgumentException("La fila ya no existe");
+        if (actual == null) {
+            throw new IllegalArgumentException("La fila ya no existe");
+        }
         if (estaFacturado(actual.getIdOrdenProducto())) {
             throw new IllegalArgumentException("No se puede modificar un producto facturado");
         }
@@ -171,17 +204,21 @@ public class OrdenDAO extends DefaultDAO<Orden> {
         return actual;
     }
 
-    /** Elimina únicamente la fila, no el producto del catálogo. */
+    /**
+     * Elimina únicamente la fila, no el producto del catálogo.
+     */
     public void eliminarProducto(OrdenProducto detalle) {
         if (detalle == null || detalle.getIdOrdenProducto() == null) {
             throw new IllegalArgumentException("Debe indicar una fila de orden");
         }
         OrdenProducto actual = em.find(OrdenProducto.class, detalle.getIdOrdenProducto(),
                 LockModeType.PESSIMISTIC_WRITE);
-        if (actual == null) throw new IllegalArgumentException("La fila ya no existe");
+        if (actual == null) {
+            throw new IllegalArgumentException("La fila ya no existe");
+        }
         if (detalle.getIdOrden() != null && detalle.getIdOrden().getIdOrden() != null
                 && (actual.getIdOrden() == null || !detalle.getIdOrden().getIdOrden()
-                        .equals(actual.getIdOrden().getIdOrden()))) {
+                .equals(actual.getIdOrden().getIdOrden()))) {
             throw new IllegalArgumentException("La fila no pertenece a la orden indicada");
         }
         if (estaFacturado(actual.getIdOrdenProducto())) {
@@ -191,17 +228,25 @@ public class OrdenDAO extends DefaultDAO<Orden> {
         em.flush();
     }
 
-    /** Devuelve las filas de la orden, con la referencia a producto cargada. */
+    /**
+     * Devuelve las filas de la orden, con la referencia a producto cargada.
+     */
     public List<OrdenProducto> findProductosByOrden(UUID idOrden) {
-        if (idOrden == null) throw new IllegalArgumentException("El identificador de orden es obligatorio");
+        if (idOrden == null) {
+            throw new IllegalArgumentException("El identificador de orden es obligatorio");
+        }
         return em.createNamedQuery("OrdenProducto.findByOrdenConProducto", OrdenProducto.class)
                 .setParameter("idOrden", idOrden)
                 .getResultList();
     }
 
-    /** Cuenta las filas asociadas. */
+    /**
+     * Cuenta las filas asociadas.
+     */
     public long countProductosByOrden(UUID idOrden) {
-        if (idOrden == null) throw new IllegalArgumentException("El identificador de orden es obligatorio");
+        if (idOrden == null) {
+            throw new IllegalArgumentException("El identificador de orden es obligatorio");
+        }
         return em.createNamedQuery("OrdenProducto.countByOrden", Long.class)
                 .setParameter("idOrden", idOrden)
                 .getSingleResult();
@@ -213,7 +258,23 @@ public class OrdenDAO extends DefaultDAO<Orden> {
                 .getSingleResult() > 0;
     }
 
-    /** Consulta de compatibilidad: descuentos disponibles para un producto individual. */
+    public boolean tieneProductosFacturados(UUID idOrden) {
+        if (idOrden == null) {
+            throw new IllegalArgumentException("Debe indicar una orden");
+        }
+
+        return em.createQuery(
+                "SELECT COUNT(fop) FROM FacturaOrdenProducto fop "
+                + "WHERE fop.idOrdenProducto.idOrden.idOrden = :idOrden",
+                Long.class)
+                .setParameter("idOrden", idOrden)
+                .getSingleResult() > 0;
+    }
+
+    /**
+     * Consulta de compatibilidad: descuentos disponibles para un producto
+     * individual.
+     */
     public List<DescuentoProducto> findDescuentosAplicables(UUID idProducto, Date fecha) {
         if (idProducto == null || fecha == null) {
             throw new IllegalArgumentException("Producto y fecha son obligatorios");
@@ -227,8 +288,8 @@ public class OrdenDAO extends DefaultDAO<Orden> {
     }
 
     /**
-     * Retorna una promoción una sola vez si existe una asociación vigente
-     * con al menos una fila de producto de la orden.
+     * Retorna una promoción una sola vez si existe una asociación vigente con
+     * al menos una fila de producto de la orden.
      */
     public List<Descuento> findPromocionesAplicables(UUID idOrden, Date fecha) {
         List<DescuentoProducto> asociaciones = consultarAplicablesOrden(idOrden, fecha);
@@ -260,8 +321,9 @@ public class OrdenDAO extends DefaultDAO<Orden> {
 
     /**
      * Aplica UNA promoción a TODAS las filas elegibles de la orden en una sola
-     * transacción EJB. Una segunda aplicación descuenta sobre el precio vigente.
-     * La operación es todo o nada si encuentra una fila facturada o inválida.
+     * transacción EJB. Una segunda aplicación descuenta sobre el precio
+     * vigente. La operación es todo o nada si encuentra una fila facturada o
+     * inválida.
      */
     public ResultadoPromocion aplicarPromocion(UUID idOrden, UUID idPromocion) {
         if (idOrden == null || idPromocion == null) {
@@ -276,8 +338,12 @@ public class OrdenDAO extends DefaultDAO<Orden> {
         Map<UUID, DescuentoProducto> porProducto = new LinkedHashMap<>();
         for (DescuentoProducto dp : asociaciones) {
             if (dp == null || dp.getIdDescuento() == null || dp.getIdProducto() == null
-                    || dp.getIdProducto().getIdProducto() == null) continue;
-            if (!idPromocion.equals(dp.getIdDescuento().getIdDescuento())) continue;
+                    || dp.getIdProducto().getIdProducto() == null) {
+                continue;
+            }
+            if (!idPromocion.equals(dp.getIdDescuento().getIdDescuento())) {
+                continue;
+            }
             UUID idProducto = dp.getIdProducto().getIdProducto();
             if (porProducto.putIfAbsent(idProducto, dp) != null) {
                 throw new IllegalArgumentException(
@@ -297,7 +363,9 @@ public class OrdenDAO extends DefaultDAO<Orden> {
                 throw new IllegalArgumentException("La orden contiene una fila inválida");
             }
             DescuentoProducto asociacion = porProducto.get(fila.getIdProducto().getIdProducto());
-            if (asociacion == null) continue;
+            if (asociacion == null) {
+                continue;
+            }
             em.lock(fila, LockModeType.PESSIMISTIC_WRITE);
             if (estaFacturado(fila.getIdOrdenProducto())) {
                 throw new IllegalArgumentException(
@@ -344,7 +412,9 @@ public class OrdenDAO extends DefaultDAO<Orden> {
         return new ResultadoPromocion(cambios.size(), totalDescontado);
     }
 
-    /** Mantiene compatibilidad con la creación conjunta de cabecera y filas. */
+    /**
+     * Mantiene compatibilidad con la creación conjunta de cabecera y filas.
+     */
     public void crearOrdenCompleta(Orden orden, List<OrdenProducto> productos) {
         if (orden == null || productos == null) {
             throw new IllegalArgumentException("Orden y lista no pueden ser nulas");
@@ -388,11 +458,13 @@ public class OrdenDAO extends DefaultDAO<Orden> {
     }
 
     private static final class Cambio {
+
         private final OrdenProducto detalle;
         private final BigDecimal nuevoPrecio;
         private final BigDecimal precioAnterior;
         private final String observacionesAnteriores;
         private final String nota;
+
         Cambio(OrdenProducto detalle, BigDecimal nuevoPrecio, String nota) {
             this.detalle = Objects.requireNonNull(detalle);
             this.precioAnterior = detalle.getPrecio();
@@ -402,15 +474,25 @@ public class OrdenDAO extends DefaultDAO<Orden> {
         }
     }
 
-    /** Resumen para mensajes de éxito en la interfaz. */
+    /**
+     * Resumen para mensajes de éxito en la interfaz.
+     */
     public static final class ResultadoPromocion {
+
         private final int productosAfectados;
         private final BigDecimal descuentoTotal;
+
         public ResultadoPromocion(int productosAfectados, BigDecimal descuentoTotal) {
             this.productosAfectados = productosAfectados;
             this.descuentoTotal = descuentoTotal;
         }
-        public int getProductosAfectados() { return productosAfectados; }
-        public BigDecimal getDescuentoTotal() { return descuentoTotal; }
+
+        public int getProductosAfectados() {
+            return productosAfectados;
+        }
+
+        public BigDecimal getDescuentoTotal() {
+            return descuentoTotal;
+        }
     }
 }

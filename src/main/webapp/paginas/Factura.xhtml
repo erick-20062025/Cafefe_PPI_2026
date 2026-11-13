@@ -261,93 +261,17 @@
                             itemLabel="#{orden.fechaCreacion} - #{orden.idEmpleadoRol.idEmpleado.nombre} #{orden.idEmpleadoRol.idEmpleado.apellido}"
                             itemValue="#{orden.idOrden.toString()}"/>
 
-                        <p:ajax
-                            process="@this"
-                            update="cmbOrdenProducto txtPrecioProducto txtObservacionesProducto"/>
+                        <p:ajax process="@form" update="@form"/>
 
                     </p:selectOneMenu>
-
-                </div>
-
-
-                <!-- PRODUCTO DE LA ORDEN -->
-
-                <div class="field col-12 md:col-6">
-
-                    <p:outputLabel
-                        for="cmbOrdenProducto"
-                        value="Producto"/>
-
-                    <p:selectOneMenu
-                        id="cmbOrdenProducto"
-                        value="#{facturaModel.idOrdenProductoSeleccionado}"
-                        style="width: 100%;">
-
-                        <f:selectItem
-                            itemLabel="Seleccione un producto"
-                            itemValue="#{null}"
-                            noSelectionOption="true"/>
-
-                        <f:selectItems
-                            value="#{facturaModel.productosOrden}"
-                            var="ordenProducto"
-                            itemLabel="#{ordenProducto.idProducto.nombre}"
-                            itemValue="#{ordenProducto.idOrdenProducto.toString()}"/>
-
-                        <p:ajax
-                            process="@this"
-                            update="txtPrecioProducto txtObservacionesProducto"/>
-
-                    </p:selectOneMenu>
-
-                </div>
-
-
-                <!-- PRECIO -->
-
-                <div class="field col-12 md:col-4">
-
-                    <p:outputLabel
-                        for="txtPrecioProducto"
-                        value="Precio"/>
-
-                    <p:inputNumber
-                        id="txtPrecioProducto"
-                        value="#{facturaModel.precioProducto}"
-                        decimalPlaces="2"
-                        style="width: 100%;"/>
-
-                </div>
-
-
-                <!-- OBSERVACIONES DEL PRODUCTO -->
-
-                <div class="field col-12 md:col-8">
-
-                    <p:outputLabel
-                        for="txtObservacionesProducto"
-                        value="Observaciones del producto"/>
-
-                    <p:inputText
-                        id="txtObservacionesProducto"
-                        value="#{facturaModel.observacionesProducto}"
-                        maxlength="500"
-                        style="width: 100%;"/>
-
-                </div>
-
-
-                <!-- AGREGAR -->
-
-                <div class="field col-12">
-
                     <p:commandButton
-                        value="Agregar producto"
-                        icon="pi pi-plus"
-                        action="#{facturaModel.agregarProducto}"
-                        process="datosFactura cmbOrden cmbOrdenProducto txtPrecioProducto txtObservacionesProducto"
+                        value="Agregar todos los productos"
+                        icon="pi pi-plus-circle"
+                        action="#{facturaModel.agregarTodosLosProductos}"
+                        process="@this"
                         update="@form"
-                        styleClass="ui-button-success"/>
+                        rendered="#{facturaModel.nuevo or facturaModel.editando}"
+                        styleClass="ui-button-success mt-2"/>
 
                 </div>
 
@@ -403,9 +327,10 @@
                     <p:commandButton
                         icon="pi pi-trash"
                         title="Quitar producto"
-                        action="#{facturaModel.quitarProducto(detalle)}"
+                        actionListener="#{facturaModel.quitarProducto(detalle)}"
                         process="@this"
                         update="@form"
+                        rendered="#{facturaModel.nuevo or facturaModel.editando}"
                         styleClass="ui-button-danger">
 
                         <p:confirm
@@ -423,21 +348,18 @@
     </ui:define>
     <ui:define name="accionesListadoEspeciales">
 
-        <p:commandButton
-            value="Confirmar pago"
-            icon="pi pi-check-circle"
-            action="#{facturaModel.confirmarPagada}"
-            process="@this"
-            update=":frmPrincipal"
+        <p:button
+            value="Ir a pagos"
+            icon="pi pi-credit-card"
+            outcome="/paginas/Pago"
             rendered="#{facturaModel.facturaPendiente}"
             styleClass="ui-button-success mr-2">
 
-            <p:confirm
-                header="Confirmar pago"
-                message="¿Está seguro de que desea confirmar esta factura como pagada? Después de confirmarla no podrá modificarse."
-                icon="pi pi-exclamation-triangle"/>
+            <f:param
+                name="idFactura"
+                value="#{facturaModel.registro.idFactura}"/>
 
-        </p:commandButton>
+        </p:button>
         <p:commandButton
             value="Ver factura"
             icon="pi pi-eye"
