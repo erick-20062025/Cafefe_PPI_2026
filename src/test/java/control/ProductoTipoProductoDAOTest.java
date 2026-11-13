@@ -72,4 +72,20 @@ public class ProductoTipoProductoDAOTest {
         assertSame(registro, dao.findById(id));
         verify(em).find(ProductoTipoProducto.class, id);
     }
+    @Test
+    void debeFiltrarPorTipoYDevolverListaVacia() {
+        UUID id = UUID.randomUUID();
+        TypedQuery<ProductoTipoProducto> query = mock(TypedQuery.class);
+        String jpql = "SELECT p FROM ProductoTipoProducto p WHERE p.idTipoProducto.idTipoProducto = :idTipoProducto";
+        when(em.createQuery(jpql, ProductoTipoProducto.class)).thenReturn(query);
+        when(query.setParameter("idTipoProducto", id)).thenReturn(query);
+        List<ProductoTipoProducto> registros = List.of(new ProductoTipoProducto(), new ProductoTipoProducto());
+        when(query.getResultList()).thenReturn(registros, List.of());
+        assertSame(registros, dao.findByIdTipoProducto(id));
+        assertTrue(dao.findByIdTipoProducto(id).isEmpty());
+        verify(em, times(2)).createQuery(jpql, ProductoTipoProducto.class);
+        verify(query, times(2)).setParameter("idTipoProducto", id);
+        verify(query, times(2)).getResultList();
+    }
+
 }
