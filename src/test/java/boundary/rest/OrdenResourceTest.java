@@ -284,4 +284,35 @@ class OrdenResourceTest {
         assertFalse(detalle.contains("SELECT"));
         verify(ordenDAO, never()).eliminar(any());
     }
+    @Test
+    void agregaFilasUsandoCantidadYProductoDeLaSolicitud() {
+        UUID orden = UUID.randomUUID();
+        when(ordenDAO.agregarProductos(orden, ID_PRODUCTO, 2, null)).thenReturn(List.of());
+        String json = """
+                {"idProducto":"%s","cantidad":2}
+                """.formatted(ID_PRODUCTO);
+        assertEquals(201, resource.agregarProductos(orden.toString(), json).getStatus());
+        verify(ordenDAO).agregarProductos(orden, ID_PRODUCTO, 2, null);
+    }
+
+    @Test
+    void quitaFilasSoloDeLaOrdenIndicadaYTraduceConflictos() {
+        UUID orden = UUID.randomUUID();
+        UUID fila = UUID.randomUUID();
+        assertEquals(200, resource.quitarProducto(orden.toString(), fila.toString()).getStatus());
+        doThrow(new RuntimeException(new OrdenDAO.OrdenFacturada())).when(ordenDAO).quitarProducto(orden, fila);
+        assertEquals(409, resource.quitarProducto(orden.toString(), fila.toString()).getStatus());
+        assertEquals(400, resource.quitarProducto(orden.toString(), "invalido").getStatus());
+    }
+
+    @Test
+    void filtraFilasParaFacturacion() {
+        UUID orden = UUID.randomUUID();
+        when(ordenDAO.findById(orden)).thenReturn(new Orden(orden));
+        when(ordenDAO.findProductosFacturables(orden)).thenReturn(List.of());
+        var respuesta = resource.productosFacturables(orden.toString());
+        assertEquals(200, respuesta.getStatus());
+        assertEquals(List.of(), respuesta.getEntity());
+        assertEquals(404, resource.productosFacturables(UUID.randomUUID().toString()).getStatus());
+    }
 }
