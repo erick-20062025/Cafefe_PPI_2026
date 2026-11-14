@@ -192,6 +192,68 @@ public class OrdenDAO extends DefaultDAO<Orden> {
         em.flush();
     }
 
+    /** Agrega filas en una sola transacción, con el precio vigente del catálogo. */
+    public List<OrdenProducto> agregarProductos(UUID idOrden, UUID idProducto,
+            int cantidad, String observaciones) {
+        if (cantidad < 1 || cantidad > 20) {
+            throw new IllegalArgumentException("La cantidad debe estar entre 1 y 20");
+        }
+        Orden orden = bloquearOrdenEditable(idOrden);
+        Producto producto = em.find(Producto.class, idProducto);
+        if (producto == null || !Boolean.TRUE.equals(producto.getActivo())) {
+            throw new IllegalArgumentException("El producto no existe o está inactivo");
+        }
+        BigDecimal precio = validarPrecio(producto.getPrecioSugerido());
+        List<OrdenProducto> filas = new ArrayList<>();
+        for (int i = 0; i < cantidad; i++) {
+            OrdenProducto fila = new OrdenProducto(UUID.randomUUID());
+            fila.setIdOrden(orden);
+            fila.setIdProducto(producto);
+            fila.setPrecio(precio);
+            fila.setObservaciones(observaciones);
+            em.persist(fila);
+            filas.add(fila);
+        }
+        em.flush();
+        return filas;
+    }
+
+    public void quitarProducto(UUID idOrden, UUID idFila) {
+        Orden orden = bloquearOrdenEditable(idOrden);
+        OrdenProducto referencia = new OrdenProducto(idFila);
+        referencia.setIdOrden(orden);
+        eliminarProducto(referencia);
+    }
+
+    public static class OrdenNoEncontrada extends IllegalArgumentException {
+        public OrdenNoEncontrada() { super("La orden no existe"); }
+    }
+
+    public static class OrdenFacturada extends IllegalStateException {
+        public OrdenFacturada() { super("No se puede editar una orden con productos facturados"); }
+    }
+
+    private Orden bloquearOrdenEditable(UUID id) {
+        Orden orden = em.find(Orden.class, id, LockModeType.PESSIMISTIC_WRITE);
+        if (orden == null) throw new OrdenNoEncontrada();
+        // Factura toma estos mismos bloqueos en orden de UUID antes de asociar filas.
+        List<UUID> ids = findProductosByOrden(id).stream()
+                .map(OrdenProducto::getIdOrdenProducto).sorted().toList();
+        for (UUID fila : ids) {
+            em.find(OrdenProducto.class, fila, LockModeType.PESSIMISTIC_WRITE);
+        }
+        if (tieneProductosFacturados(id)) throw new OrdenFacturada();
+        return orden;
+    }
+
+    public List<OrdenProducto> findProductosFacturables(UUID idOrden) {
+        return em.createQuery("SELECT op FROM OrdenProducto op LEFT JOIN FETCH op.idProducto "
+                + "WHERE op.idOrden.idOrden = :id AND NOT EXISTS "
+                + "(SELECT f FROM FacturaOrdenProducto f WHERE f.idOrdenProducto = op) "
+                + "ORDER BY op.idOrdenProducto", OrdenProducto.class)
+                .setParameter("id", idOrden).getResultList();
+    }
+
     /**
      * Actualiza una fila existente solo si aún no está facturada.
      */
@@ -367,7 +429,12 @@ public class OrdenDAO extends DefaultDAO<Orden> {
         // Fase 1: bloquear, validar y calcular, sin modificar todavía la entidad.
         List<Cambio> cambios = new ArrayList<>();
         BigDecimal totalDescontado = BigDecimal.ZERO.setScale(2);
-        for (OrdenProducto fila : detalles) {
+        // Factura también bloquea filas por UUID. Mantener el mismo orden evita
+        // un bloqueo circular cuando ambos flujos afectan varias filas.
+        List<OrdenProducto> filasOrdenadas = new ArrayList<>(detalles);
+        filasOrdenadas.sort(Comparator.nullsFirst(Comparator.comparing(
+                OrdenProducto::getIdOrdenProducto, Comparator.nullsFirst(Comparator.naturalOrder()))));
+        for (OrdenProducto fila : filasOrdenadas) {
             if (fila == null || fila.getIdOrdenProducto() == null || fila.getIdProducto() == null
                     || fila.getIdProducto().getIdProducto() == null) {
                 throw new IllegalArgumentException("La orden contiene una fila inválida");

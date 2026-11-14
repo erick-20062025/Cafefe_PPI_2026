@@ -34,19 +34,30 @@ public final class FacturaDTO {
     public static final class Detalle {
         private final UUID idFacturaOrdenProducto;
         private final UUID idOrdenProducto;
+        private final UUID idOrden;
+        private final UUID idProducto;
+        private final String producto;
         private final BigDecimal precio;
         private final String observaciones;
 
         Detalle(FacturaOrdenProducto fila) {
             idFacturaOrdenProducto = fila.getIdFacturaOrdenProducto();
-            idOrdenProducto = fila.getIdOrdenProducto() == null
-                    ? null : fila.getIdOrdenProducto().getIdOrdenProducto();
+            var filaOrden = fila.getIdOrdenProducto();
+            var catalogo = filaOrden == null ? null : filaOrden.getIdProducto();
+            idOrdenProducto = filaOrden == null ? null : filaOrden.getIdOrdenProducto();
+            idOrden = filaOrden == null || filaOrden.getIdOrden() == null
+                    ? null : filaOrden.getIdOrden().getIdOrden();
+            idProducto = catalogo == null ? null : catalogo.getIdProducto();
+            producto = catalogo == null ? null : catalogo.getNombre();
             precio = fila.getPrecio();
             observaciones = fila.getObservaciones();
         }
 
         public UUID getIdFacturaOrdenProducto() { return idFacturaOrdenProducto; }
         public UUID getIdOrdenProducto() { return idOrdenProducto; }
+        public UUID getIdOrden() { return idOrden; }
+        public UUID getIdProducto() { return idProducto; }
+        public String getProducto() { return producto; }
         public BigDecimal getPrecio() { return precio; }
         public String getObservaciones() { return observaciones; }
     }

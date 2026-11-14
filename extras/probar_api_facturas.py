@@ -241,7 +241,7 @@ class Pruebas:
                 if self.filas:
                     self.limpiar_filas()
                 if self.baseline is not None:
-                    self.resultado('Contenido de las 11 tablas idéntico al inicial', self.baseline == self.huella())
+                    self.resultado(f'Contenido de las {len(TABLAS)} tablas idéntico al inicial', self.baseline == self.huella())
             except Exception as ex:
                 self.resultado('Limpieza completa', False, ex)
                 print('UUID de facturas y filas de prueba:', self.facturas, self.filas)

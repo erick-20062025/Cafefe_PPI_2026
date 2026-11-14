@@ -115,6 +115,85 @@ public class OrdenResource {
         }
     }
 
+    @GET
+    @Path("/{id}/productos-facturables")
+    public Response productosFacturables(@PathParam("id") String id) {
+        try {
+            UUID uuid = convertirUUID(id);
+            if (ordenDAO.findById(uuid) == null) return error(404, "La orden no existe");
+            return Response.ok(ordenDAO.findProductosFacturables(uuid).stream()
+                    .map(OrdenDTO.ProductoDTO::desde).toList()).build();
+        } catch (IllegalArgumentException ex) {
+            return error(400, "El identificador de orden no es un UUID válido");
+        } catch (RuntimeException ex) {
+            return errorOperacion(ex, "consultar los productos facturables");
+        }
+    }
+
+    @POST
+    @Path("/{id}/productos")
+    public Response agregarProductos(@PathParam("id") String id, String json) {
+        UUID uuid;
+        OrdenSolicitud.ProductoSolicitado producto;
+        try {
+            uuid = convertirUUID(id);
+            producto = OrdenSolicitud.leerProducto(json);
+        } catch (OrdenSolicitud.DatoInvalido ex) {
+            return error(ex.getEstadoHttp(), ex.getMessage());
+        } catch (IllegalArgumentException ex) {
+            return error(400, "El identificador de orden no es un UUID válido");
+        }
+        try {
+            return Response.status(201).entity(ordenDAO.agregarProductos(uuid, producto.getIdProducto(),
+                    producto.getCantidad(), producto.getObservaciones()).stream()
+                    .map(OrdenDTO.ProductoDTO::desde).toList()).build();
+        } catch (RuntimeException ex) {
+            return errorEdicionProductos(ex);
+        }
+    }
+
+    @DELETE
+    @Path("/{id}/productos/{idFila}")
+    public Response quitarProducto(@PathParam("id") String id, @PathParam("idFila") String idFila) {
+        UUID uuid;
+        UUID fila;
+        try {
+            uuid = convertirUUID(id);
+            fila = convertirUUID(idFila);
+        } catch (IllegalArgumentException ex) {
+            return error(400, "Orden y fila deben tener UUID válidos");
+        }
+        try {
+            ordenDAO.quitarProducto(uuid, fila);
+            return Response.ok(new ApiResponse(ApiMensajes.CODIGO_OK, ApiMensajes.MENSAJE_OK,
+                    "Producto quitado de la orden")).build();
+        } catch (RuntimeException ex) {
+            return errorEdicionProductos(ex);
+        }
+    }
+
+    private Response errorEdicionProductos(RuntimeException ex) {
+        int profundidad = 0;
+        for (Throwable causa = ex; causa != null && profundidad++ < 16; causa = causa.getCause()) {
+            if (causa instanceof OrdenDAO.OrdenNoEncontrada) return error(404, causa.getMessage());
+            if (causa instanceof OrdenDAO.OrdenFacturada) return error(409, causa.getMessage());
+            if (causa instanceof IllegalArgumentException && causa.getMessage() != null) {
+                switch (causa.getMessage()) {
+                    case "La fila ya no existe", "La fila no pertenece a la orden indicada":
+                        return error(404, "La fila no existe en esta orden");
+                    case "No se puede eliminar un producto facturado":
+                        return error(409, causa.getMessage());
+                    case "El producto no existe o está inactivo", "El precio debe ser mayor o igual a cero",
+                         "El precio solo admite dos decimales", "La cantidad debe estar entre 1 y 20":
+                        return error(422, causa.getMessage());
+                    default:
+                        break;
+                }
+            }
+        }
+        return errorOperacion(ex, "editar los productos de la orden");
+    }
+
     /** GET /api/ordenes/{id}/promociones: solo promociones aplicables a esa orden. */
     @GET
     @Path("/{id}/promociones")
