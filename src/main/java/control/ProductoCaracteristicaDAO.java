@@ -5,6 +5,9 @@
 package control;
 
 import entity.ProductoCaracteristica;
+import entity.Producto;
+import entity.Caracteristica;
+import jakarta.persistence.LockModeType;
 import jakarta.ejb.Stateless;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
@@ -33,11 +36,20 @@ public class ProductoCaracteristicaDAO extends DefaultDAO<ProductoCaracteristica
 
     @Override
     public void crear(ProductoCaracteristica reg) {
-        ProductoCaracteristicaValidator.validar(reg);
-
+        // Mantener el validador existente para referencias incompletas.
+        if (reg == null || reg.getIdProducto() == null || reg.getIdProducto().getIdProducto() == null
+                || reg.getIdCaracteristica() == null || reg.getIdCaracteristica().getIdCaracteristica() == null) {
+            ProductoCaracteristicaValidator.validar(reg);
+        }
         UUID idProducto = reg.getIdProducto().getIdProducto();
-        UUID idCaracteristica
-                = reg.getIdCaracteristica().getIdCaracteristica();
+        UUID idCaracteristica = reg.getIdCaracteristica().getIdCaracteristica();
+        Producto producto = em.find(Producto.class, idProducto, LockModeType.PESSIMISTIC_WRITE);
+        if (producto == null) throw new IllegalArgumentException("El producto no existe");
+        Caracteristica caracteristica = em.find(Caracteristica.class, idCaracteristica, LockModeType.PESSIMISTIC_READ);
+        if (caracteristica == null) throw new IllegalArgumentException("La característica no existe");
+        reg.setIdProducto(producto);
+        reg.setIdCaracteristica(caracteristica);
+        ProductoCaracteristicaValidator.validar(reg);
 
         if (existeRelacion(idProducto, idCaracteristica)) {
             throw new IllegalArgumentException(
@@ -45,6 +57,16 @@ public class ProductoCaracteristicaDAO extends DefaultDAO<ProductoCaracteristica
         }
 
         super.crear(reg);
+        em.flush();
+    }
+
+    @Override
+    public void eliminar(ProductoCaracteristica reg) {
+        ProductoCaracteristica actual = em.find(ProductoCaracteristica.class,
+                reg.getIdProductoCaracteristica(), LockModeType.PESSIMISTIC_WRITE);
+        if (actual == null) throw new IllegalArgumentException("La asociación no existe");
+        em.remove(actual);
+        em.flush();
     }
 
     @Override

@@ -5,6 +5,7 @@ import entity.Producto;
 import entity.ProductoCaracteristica;
 import entity.TipoCaracteristica;
 import jakarta.persistence.EntityManager;
+import jakarta.persistence.LockModeType;
 import java.lang.reflect.Field;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -61,6 +62,8 @@ public class ProductoCaracteristicaValidacionDAOTest {
         relacion.setIdCaracteristica(caracteristica);
         relacion.setValor("600 ml");
 
+        when(em.find(Producto.class, producto.getIdProducto(), LockModeType.PESSIMISTIC_WRITE)).thenReturn(producto);
+        when(em.find(Caracteristica.class, caracteristica.getIdCaracteristica(), LockModeType.PESSIMISTIC_READ)).thenReturn(caracteristica);
         return relacion;
     }
 
