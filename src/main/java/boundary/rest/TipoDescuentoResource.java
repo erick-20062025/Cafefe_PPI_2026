@@ -7,6 +7,7 @@ import control.DescuentoDAO;
 import control.TipoDescuentoDAO;
 import entity.Descuento;
 import entity.TipoDescuento;
+import boundary.rest.dto.DescuentoDTO;
 import jakarta.inject.Inject;
 import jakarta.persistence.PersistenceException;
 import jakarta.ws.rs.Consumes;
@@ -216,7 +217,7 @@ public class TipoDescuentoResource {
                 return noEncontrado("No existe el tipo de descuento solicitado");
             }
             List<Descuento> descuentos = descuentoDAO.findByTipoDescuento(uuid);
-            return Response.ok(descuentos == null ? List.of() : descuentos).build();
+            return Response.ok(descuentos == null ? List.of() : descuentos.stream().map(DescuentoDTO::new).toList()).build();
         } catch (Exception ex) {
             return errorOperacion(ex, "consultar los descuentos asociados");
         }
