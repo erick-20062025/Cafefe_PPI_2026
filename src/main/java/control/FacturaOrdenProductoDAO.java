@@ -3,6 +3,7 @@ package control;
 import entity.FacturaOrdenProducto;
 import entity.OrdenProducto;
 import jakarta.ejb.Stateless;
+import jakarta.ejb.EJB;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import java.util.List;
@@ -11,6 +12,9 @@ import java.util.UUID;
 @Stateless
 public class FacturaOrdenProductoDAO
         extends DefaultDAO<FacturaOrdenProducto> {
+
+    @EJB
+    private FacturaDAO facturaDAO;
 
     @PersistenceContext(unitName = "my_persistence_unit")
     private EntityManager em;
@@ -52,7 +56,7 @@ public class FacturaOrdenProductoDAO
     public void agregarProductoAFactura(
             FacturaOrdenProducto detalle) {
 
-        em.persist(detalle);
+        facturaDAO.agregarDetalle(detalle);
     }
 
     public boolean existeRelacion(

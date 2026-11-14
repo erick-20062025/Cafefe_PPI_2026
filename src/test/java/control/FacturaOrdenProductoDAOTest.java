@@ -17,6 +17,7 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 public class FacturaOrdenProductoDAOTest {
     @Mock private EntityManager em;
+    @Mock private FacturaDAO facturaDAO;
     @InjectMocks private FacturaOrdenProductoDAO dao;
 
     @Test
@@ -69,10 +70,11 @@ public class FacturaOrdenProductoDAOTest {
     }
 
     @Test
-    void debePersistirDetalle() {
+    void debeDelegarEscrituraEnFactura() {
         FacturaOrdenProducto detalle = new FacturaOrdenProducto();
         dao.agregarProductoAFactura(detalle);
-        verify(em).persist(same(detalle));
+        verify(facturaDAO).agregarDetalle(same(detalle));
+        verifyNoInteractions(em);
     }
 
     @Test
