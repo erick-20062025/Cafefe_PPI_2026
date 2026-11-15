@@ -27,3 +27,9 @@ nbdist/
 # Sistema
 .DS_Store
 Thumbs.db
+
+# Configuracion local de Liberty (no versionar identidades ni secretos)
+src/main/liberty/config/server.env
+
+# Python: artefactos de pruebas
+__pycache__/
