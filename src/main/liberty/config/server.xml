@@ -6,6 +6,22 @@
         <feature>jdbc-4.2</feature>
     </featureManager>
 
+    <!-- Endpoint local explícito, también al iniciar fuera de liberty:dev. -->
+    <httpEndpoint id="defaultHttpEndpoint" host="localhost" httpPort="9080"/>
+
+    <httpSession cookieHttpOnly="true" cookieSameSite="Lax"
+                 useContextRootAsCookiePath="true" invalidationTimeout="30m"
+                 urlRewritingEnabled="false"/>
+
+    <!-- Solo el frontend de desarrollo aprobado; limitado al contexto REST. -->
+    <cors id="cafefeFrontendDesarrollo"
+          domain="/Cafefe_PPI_2026-1.0-SNAPSHOT/api/"
+          allowedOrigins="http://127.0.0.1:5501"
+          allowedMethods="GET,POST,PUT,DELETE,OPTIONS"
+          allowedHeaders="Content-Type,Accept"
+          allowCredentials="true"
+          maxAge="0"/>
+
     <!-- Definición de la librería del driver -->
     <library id="PostgreSQLLib">
         <fileset dir="${server.config.dir}/lib/postgres" includes="postgresql-42.5.4.jar"/>

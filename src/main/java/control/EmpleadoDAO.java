@@ -60,6 +60,13 @@ public class EmpleadoDAO extends DefaultDAO<Empleado> {
         return em.find(Empleado.class, id);
     }
 
+    /** Lectura fresca de identidad: una revocación externa no debe quedar en caché JPA. */
+    public Empleado findParaSesion(java.util.UUID id) {
+        return em.find(Empleado.class, id, java.util.Map.of(
+                "jakarta.persistence.cache.retrieveMode", jakarta.persistence.CacheRetrieveMode.BYPASS,
+                "jakarta.persistence.cache.storeMode", jakarta.persistence.CacheStoreMode.REFRESH));
+    }
+
     /**
      * Registra un empleado después de validar sus datos.
      *

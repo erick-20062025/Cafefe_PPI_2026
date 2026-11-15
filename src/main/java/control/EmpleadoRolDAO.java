@@ -73,6 +73,14 @@ public class EmpleadoRolDAO
                 .getResultList();
     }
 
+    /** Proyección escalar: estados activos evaluados por PostgreSQL en cada acceso. */
+    public List<String> findRolesActivosParaSesion(UUID idEmpleado) {
+        validarId(idEmpleado, "empleado");
+        return em.createQuery("SELECT r.nombre FROM EmpleadoRol er JOIN er.idRol r JOIN er.idEmpleado e "
+                + "WHERE e.idEmpleado = :id AND e.activo = TRUE AND er.activo = TRUE AND r.activo = TRUE", String.class)
+                .setParameter("id", idEmpleado).getResultList();
+    }
+
     /**
      * Cuenta todas las relaciones del empleado.
      */
