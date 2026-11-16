@@ -16,7 +16,7 @@ import java.util.UUID;
 @ApplicationScoped
 public class AccesoPersonal {
     public static final String ATRIBUTO = AccesoPersonal.class.getName() + ".empleado";
-    private static final Set<String> PERMITIDOS = Set.of("barista", "cocinero", "cajero", "camarero");
+    private static final Set<String> PERMITIDOS = Set.of("barista", "cocinero", "cajero", "camarero", "administrador");
     @Inject EmpleadoDAO empleados;
     @Inject EmpleadoRolDAO asignaciones;
 

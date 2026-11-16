@@ -279,6 +279,12 @@ public class OrdenResource {
         return crearConCamarero(solicitud, idVirtual);
     }
 
+    @Inject CancelacionResource cancelaciones;
+    @GET @Path("/gestionables")
+    public Response gestionables() { cancelaciones.request=peticion;return cancelaciones.gestionables(); }
+    @POST @Path("/{id}/cancelacion")
+    public Response cancelar(@PathParam("id") String id) { cancelaciones.request=peticion;return cancelaciones.cancelar(id); }
+
     @jakarta.ws.rs.PUT
     @Path("/{id}/preparacion")
     public Response preparacion(@PathParam("id") String id, String json) {

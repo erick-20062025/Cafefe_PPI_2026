@@ -101,6 +101,9 @@ public class FacturaDAOTest {
         Orden orden = new Orden();
         orden.setIdOrden(UUID.randomUUID());
         op.setIdOrden(orden);
+        orden.setEstadoPreparacion("DESPACHADA");
+        when(em.find(OrdenProducto.class,op.getIdOrdenProducto())).thenReturn(op);
+        when(em.find(Orden.class,orden.getIdOrden(),LockModeType.PESSIMISTIC_WRITE)).thenReturn(orden);
         when(em.find(OrdenProducto.class, op.getIdOrdenProducto(), LockModeType.PESSIMISTIC_WRITE)).thenReturn(op);
         TypedQuery<Long> consulta = mock(TypedQuery.class, RETURNS_SELF);
         when(em.createQuery(startsWith("SELECT COUNT(f) FROM FacturaOrdenProducto"), eq(Long.class)))

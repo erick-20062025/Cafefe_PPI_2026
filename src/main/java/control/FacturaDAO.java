@@ -92,6 +92,7 @@ public class FacturaDAO extends DefaultDAO<Factura> {
             throw new DatosInvalidos("El cliente supera 155 caracteres");
         }
         validarCabecera(factura);
+        bloquearOrdenesDespachadas(productos);
         validarDetalles(factura.getIdFactura(), productos);
         em.persist(factura);
         for (FacturaOrdenProducto detalle : productos) {
@@ -168,6 +169,23 @@ public class FacturaDAO extends DefaultDAO<Factura> {
         }
         factura.setIdCaja(caja);
         factura.setIdEmpleadoRol(empleado);
+    }
+
+    /** Orden antes que sus filas: mismo bloqueo que preparación y cancelación. */
+    private void bloquearOrdenesDespachadas(List<FacturaOrdenProducto> productos) {
+        if (productos==null || productos.isEmpty()) throw new DatosInvalidos("La factura debe contener productos");
+        var ordenes=new java.util.TreeSet<UUID>();
+        for (var detalle:productos) {
+            if (detalle==null || detalle.getIdOrdenProducto()==null) throw new DatosInvalidos("Producto inválido");
+            var fila=em.find(OrdenProducto.class,detalle.getIdOrdenProducto().getIdOrdenProducto());
+            if (fila==null || fila.getIdOrden()==null) throw new DatosInvalidos("Producto de orden inexistente");
+            ordenes.add(fila.getIdOrden().getIdOrden());
+        }
+        for (UUID id:ordenes) {
+            var orden=em.find(entity.Orden.class,id,LockModeType.PESSIMISTIC_WRITE);
+            if (orden==null || !"DESPACHADA".equals(orden.getEstadoPreparacion()))
+                throw new Conflicto("Solo se pueden generar facturas nuevas de órdenes DESPACHADA.");
+        }
     }
 
     private void validarDetalles(UUID idFactura, List<FacturaOrdenProducto> productos) {

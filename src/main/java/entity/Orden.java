@@ -30,7 +30,7 @@ import java.util.UUID;
     // en las entidades, no se construye mediante cadenas en el DAO.
     @NamedQuery(name = "Orden.findPendientesPago",
             query = "SELECT DISTINCT o FROM Orden o JOIN o.ordenProductoCollection op "
-            + "WHERE NOT EXISTS (SELECT fp FROM FacturaOrdenProducto fp "
+            + "WHERE (o.estadoPreparacion IS NULL OR o.estadoPreparacion <> 'CANCELADA') AND NOT EXISTS (SELECT fp FROM FacturaOrdenProducto fp "
             + "WHERE fp.idOrdenProducto = op "
             + "AND UPPER(fp.idFactura.estado) = 'PAGADA') "
             + "ORDER BY o.fechaCreacion DESC"),
@@ -48,6 +48,12 @@ import java.util.UUID;
             + "AND LOWER(TRIM(r.nombre)) = :nombreRol")
 })
 public class Orden implements Serializable {
+    @Column(name="cancelada_por") private String canceladaPor;
+    @Column(name="cancelada_en") @Temporal(TemporalType.TIMESTAMP) private Date canceladaEn;
+    public String getCanceladaPor() { return canceladaPor; }
+    public void setCanceladaPor(String valor) { canceladaPor=valor; }
+    public Date getCanceladaEn() { return canceladaEn; }
+    public void setCanceladaEn(Date valor) { canceladaEn=valor; }
     private static final long serialVersionUID = 1L;
 
     @Id
