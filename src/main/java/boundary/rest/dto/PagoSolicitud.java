@@ -22,10 +22,12 @@ public final class PagoSolicitud {
     private static final int MAX_REFERENCIA = 120;
     private static final int MAX_OBSERVACIONES = 1000;
     private static final Set<String> CAMPOS = Set.of(
-            "monto", "tipoPago", "referenciaExterna", "observaciones");
+            "monto", "tipoPago", "referenciaExterna", "observaciones", "efectivoRecibido");
     private static final Set<String> METODOS = Set.of(
             "EFECTIVO", "TARJETA", "TRANSFERENCIA", "QR");
 
+    private BigDecimal efectivoRecibido;
+    public BigDecimal getEfectivoRecibido() { return efectivoRecibido; }
     private final BigDecimal monto;
     private final String tipoPago;
     private final String referenciaExterna;
@@ -75,7 +77,14 @@ public final class PagoSolicitud {
         if (!"EFECTIVO".equals(metodo) && referencia == null) {
             throw new DatoInvalido(422, "Debe indicar una referencia para " + metodo);
         }
-        return new PagoSolicitud(monto, metodo, referencia, observaciones);
+        PagoSolicitud salida = new PagoSolicitud(monto, metodo, referencia, observaciones);
+        if (objeto.containsKey("efectivoRecibido")) {
+            if (!"EFECTIVO".equals(metodo) || !(objeto.get("efectivoRecibido") instanceof JsonNumber recibido))
+                throw new DatoInvalido(400, "efectivoRecibido solo se admite como número para efectivo");
+            salida.efectivoRecibido = monto(Json.createObjectBuilder().add("monto", recibido).build());
+            if (salida.efectivoRecibido.compareTo(monto) < 0) throw new DatoInvalido(422, "El efectivo recibido es menor que el abono");
+        }
+        return salida;
     }
 
     private static BigDecimal monto(JsonObject objeto) {

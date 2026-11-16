@@ -185,7 +185,7 @@ class ProductoResourceTest {
         assertEquals(List.of(), recurso.listar().getEntity());
         ProductoDTO dto = (ProductoDTO) recurso.crear(json()).getEntity();
         assertEquals(0, dto.getPrecioSugerido().signum());
-        assertEquals(5, java.util.Arrays.stream(ProductoDTO.class.getDeclaredMethods())
+        assertEquals(6, java.util.Arrays.stream(ProductoDTO.class.getDeclaredMethods())
                 .filter(m -> m.getName().startsWith("get")).count());
     }
 }

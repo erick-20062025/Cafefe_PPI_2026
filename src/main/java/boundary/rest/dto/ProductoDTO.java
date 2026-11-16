@@ -10,6 +10,8 @@ import java.math.BigDecimal;
  */
 public final class ProductoDTO {
 
+    private final String caracteristicas;
+    public String getCaracteristicas() { return caracteristicas; }
     private final BigDecimal precioSugerido;
     private final UUID idProducto;
     private final String nombre;
@@ -17,6 +19,7 @@ public final class ProductoDTO {
     private final String comentarios;
 
     public ProductoDTO(Producto producto) {
+        this.caracteristicas = entity.CaracteristicasProducto.texto(producto);
         this.precioSugerido = producto.getPrecioSugerido();
         this.idProducto = producto.getIdProducto();
         this.nombre = producto.getNombre();

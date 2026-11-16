@@ -120,6 +120,11 @@ public class OrdenDAO extends DefaultDAO<Orden> {
             throw new IllegalArgumentException("Ya existe una orden con ese identificador");
         }
         orden.setIdEmpleadoRol(camarero);
+        if (orden.getAtendidoPor() == null && camarero.getIdEmpleado() != null) {
+            var e = camarero.getIdEmpleado();
+            orden.setAtendidoPor((e.getNombre() == null ? "" : e.getNombre()) + " " + (e.getApellido() == null ? "" : e.getApellido()));
+        }
+        if (orden.getEstadoPreparacion() == null) orden.setEstadoPreparacion("PENDIENTE");
         em.persist(orden);
         em.flush();
     }
@@ -195,6 +200,7 @@ public class OrdenDAO extends DefaultDAO<Orden> {
         detalle.setIdOrden(orden);
         detalle.setIdProducto(producto);
         detalle.setPrecio(precio);
+        fijarImportes(detalle, orden, producto);
         em.persist(detalle);
         em.flush();
     }
@@ -218,6 +224,7 @@ public class OrdenDAO extends DefaultDAO<Orden> {
             fila.setIdProducto(producto);
             fila.setPrecio(precio);
             fila.setObservaciones(observaciones);
+            fijarImportes(fila, orden, producto);
             em.persist(fila);
             filas.add(fila);
         }
@@ -277,6 +284,8 @@ public class OrdenDAO extends DefaultDAO<Orden> {
         if (estaFacturado(actual.getIdOrdenProducto())) {
             throw new IllegalArgumentException("No se puede modificar un producto facturado");
         }
+        if (actual.getPrecioBase() != null && actual.getPrecio().compareTo(precio) != 0)
+            throw new IllegalStateException("El importe histórico de la orden no puede modificarse");
         actual.setPrecio(precio);
         actual.setObservaciones(detalle.getObservaciones());
         em.flush();
@@ -400,8 +409,7 @@ public class OrdenDAO extends DefaultDAO<Orden> {
 
     /**
      * Aplica UNA promoción a TODAS las filas elegibles de la orden en una sola
-     * transacción EJB. Una segunda aplicación descuenta sobre el precio
-     * vigente. La operación es todo o nada si encuentra una fila facturada o
+     * transacción EJB. Una segunda aplicación se rechaza. La operación es todo o nada si encuentra una fila facturada o
      * inválida.
      */
     public ResultadoPromocion aplicarPromocion(UUID idOrden, UUID idPromocion) {
@@ -455,6 +463,8 @@ public class OrdenDAO extends DefaultDAO<Orden> {
                 throw new IllegalArgumentException(
                         "La promoción no puede aplicarse: existe un producto facturado");
             }
+            if (fila.getPrecioBase() != null || (fila.getObservaciones() != null && fila.getObservaciones().contains("Aplicado descuento ")))
+                throw new IllegalStateException("La fila ya tiene un importe histórico; no se permite duplicar descuentos");
             BigDecimal actual = validarPrecio(fila.getPrecio());
             int porcentaje = asociacion.getValor();
             if (porcentaje <= 0 || porcentaje > 100) {
@@ -516,6 +526,28 @@ public class OrdenDAO extends DefaultDAO<Orden> {
             detalle.setIdOrden(orden);
             agregarProducto(detalle);
         }
+    }
+
+    private void fijarImportes(OrdenProducto fila, Orden orden, Producto producto) {
+        if (fila.getPrecioBase() != null) return;
+        Date fecha = orden.getFechaCreacion();
+        var resultado = ImportesOrden.calcular(fila.getPrecio(), fecha,
+                findDescuentosAplicables(producto.getIdProducto(), fecha));
+        fila.setPrecioBase(resultado.base()); fila.setDescuentoAplicado(resultado.descuento());
+        fila.setPrecio(resultado.total()); fila.setPromocionAplicada(resultado.promocion());
+        fila.setCaracteristicasHistoricas(entity.CaracteristicasProducto.texto(producto));
+        fila.setProductoHistorico(producto.getNombre());
+    }
+
+    public Orden cambiarPreparacion(UUID id, String esperado, String siguiente) {
+        var estados = List.of("PENDIENTE", "EN_PREPARACION", "LISTA", "DESPACHADA");
+        Orden orden = em.find(Orden.class, id, LockModeType.PESSIMISTIC_WRITE);
+        if (orden == null) throw new OrdenNoEncontrada();
+        String actual = orden.getEstadoPreparacion() == null ? "PENDIENTE" : orden.getEstadoPreparacion();
+        int indice = estados.indexOf(actual);
+        if (!actual.equals(esperado) || indice < 0 || indice == estados.size()-1 || !estados.get(indice+1).equals(siguiente))
+            throw new IllegalStateException("La orden cambió o la transición no es válida. Actualiza el listado.");
+        orden.setEstadoPreparacion(siguiente); em.flush(); return orden;
     }
 
     private static BigDecimal validarPrecio(BigDecimal precio) {

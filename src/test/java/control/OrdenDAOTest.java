@@ -201,7 +201,7 @@ class OrdenDAOTest {
     }
 
     @Test
-    void aplicaPromocionSoloAElegiblesYLaRepiteSobrePrecioActual() {
+    void aplicaPromocionSoloAElegiblesYRechazaDuplicarla() {
         Orden o = orden();
         OrdenProducto cafe = fila(o, "5.00");
         OrdenProducto pastel = fila(o, "4.00");
@@ -222,15 +222,11 @@ class OrdenDAOTest {
         assertEquals(new BigDecimal("3.20"), pastel.getPrecio());
         assertEquals(new BigDecimal("3.00"), te.getPrecio());
 
-        OrdenDAO.ResultadoPromocion dos = dao.aplicarPromocion(o.getIdOrden(), promo.getIdDescuento());
-        assertEquals(2, dos.getProductosAfectados());
-        assertEquals(new BigDecimal("1.44"), dos.getDescuentoTotal());
-        assertEquals(new BigDecimal("3.20"), cafe.getPrecio());
-        assertEquals(new BigDecimal("2.56"), pastel.getPrecio());
-        assertEquals(new BigDecimal("3.00"), te.getPrecio());
-        assertTrue(cafe.getObservaciones().contains("sobre $4.00"));
-        verify(em, times(2)).flush();
-        verify(em, times(4)).lock(any(OrdenProducto.class), eq(LockModeType.PESSIMISTIC_WRITE));
+        assertThrows(IllegalStateException.class,
+                () -> dao.aplicarPromocion(o.getIdOrden(), promo.getIdDescuento()));
+        assertEquals(new BigDecimal("4.00"), cafe.getPrecio());
+        assertEquals(new BigDecimal("3.20"), pastel.getPrecio());
+        verify(em, times(1)).flush();
     }
 
     @Test

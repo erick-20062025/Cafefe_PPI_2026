@@ -155,9 +155,9 @@ public class PagoResource {
             return error(ex.getEstadoHttp(), ex.getMessage());
         }
         try {
-            PagoDAO.ResumenPago resultado = pagoDAO.registrarAbono(uuid,
-                    solicitud.getMonto(), solicitud.getTipoPago(),
-                    solicitud.getReferenciaExterna(), solicitud.getObservaciones());
+            PagoDAO.ResumenPago resultado = solicitud.getEfectivoRecibido() == null
+                    ? pagoDAO.registrarAbono(uuid, solicitud.getMonto(), solicitud.getTipoPago(), solicitud.getReferenciaExterna(), solicitud.getObservaciones())
+                    : pagoDAO.registrarAbono(uuid, solicitud.getMonto(), solicitud.getTipoPago(), solicitud.getReferenciaExterna(), solicitud.getObservaciones(), solicitud.getEfectivoRecibido());
             return Response.status(Response.Status.CREATED)
                     .entity(new PagoDTO.Resumen(uuid, resultado)).build();
         } catch (RuntimeException ex) {

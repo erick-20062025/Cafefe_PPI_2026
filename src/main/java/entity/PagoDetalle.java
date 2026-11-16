@@ -57,6 +57,12 @@ public class PagoDetalle implements Serializable {
     @ManyToOne
     private Pago idPago;
 
+    @Column(name="efectivo_recibido") private BigDecimal efectivoRecibido;
+    @Column(name="cambio_entregado") private BigDecimal cambioEntregado;
+    public BigDecimal getEfectivoRecibido() { return efectivoRecibido; }
+    public void setEfectivoRecibido(BigDecimal valor) { efectivoRecibido = valor; }
+    public BigDecimal getCambioEntregado() { return cambioEntregado; }
+    public void setCambioEntregado(BigDecimal valor) { cambioEntregado = valor; }
     public PagoDetalle() { }
     public PagoDetalle(UUID idPagoDetalle) { this.idPagoDetalle = idPagoDetalle; }
 
