@@ -1,5 +1,7 @@
 package boundary.rest;
 
+import jakarta.ws.rs.core.MultivaluedHashMap;
+import jakarta.ws.rs.core.MultivaluedMap;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.ext.RuntimeDelegate;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -74,8 +76,11 @@ final class RestTestRuntime {
     }
 
     private static Response nuevaRespuesta(int estado, Object entidad) {
+        MultivaluedMap<String, Object> cabeceras = new MultivaluedHashMap<>();
         return mock(Response.class, invocacion -> {
             switch (invocacion.getMethod().getName()) {
+                case "getHeaders":
+                    return cabeceras;
                 case "getStatus":
                     return estado;
                 case "getStatusInfo":
