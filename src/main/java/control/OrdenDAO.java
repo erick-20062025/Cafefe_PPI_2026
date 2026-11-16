@@ -56,6 +56,13 @@ public class OrdenDAO extends DefaultDAO<Orden> {
                 .getResultList();
     }
 
+    /** Órdenes con al menos una fila que todavía se puede incluir en una factura. */
+    public List<Orden> findPendientesFacturar() {
+        return em.createQuery("SELECT DISTINCT o FROM Orden o JOIN o.ordenProductoCollection op "
+                + "WHERE NOT EXISTS (SELECT fp FROM FacturaOrdenProducto fp WHERE fp.idOrdenProducto = op) "
+                + "ORDER BY o.fechaCreacion DESC", Orden.class).getResultList();
+    }
+
     /**
      * Obtiene las relaciones activas para tomar órdenes.
      */
