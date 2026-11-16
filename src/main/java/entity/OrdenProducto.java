@@ -61,6 +61,21 @@ public class OrdenProducto implements Serializable {
     @ManyToOne
     private Producto idProducto;
 
+    @Column(name="precio_base") private BigDecimal precioBase;
+    public BigDecimal getPrecioBase() { return precioBase; }
+    public void setPrecioBase(BigDecimal valor) { precioBase = valor; }
+    @Column(name="descuento_aplicado") private BigDecimal descuentoAplicado;
+    public BigDecimal getDescuentoAplicado() { return descuentoAplicado; }
+    public void setDescuentoAplicado(BigDecimal valor) { descuentoAplicado = valor; }
+    @Column(name="promocion_aplicada") private String promocionAplicada;
+    public UUID getPromocionAplicada() { return promocionAplicada == null ? null : UUID.fromString(promocionAplicada); }
+    public void setPromocionAplicada(UUID valor) { promocionAplicada = valor == null ? null : valor.toString(); }
+    @Column(name="caracteristicas_historicas") private String caracteristicasHistoricas;
+    public String getCaracteristicasHistoricas() { return caracteristicasHistoricas; }
+    public void setCaracteristicasHistoricas(String valor) { caracteristicasHistoricas = valor; }
+    @Column(name="producto_historico") private String productoHistorico;
+    public String getProductoHistorico() { return productoHistorico; }
+    public void setProductoHistorico(String valor) { productoHistorico = valor; }
     public OrdenProducto() { }
     public OrdenProducto(UUID id) { this.idOrdenProducto = id; }
     public UUID getIdOrdenProducto() { return idOrdenProducto; }

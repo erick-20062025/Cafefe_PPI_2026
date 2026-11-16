@@ -39,6 +39,16 @@ public final class FacturaDTO {
         private final String producto;
         private final BigDecimal precio;
         private final String observaciones;
+        private final String caracteristicas;
+        private final String atendidoPor;
+        private final String fechaOrden;
+        private final BigDecimal precioBase;
+        private final BigDecimal descuento;
+        public String getCaracteristicas() { return caracteristicas; }
+        public String getAtendidoPor() { return atendidoPor; }
+        public String getFechaOrden() { return fechaOrden; }
+        public BigDecimal getPrecioBase() { return precioBase; }
+        public BigDecimal getDescuento() { return descuento; }
 
         Detalle(FacturaOrdenProducto fila) {
             idFacturaOrdenProducto = fila.getIdFacturaOrdenProducto();
@@ -48,7 +58,13 @@ public final class FacturaDTO {
             idOrden = filaOrden == null || filaOrden.getIdOrden() == null
                     ? null : filaOrden.getIdOrden().getIdOrden();
             idProducto = catalogo == null ? null : catalogo.getIdProducto();
-            producto = catalogo == null ? null : catalogo.getNombre();
+            producto = filaOrden != null && filaOrden.getProductoHistorico() != null ? filaOrden.getProductoHistorico() : catalogo == null ? null : catalogo.getNombre();
+            var orden = filaOrden == null ? null : filaOrden.getIdOrden();
+            caracteristicas = filaOrden == null ? "" : (filaOrden.getCaracteristicasHistoricas() == null ? entity.CaracteristicasProducto.texto(catalogo) : filaOrden.getCaracteristicasHistoricas());
+            atendidoPor = orden == null ? null : orden.getAtendidoPor();
+            fechaOrden = orden == null || orden.getFechaCreacion() == null ? null : orden.getFechaCreacion().toInstant().toString();
+            precioBase = filaOrden == null || filaOrden.getPrecioBase() == null ? fila.getPrecio() : filaOrden.getPrecioBase();
+            descuento = filaOrden == null || filaOrden.getDescuentoAplicado() == null ? BigDecimal.ZERO : filaOrden.getDescuentoAplicado();
             precio = fila.getPrecio();
             observaciones = fila.getObservaciones();
         }

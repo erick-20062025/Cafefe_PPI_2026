@@ -49,6 +49,10 @@ public class OrdenResource {
     private static final Pattern UUID_CANONICO = Pattern.compile(
             "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$");
 
+    @Inject boundary.rest.seguridad.AccesoPersonal accesoPersonal;
+    @Inject control.EmpleadoRolDAO rolesPersonal;
+    @jakarta.ws.rs.core.Context jakarta.servlet.http.HttpServletRequest peticion;
+
     @Inject private OrdenDAO ordenDAO;
     @Inject private ProductoDAO productoDAO;
 
@@ -248,6 +252,19 @@ public class OrdenResource {
         } catch (OrdenSolicitud.DatoInvalido ex) {
             return error(ex.getEstadoHttp(), ex.getMessage());
         }
+        if (peticion != null && peticion.getSession(false) != null) {
+            var identidad = accesoPersonal.recuperar(peticion);
+            if (identidad != null && identidad.getRoles().contains("camarero")) {
+                if (!SesionResource.ORIGEN.equals(peticion.getHeader("Origin"))) return SesionResource.error(403, "Origen no permitido.");
+                UUID empleado = (UUID) peticion.getSession(false).getAttribute(boundary.rest.seguridad.AccesoPersonal.ATRIBUTO);
+                var asignacion = rolesPersonal.findByIdEmpleado(empleado).stream()
+                    .filter(er -> Boolean.TRUE.equals(er.getActivo()) && er.getIdRol() != null && Boolean.TRUE.equals(er.getIdRol().getActivo())
+                        && "camarero".equalsIgnoreCase(er.getIdRol().getNombre().trim()))
+                    .map(entity.EmpleadoRol::getIdEmpleadoRol).sorted().findFirst().orElse(null);
+                if (asignacion == null) return SesionResource.error(403, "Asignación de camarero no disponible.");
+                return crearConCamarero(solicitud, asignacion);
+            }
+        }
         String configurado = camareroVirtualConfigurado();
         if (configurado == null || configurado.isBlank()) {
             return error(503, "El servicio de pedidos en línea no tiene camarero virtual configurado");
@@ -260,6 +277,53 @@ public class OrdenResource {
             return error(503, "El servicio de pedidos en línea no está disponible");
         }
         return crearConCamarero(solicitud, idVirtual);
+    }
+
+    @jakarta.ws.rs.PUT
+    @Path("/{id}/preparacion")
+    public Response preparacion(@PathParam("id") String id, String json) {
+        if (!SesionResource.ORIGEN.equals(peticion.getHeader("Origin"))) return SesionResource.error(403, "Origen no permitido.");
+        var identidad = accesoPersonal.recuperar(peticion);
+        if (identidad == null) return SesionResource.error(401, "Inicia sesión.");
+        if (identidad.getRoles().stream().noneMatch(r -> r.equals("barista") || r.equals("cocinero"))) return SesionResource.error(403, "Rol no permitido.");
+        try (var lector = jakarta.json.Json.createReader(new java.io.StringReader(json))) {
+            var datos = lector.readObject();
+            if (!datos.keySet().equals(java.util.Set.of("esperado", "siguiente"))) return error(400, "Solicitud inválida");
+            return Response.ok(OrdenDTO.resumen(ordenDAO.cambiarPreparacion(convertirUUID(id), datos.getString("esperado"), datos.getString("siguiente"))))
+                .header("Cache-Control", "no-store").build();
+        } catch (IllegalStateException ex) { return error(409, ex.getMessage()); }
+        catch (RuntimeException ex) {
+            for (Throwable causa=ex; causa!=null; causa=causa.getCause()) {
+                if (causa instanceof OrdenDAO.OrdenNoEncontrada) return error(404,"La orden no existe");
+                if (causa instanceof IllegalStateException) return error(409,"La orden cambió o la transición no es válida. Actualiza el listado.");
+            }
+            return error(400, "Estado o identificador inválido");
+        }
+    }
+
+    /** Cotización pública calculada en servidor; no persiste ni reserva una promoción. */
+    @POST @Path("/cotizacion")
+    public Response cotizacion(String json) {
+        try {
+            var solicitud = OrdenSolicitud.leer(json, true);
+            java.math.BigDecimal subtotal = java.math.BigDecimal.ZERO.setScale(2), descuento = subtotal;
+            var filas = new java.util.ArrayList<java.util.Map<String,Object>>();
+            for (var item : solicitud.getProductos()) {
+                var producto = productoDAO.findById(item.getIdProducto());
+                if (producto == null || !Boolean.TRUE.equals(producto.getActivo())) return error(422, "Producto no disponible");
+                var calculo = control.ImportesOrden.calcular(producto.getPrecioSugerido(), solicitud.getFechaCreacion(),
+                        ordenDAO.findDescuentosAplicables(producto.getIdProducto(), solicitud.getFechaCreacion()));
+                var cantidad = java.math.BigDecimal.valueOf(item.getCantidad());
+                subtotal = subtotal.add(calculo.base().multiply(cantidad));
+                descuento = descuento.add(calculo.descuento().multiply(cantidad));
+                filas.add(java.util.Map.of("idProducto", producto.getIdProducto(), "cantidad", item.getCantidad(),
+                    "precioBase", calculo.base(), "descuento", calculo.descuento(), "precio", calculo.total()));
+            }
+            return Response.ok(java.util.Map.of("subtotal",subtotal,"descuento",descuento,"total",subtotal.subtract(descuento),"productos",filas))
+                .header("Cache-Control","no-store").build();
+        } catch (OrdenSolicitud.DatoInvalido ex) { return error(ex.getEstadoHttp(),ex.getMessage()); }
+        catch (IllegalArgumentException ex) { return error(422,"No fue posible calcular el pedido"); }
+        catch (RuntimeException ex) { return errorOperacion(ex,"cotizar el pedido"); }
     }
 
     /** Punto sustituible en pruebas; configuración de Liberty desde server.env. */
@@ -374,6 +438,7 @@ public class OrdenResource {
 
             Orden orden = new Orden(UUID.randomUUID());
             orden.setFechaCreacion(solicitud.getFechaCreacion());
+            orden.setClienteWeb(solicitud.getNombreCliente());
             orden.setIdEmpleadoRol(camarero);
             // @Stateless: llamada externa EJB, transacción REQUIRED por defecto.
             // Si falla una fila, la excepción provoca rollback de toda la orden.

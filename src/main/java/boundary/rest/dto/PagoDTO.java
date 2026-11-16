@@ -73,6 +73,10 @@ public final class PagoDTO {
     public static final class Abono {
         private final UUID idPagoDetalle;
         private final UUID idPago;
+        private final BigDecimal efectivoRecibido;
+        private final BigDecimal cambioEntregado;
+        public BigDecimal getEfectivoRecibido() { return efectivoRecibido; }
+        public BigDecimal getCambioEntregado() { return cambioEntregado; }
         private final BigDecimal monto;
         private final String tipoPago;
         private final String referenciaExterna;
@@ -80,6 +84,8 @@ public final class PagoDTO {
         public Abono(PagoDetalle detalle) {
             this.idPagoDetalle = detalle.getIdPagoDetalle();
             this.idPago = detalle.getIdPago() == null ? null : detalle.getIdPago().getIdPago();
+            this.efectivoRecibido = detalle.getEfectivoRecibido();
+            this.cambioEntregado = detalle.getCambioEntregado();
             this.monto = detalle.getMonto();
             this.tipoPago = detalle.getTipoPago();
             this.referenciaExterna = detalle.getReferenciaExterna();

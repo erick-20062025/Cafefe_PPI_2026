@@ -83,12 +83,20 @@ public class PagoDAO extends DefaultDAO<Pago> {
     @TransactionAttribute(TransactionAttributeType.REQUIRED)
     public ResumenPago registrarAbono(UUID idFactura, BigDecimal monto,
             String tipoPago, String referenciaExterna, String observaciones) {
+        return registrarAbono(idFactura, monto, tipoPago, referenciaExterna, observaciones, null);
+    }
+
+    public ResumenPago registrarAbono(UUID idFactura, BigDecimal monto,
+            String tipoPago, String referenciaExterna, String observaciones, BigDecimal efectivoRecibido) {
 
         validarId(idFactura);
         BigDecimal importe = validarMonto(monto);
         String metodo = normalizarMetodo(tipoPago);
         String referencia = normalizarTexto(referenciaExterna);
         String nota = normalizarTexto(observaciones);
+        if (efectivoRecibido != null && (!"EFECTIVO".equals(metodo) || validarMonto(efectivoRecibido).compareTo(importe) < 0))
+            throw new IllegalArgumentException("Efectivo recibido inválido");
+
 
         if (!"EFECTIVO".equals(metodo) && referencia == null) {
             throw new IllegalArgumentException(
@@ -157,6 +165,10 @@ public class PagoDAO extends DefaultDAO<Pago> {
         PagoDetalle detalle = new PagoDetalle(UUID.randomUUID());
         detalle.setIdPago(pago);
         detalle.setMonto(importe);
+        if (efectivoRecibido != null) {
+            detalle.setEfectivoRecibido(efectivoRecibido.setScale(2));
+            detalle.setCambioEntregado(efectivoRecibido.subtract(importe).setScale(2));
+        }
         detalle.setTipoPago(metodo);
         detalle.setReferenciaExterna(referencia);
         detalle.setObservaciones(nota);
