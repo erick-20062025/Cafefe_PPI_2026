@@ -68,6 +68,20 @@ class PagoDAOTest {
     }
 
     @Test
+    void consultaProyeccionSoloDeLaFacturaSolicitada() {
+        ProductoFacturado fila = new ProductoFacturado(UUID.randomUUID(), UUID.randomUUID(),
+                "Café", new BigDecimal("7.25"));
+        consultaLista("Pago.productosFacturados", ProductoFacturado.class, List.of(fila));
+        assertEquals(List.of(fila), dao.listarProductosFacturados(idFactura));
+    }
+
+    @Test
+    void proyeccionRechazaFacturaNulaSinConsultar() {
+        assertThrows(IllegalArgumentException.class, () -> dao.listarProductosFacturados(null));
+        verifyNoInteractions(em);
+    }
+
+    @Test
     void noDebeRegistrarSinFactura() {
         assertThrows(IllegalArgumentException.class,
                 () -> dao.registrarAbono(null, new BigDecimal("5.00"),

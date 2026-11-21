@@ -13,14 +13,6 @@ import java.util.UUID;
  * Los datos de empleados, facturas y relaciones internas no se devuelven.
  */
 public class OrdenDTO {
-    private String estadoPreparacion;
-    private String cliente;
-    private String atendidoPor;
-    public String getEstadoPreparacion() { return estadoPreparacion; }
-    public String getCliente() { return cliente; }
-    public String getAtendidoPor() { return atendidoPor; }
-    public BigDecimal getSubtotal() { return productos == null ? null : productos.stream().map(ProductoDTO::getPrecioBase).filter(java.util.Objects::nonNull).reduce(BigDecimal.ZERO, BigDecimal::add); }
-    public BigDecimal getDescuento() { return productos == null ? null : productos.stream().map(ProductoDTO::getDescuento).filter(java.util.Objects::nonNull).reduce(BigDecimal.ZERO, BigDecimal::add); }
     private UUID idOrden;
     private String fechaCreacion;
     private UUID idEmpleadoRol;
@@ -31,8 +23,6 @@ public class OrdenDTO {
 
     public static OrdenDTO resumen(Orden orden) {
         OrdenDTO salida = new OrdenDTO();
-        salida.estadoPreparacion = orden.getEstadoPreparacion() == null ? "PENDIENTE" : orden.getEstadoPreparacion();
-        salida.cliente = orden.getClienteWeb(); salida.atendidoPor = orden.getAtendidoPor();
         salida.idOrden = orden.getIdOrden();
         salida.fechaCreacion = orden.getFechaCreacion() == null ? null
                 : Instant.ofEpochMilli(orden.getFechaCreacion().getTime()).toString();
@@ -68,11 +58,7 @@ public class OrdenDTO {
 
     public static class ProductoDTO {
         private String caracteristicas;
-        private BigDecimal precioBase;
-        private BigDecimal descuento;
         public String getCaracteristicas() { return caracteristicas; }
-        public BigDecimal getPrecioBase() { return precioBase; }
-        public BigDecimal getDescuento() { return descuento; }
         private UUID idOrdenProducto;
         private UUID idProducto;
         private String producto;
@@ -86,10 +72,6 @@ public class OrdenDTO {
                     : fila.getIdProducto().getIdProducto();
             dto.producto = fila.getIdProducto() == null ? null
                     : fila.getIdProducto().getNombre();
-            dto.caracteristicas = fila.getCaracteristicasHistoricas() == null ? entity.CaracteristicasProducto.texto(fila.getIdProducto()) : fila.getCaracteristicasHistoricas();
-            if (fila.getProductoHistorico() != null) dto.producto = fila.getProductoHistorico();
-            dto.precioBase = fila.getPrecioBase() == null ? fila.getPrecio() : fila.getPrecioBase();
-            dto.descuento = fila.getDescuentoAplicado() == null ? BigDecimal.ZERO : fila.getDescuentoAplicado();
             dto.precio = fila.getPrecio();
             dto.observaciones = fila.getObservaciones();
             return dto;

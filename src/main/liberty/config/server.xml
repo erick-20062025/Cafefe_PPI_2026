@@ -1,7 +1,7 @@
 <server description="Open Liberty Server">
 
     <featureManager>
-        <feature>jakartaee-10.0</feature>
+        <feature>webProfile-10.0</feature>
         <feature>faces-4.0</feature>
         <feature>jdbc-4.2</feature>
     </featureManager>
@@ -34,11 +34,11 @@
     <dataSource id="PostgreSQLDS" jndiName="jdbc/CafefeDS">
         <jdbcDriver ref="PostgreSQLDriver"/>
         <properties.postgresql
-            serverName="localhost"
-            portNumber="5432"
-            databaseName="programacion_internet"
-            user="postgres"
-            password="postgres"/>
+            serverName="${env.PG_HOST}"
+            portNumber="${env.PG_PORT}"
+            databaseName="${env.PG_DB}"
+            user="${env.PG_USER}"
+            password="${env.PG_PASS}"/>
     </dataSource>
 
 </server>

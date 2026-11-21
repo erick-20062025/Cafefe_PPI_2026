@@ -29,6 +29,10 @@
         <class>entity.EmpleadoRol</class>
         <class>entity.ProductoTipoProducto</class>
 
+        <properties>
+            <property name="jakarta.persistence.schema-generation.database.action" value="none"/>
+            <property name="eclipselink.ddl-generation" value="none"/>
+        </properties>
     </persistence-unit>
 
 </persistence>

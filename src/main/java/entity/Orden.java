@@ -67,15 +67,6 @@ public class Orden implements Serializable {
     @ManyToOne
     private EmpleadoRol idEmpleadoRol;
 
-    @Column(name="estado_preparacion") private String estadoPreparacion;
-    public String getEstadoPreparacion() { return estadoPreparacion; }
-    public void setEstadoPreparacion(String valor) { estadoPreparacion = valor; }
-    @Column(name="cliente_web") private String clienteWeb;
-    public String getClienteWeb() { return clienteWeb; }
-    public void setClienteWeb(String valor) { clienteWeb = valor; }
-    @Column(name="atendido_por") private String atendidoPor;
-    public String getAtendidoPor() { return atendidoPor; }
-    public void setAtendidoPor(String valor) { atendidoPor = valor; }
     public Orden() { }
     public Orden(UUID idOrden) { this.idOrden = idOrden; }
     public UUID getIdOrden() { return idOrden; }

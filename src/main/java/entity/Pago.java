@@ -34,6 +34,7 @@ import java.util.UUID;
     @NamedQuery(name = "Pago.facturasPendientes", query = "SELECT f FROM Factura f WHERE UPPER(TRIM(f.estado)) = 'PENDIENTE' ORDER BY f.fechaFacturacion DESC"),
     @NamedQuery(name = "Pago.facturasPagadas", query = "SELECT f FROM Factura f WHERE UPPER(TRIM(f.estado)) = 'PAGADA' ORDER BY f.fechaFacturacion DESC"),
     @NamedQuery(name = "Pago.detallesFactura", query = "SELECT fop FROM FacturaOrdenProducto fop JOIN FETCH fop.idOrdenProducto op JOIN FETCH op.idProducto WHERE fop.idFactura.idFactura = :idFactura"),
+    @NamedQuery(name = "Pago.productosFacturados", query = "SELECT NEW control.ProductoFacturado(op.idOrdenProducto, p.idProducto, p.nombre, fop.precio) FROM FacturaOrdenProducto fop JOIN fop.idOrdenProducto op JOIN op.idProducto p WHERE fop.idFactura.idFactura = :idFactura"),
     @NamedQuery(name = "Pago.totalFactura", query = "SELECT SUM(fop.precio) FROM FacturaOrdenProducto fop WHERE fop.idFactura.idFactura = :idFactura"),
     @NamedQuery(name = "Pago.detallesInvalidosFactura", query = "SELECT COUNT(fop) FROM FacturaOrdenProducto fop WHERE fop.idFactura.idFactura = :idFactura AND (fop.precio IS NULL OR fop.precio < 0)")
 })
