@@ -1,0 +1,70 @@
+# Auditoría de arquitectura, POO y reactividad — 21 de noviembre de 2026
+
+## Alcance y evidencia
+Revisión del inventario de ambos repositorios y de los módulos relacionados de Boundary/Control/Entity, configuración, precaché y pruebas. Se inspeccionaron especialmente los flujos HU1–HU4 y las superficies REST compartidas. El inventario backend contiene 132 archivos Java; eso no significa que se hayan ejecutado todos los endpoints ni auditado exhaustivamente cada rama. Los hallazgos de seguridad siguientes son de revisión estática, no de una prueba destructiva contra la base habitual.
+
+Base al empezar: backend 255a112 (sobre 4060890), frontend 0f2dadf (sobre b68f5c6). Backend tenía únicamente nb-configuration.xml modificado; frontend limpio. Se preservó ese cambio ajeno. Ramas: codex/cors-live-server y feature/frontend-diego-hu1-hu3-pwa.
+
+## Correcciones verificables de esta etapa
+- index.html: marca en un div, sin href ni comportamiento de enlace; app.js deja de asignarle navegación. Menú principal intacto.
+- Pedido: confirmación solamente cuando la respuesta contiene un ID de orden válido. Carrito y nombre se limpian, se vuelve a tipos sin recargar la SPA, se actualizan categorías y se enfoca el título. Banner separado del carrito, role=status y aria-live=polite, sin UUID ni total; dura 5000 ms. Nuevo banner cancela el temporizador anterior y desmontar lo limpia. Un fallo conserva el pedido y su error.
+- Doble clic bloqueado mientras enviar está pendiente; agregar también comprueba enviando. Versiones de petición descartan confirmaciones al desmontar y errores antiguos de categorías. No confundirlo con idempotencia duradera del servidor.
+- Renderizar carrito ya no dispara cotización. La cotización se solicita al cambiar cantidades o conexión. Los totales estimados siguen siendo síncronos. Mensaje obsoleto de promociones retirado.
+- Eliminado setInterval de 30 segundos. La recuperación responde a online/offline, visibilitychange cuando hay respaldo y botón Reconectar catálogo. Se conserva el aviso rojo y el bloqueo de mutaciones offline.
+- package.json raíz declara type=module, Node >=22 y npm test. No dependencias, instalación ni src/package.json temporal. PWA v27 conserva todos sus recursos.
+
+## Matriz de revisión por módulos relacionados
+Las rutas frontend parten de Cafefe_Fronten_2026; las Java y docs de Cafefe_PPI_2026.
+
+| Módulo / evidencia | Responsabilidad | Estado | Hallazgo y acción |
+|---|---|---|---|
+| index.html:23; src/boundary/app.js | Shell, rutas, sesión | Mejorable | Marca corregida semánticamente. render reemplaza todo main; un render por sesión puede desmontar carrito/preparación. Planificar preservación selectiva, no persistir credenciales. |
+| src/boundary/pedido-publico-view.js, enviar/mostrarCarrito/actualizarCotizacion | UI de pedido | Mejorable | Aproximadamente 390 líneas, mezcla Map, validaciones, HTTP y DOM. Corregidos confirmación, banner, retorno, errores tardíos y efectos de red desde render. Pendiente controlador de flujo/carrito. |
+| src/entity/pedido-publico-model.js | Reglas puras de pedido e importes | Correcto | Validaciones y cálculo en centavos, síncronos y testeables. Nombre «model» agrupa también catálogo de fotos; separar imágenes solo cuando simplifique dependencias. No necesita clase artificial. |
+| src/control/pedido-publico-service.js:39 | Consultas y envío | Mejorable | Promise.all reúne N consultas de producto; un producto lento/error retiene todo el catálogo. Pendiente publicación progresiva con límite de concurrencia o endpoint público agregado acordado. |
+| src/control/recepcion.js:8; recepcion-service.js | Estado, coordinación y acceso HTTP | Correcto | Composición, callback de cambio, versiones de lista/detalle, errores explícitos. actualizar descarta selección; decidir refresco preservando selección cuando siga vigente. |
+| src/entity/preparacion-local.js | Seguimiento temporal | Correcto | Map privado, transiciones encapsuladas y poda de órdenes vigentes. No escribe ni se hace pasar por estado compartido. |
+| src/boundary/recepcion-view.js | Render y eventos | Mejorable | Thin respecto a Pedido/Cobros. Etiquetas de estado en literal dentro de render y DOM reconstruido; extraer presentación si crece. No recibe cambios de otras terminales automáticamente. |
+| src/control/listados-cobros.js:12; cobros-view.js:96 | Listas independientes | Mejorable | Cada resultado publica su estado sin esperar los demás; sin embargo ejecutar pone las columnas inert hasta que concluye toda la operación. Render progresivo no equivale a interacción progresiva. |
+| src/boundary/cobros-view.js:170,231,337 | Facturar, cobrar y ticket | Mejorable | 500 líneas; mezcla dinero, verificación de respuesta, formularios y coordinación. Promise.all retiene productos hasta cajas y ticket hasta resumen/abonos. Cierre y versiones ya evitan restauración tardía. Preparar extracción de detalle y saldo por etapas. |
+| src/control/default_service.js; sesion_service.js | Transporte HTTP y credenciales de sesión | Correcto | Reutilización por herencia con comportamiento real, inyección de transporte, errores normalizados, include/no-store y mutaciones bloqueadas offline. Nombre mixto underscore/kebab pendiente sin urgencia. |
+| src/control/acceso.js; navegacion.js; login-view.js | Sesión y navegación | Mejorable | Acceso encapsula operaciones y descarta restauraciones antiguas; roles solo para UI, servidor revalida. 403 en Recepción se trata como sesión vencida en app.js: diferenciar prohibición de expiración. |
+| src/control/catalogo_offline.js:32 | Respaldo público y deduplicación | Mejorable | Lista cerrada de campos, caché con fecha y versiones. Si proyectar falla devuelve datos originales online: el límite de validación del contrato no es uniforme. Evaluar rechazo de datos malformados y estado de conexión por recurso. |
+| src/config/api.js; sw.js; pwa.js | Entorno y ciclo offline | Mejorable | API centralizada, config network-first, caché por alcance, no guarda sesiones. Precaché manual y listeners globales de registro sin función de limpieza: vigilar montajes repetidos. No «sincroniza» pedidos offline. |
+| src/recursos/estilos/*.css | Diseño y adaptación | Mejorable | Variables y media queries existentes; conviven px/rem y reglas añadidas al final. Agrupar estilos comunes por componentes antes de más overrides; no renombrar por estética. |
+| test/unit; test/manual; test/integracion | Verificación | Mejorable | Pruebas nativas de reglas/controladores/componentes y comprobación de recursos SW. Dobles DOM no prueban layout, foco real ni toda accesibilidad. npm test ejecuta unitarios, no las páginas de integración o manuales. |
+| control/DefaultDAO.java:6; DAOInterface | Persistencia genérica | Correcto | Abstracción e herencia útiles para CRUD; CriteriaQuery raw mejorable. No toda regla debe incorporarse a esta base. |
+| control/PagoDAO.java:91; FacturaDAO.java:87 | Operaciones transaccionales | Mejorable | Bloqueos y validaciones preservan importes y saldo, evitan doble facturación y sobrepago. Mezclan política de negocio con consultas y persistencia; extraer reglas puras conservando frontera EJB. |
+| control/OrdenDAO.java; boundary/rest/OrdenResource.java | Órdenes y HTTP | Mejorable | 584 y 485 líneas respectivamente: creación, precios, promociones manuales y errores. No reescribir todo: aislar construcción/validación y después lectura. |
+| control/RecepcionDAO.java; entity/Orden.java:31 | Lectura de pendientes | Mejorable | CTE agrega abonos antes del join y no multiplica importes. Aún existe findPendientesPago basado en factura.estado; es otra definición distinta al saldo agregado, aunque la ruta REST actual usa RecepcionDAO. Revisar consumidores antes de retirar/unificar. |
+| entity/*.java; DescripcionOrden; AtencionOrden | Mapeo y reglas de dominio | Mejorable | Entidades mayormente JPA con getters/setters: no es por sí solo POO rica. Helpers de descripción/atención cohesionados. Atención/nombre actual no equivalen a snapshot histórico. Mantener solo campos oficiales. |
+| boundary/rest/dto/* | Contratos y validación | Mejorable | DTO evita serializar grafos JPA; solicitudes validan formato y límites. Algunos DTO conservan referencias a entidades o leen entorno (FacturaDTO), acoplando presentación a JPA/config. Preferir valores explícitos. |
+| boundary/AbstractModel.java; AbstractRelacionModel; FacturaModel | UI JSF histórica | Mejorable | Herencia reutiliza CRUD, pero FacturaModel alcanza 819 líneas y convive con otra UI SPA. Mantener JSF separado del dominio, no borrarlo suponiendo que es código muerto. |
+| SesionResource; AccesoPersonal; CobrosResource:156 | Autenticación y permisos | Correcto en su ámbito | Sesión de servidor, revalidación de actividad/roles, DTO sin clave en sesión y conCajero con origen en mutaciones. No cubre automáticamente todos los recursos REST. |
+| seguridad/RecepcionFilter.java:35; dto/EmpleadoDTO.java:26 | Autorización administrativa | Crítico | Solo exige identidad para empleados/asignaciones/roles; no exige administrador. DTO expone idEmpleado, que también es contraseña según rúbrica. Un usuario autenticado puede acceder a credenciales/administración según este código. Acordar matriz de roles y contrato antes de cambiar APIs compartidas. |
+| FacturaResource.java:46; PagoResource.java:142 | APIs REST heredadas | Crítico | Exponen escritura sin conCajero; filtro revisado no cubre estas clases. Las rutas /cobros protegidas no cierran automáticamente /facturas y /pagos. Falta consolidar autorización; no probar mutaciones contra la base habitual. |
+| Liberty server.xml; META-INF/persistence.xml:33 | Runtime y esquema | Correcto para desarrollo acordado | PG_* preservado, CORS exacto, JPA none. Cookie/host y HTTPS deben revisarse al cambiar entorno; no se inició tercer entregable. |
+
+## Evaluación de POO
+Parcialmente correcta, no uniforme. Hay abstracción real en DAOInterface/DefaultDAO, composición en Recepcion/ListadosCobros, encapsulamiento en PreparacionLocal e inyección de dependencias en servicios y EJB. Las funciones puras de dinero/validación son una buena decisión; volverlas clases sin estado no mejoraría el diseño.
+Los componentes grandes acumulan reglas, red y DOM; los DAO acumulan decisiones de negocio, y las entidades son principalmente modelos de persistencia. Esto es una arquitectura por capas parcialmente lograda, no basta con afirmar que «tener clases» cumple responsabilidad única. Las herencias existentes deben preservarse donde comparten comportamiento real, sin crear jerarquías artificiales.
+
+## Evaluación de reactividad
+Sí hay comportamiento reactivo local: eventos de carrito, transición de preparación, sesión/rutas y callbacks que renderizan cada lista. Las operaciones de red y JPA son entrada/salida; conservar async/await y transacciones es correcto. Java REST/EJB es un backend de petición/respuesta, no un sistema de streams reactivos.
+No es completamente reactiva: pedidos de producto y detalle de Cobros esperan grupos; el bloqueo global impide utilizar listas ya cargadas; no hay actualización multiusuario push; Recepción requiere actualizar; app reconstruye vistas; no hay un único estado de dominio en Pedido/Cobros. Se corrigieron polling, red desde render, confirmación y errores tardíos sin introducir librerías.
+El timeout de 5 segundos es una duración de presentación exigida, no polling. Las versiones evitan aplicar resultados viejos, pero no cancelan peticiones ya enviadas ni revierten una orden confirmada en servidor tras abandonar la vista. Tampoco constituyen idempotencia entre pestañas, recargas o reintentos después de una respuesta perdida.
+
+## Plan de refactors grandes (no implementados sin acotar)
+1. Alta: acordar matriz de autorización con el responsable de Cobros/administración; probar cada ruta con anónimo y roles, cerrar accesos alternativos y reducir exposición de UUID sin romper HU1.
+2. Alta: definir política de respuesta perdida y reintentos de órdenes/pagos. Respetar esquema oficial; no inventar tabla/columna de idempotencia.
+3. Media: extraer controlador de Pedido que posea carrito, selección, carga y envío; vista suscribe cambios, servicio conserva HTTP, entity conserva funciones puras. Migrar una operación a la vez y conservar las pruebas actuales.
+4. Media: separar detalle de Cobros y publicación progresiva; permitir usar listas listas mientras otras cargan. Solo habilitar pago cuando factura y resumen sean coherentes. La carga conjunta puede ser necesaria para una acción, no para ocultar toda información disponible.
+5. Media: unificar definiciones de pendientes con fixtures de factura parcial/compartida; diferenciar 401/403; validación consistente del catálogo. No cambiar reglas históricas a ciegas.
+6. Baja: normalizar nombres al modificar cada módulo, limpiar comentarios antiguos (por ejemplo JPQL «solo en entidades»), reducir CSS duplicado y completar pruebas de navegador para tamaños/foco/impresión.
+
+## Pruebas y límites
+- En frontend: npm test, con Node >=22. 103 pruebas aprobadas, 0 fallos. Sin instalar dependencias ni crear src/package.json. Se cubren 4999/5000 ms, renovación de timer, desmontaje, confirmación, error persistente, doble clic y offline. Las pruebas de PWA comprueban existencia de recursos; Recepción y Cobros permanecen en la suite.
+- No se modificó código Java en esta etapa: no se presenta la suite Java histórica de 1031 como una nueva ejecución.
+- La integración HTTP con PostgreSQL/Open Liberty desechables se volvió a ejecutar: pedido → Recepción ambos roles → factura → abonos → ticket; 19 tablas y comparación estructural intactas.
+- La verificación visual de escritorio confirma marca sin enlace, envío real, retorno a tipos, carrito/nombre vacíos y banner que desaparece. También se comprobó la marca y apertura del menú a 390×844. No equivale a una auditoría completa de accesibilidad, todos los tamaños o impresión física/PDF.
+- Ninguna prueba destructiva ni datos sintéticos en PostgreSQL habitual. No cambios de esquema, Docker, push ni merge.
