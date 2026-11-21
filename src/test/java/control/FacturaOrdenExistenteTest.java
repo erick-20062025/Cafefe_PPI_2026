@@ -2,17 +2,16 @@ package control;
 import entity.*;
 import jakarta.persistence.*;
 import java.util.*;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.*;
 import org.mockito.junit.jupiter.MockitoExtension;
 import static org.mockito.Mockito.*;
 import static org.junit.jupiter.api.Assertions.*;
 @ExtendWith(MockitoExtension.class)
-class FacturaDespachadaTest {
+class FacturaOrdenExistenteTest {
  @Mock EntityManager em; @InjectMocks FacturaDAO dao;
- @ParameterizedTest @ValueSource(strings={"PENDIENTE","EN_PREPARACION","LISTA","CANCELADA"}) void rechazaFacturaSinOrdenExistente(String estado){
+ @Test void rechazaFacturaSinOrdenExistente(){
   Caja caja=new Caja(UUID.randomUUID());caja.setActivo(true);EmpleadoRol er=new EmpleadoRol(UUID.randomUUID());er.setActivo(true);
   Factura f=new Factura(UUID.randomUUID());f.setIdCaja(caja);f.setIdEmpleadoRol(er);
   when(em.find(Caja.class,caja.getIdCaja())).thenReturn(caja);when(em.find(EmpleadoRol.class,er.getIdEmpleadoRol())).thenReturn(er);
