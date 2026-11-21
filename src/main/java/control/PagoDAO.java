@@ -57,6 +57,14 @@ public class PagoDAO extends DefaultDAO<Pago> {
                 .getResultList();
     }
 
+    /** Consulta los campos oficiales sin hidratar OrdenProducto ni Orden. */
+    public List<ProductoFacturado> listarProductosFacturados(UUID idFactura) {
+        validarId(idFactura);
+        return em.createNamedQuery("Pago.productosFacturados", ProductoFacturado.class)
+                .setParameter("idFactura", idFactura)
+                .getResultList();
+    }
+
     /** Permite consultar facturas pendientes o pagadas sin modificarlas. */
     public ResumenPago consultarResumen(UUID idFactura) {
         validarId(idFactura);
@@ -165,10 +173,6 @@ public class PagoDAO extends DefaultDAO<Pago> {
         PagoDetalle detalle = new PagoDetalle(UUID.randomUUID());
         detalle.setIdPago(pago);
         detalle.setMonto(importe);
-        if (efectivoRecibido != null) {
-            detalle.setEfectivoRecibido(efectivoRecibido.setScale(2));
-            detalle.setCambioEntregado(efectivoRecibido.subtract(importe).setScale(2));
-        }
         detalle.setTipoPago(metodo);
         detalle.setReferenciaExterna(referencia);
         detalle.setObservaciones(nota);

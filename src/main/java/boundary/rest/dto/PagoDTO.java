@@ -1,6 +1,7 @@
 package boundary.rest.dto;
 
 import control.PagoDAO;
+import control.ProductoFacturado;
 import entity.Factura;
 import entity.FacturaOrdenProducto;
 import entity.OrdenProducto;
@@ -55,6 +56,12 @@ public final class PagoDTO {
         private final UUID idProducto;
         private final String nombreProducto;
         private final BigDecimal precio;
+        public ProductoFactura(ProductoFacturado detalle) {
+            this.idOrdenProducto = detalle.idOrdenProducto();
+            this.idProducto = detalle.idProducto();
+            this.nombreProducto = detalle.nombreProducto();
+            this.precio = detalle.precio();
+        }
         public ProductoFactura(FacturaOrdenProducto detalle) {
             OrdenProducto fila = detalle.getIdOrdenProducto();
             Producto producto = fila == null ? null : fila.getIdProducto();
@@ -73,10 +80,6 @@ public final class PagoDTO {
     public static final class Abono {
         private final UUID idPagoDetalle;
         private final UUID idPago;
-        private final BigDecimal efectivoRecibido;
-        private final BigDecimal cambioEntregado;
-        public BigDecimal getEfectivoRecibido() { return efectivoRecibido; }
-        public BigDecimal getCambioEntregado() { return cambioEntregado; }
         private final BigDecimal monto;
         private final String tipoPago;
         private final String referenciaExterna;
@@ -84,8 +87,6 @@ public final class PagoDTO {
         public Abono(PagoDetalle detalle) {
             this.idPagoDetalle = detalle.getIdPagoDetalle();
             this.idPago = detalle.getIdPago() == null ? null : detalle.getIdPago().getIdPago();
-            this.efectivoRecibido = detalle.getEfectivoRecibido();
-            this.cambioEntregado = detalle.getCambioEntregado();
             this.monto = detalle.getMonto();
             this.tipoPago = detalle.getTipoPago();
             this.referenciaExterna = detalle.getReferenciaExterna();

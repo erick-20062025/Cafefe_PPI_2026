@@ -14,7 +14,7 @@ public final class FacturaDTO {
 
     public FacturaDTO(Factura factura, List<FacturaOrdenProducto> detalles) {
         this.factura = factura;
-        this.productos = detalles == null ? null : detalles.stream().map(Detalle::new).toList();
+        this.productos = detalles == null ? null : detalles.stream().map(fila -> new Detalle(fila, System.getenv("CAFEFE_CAMARERO_VIRTUAL_ID"))).toList();
     }
 
     public UUID getIdFactura() { return factura.getIdFactura(); }
@@ -39,18 +39,12 @@ public final class FacturaDTO {
         private final String producto;
         private final BigDecimal precio;
         private final String observaciones;
-        private final String caracteristicas;
-        private final String atendidoPor;
         private final String fechaOrden;
-        private final BigDecimal precioBase;
-        private final BigDecimal descuento;
-        public String getCaracteristicas() { return caracteristicas; }
+        private final String atendidoPor;
         public String getAtendidoPor() { return atendidoPor; }
         public String getFechaOrden() { return fechaOrden; }
-        public BigDecimal getPrecioBase() { return precioBase; }
-        public BigDecimal getDescuento() { return descuento; }
 
-        Detalle(FacturaOrdenProducto fila) {
+        Detalle(FacturaOrdenProducto fila, String virtual) {
             idFacturaOrdenProducto = fila.getIdFacturaOrdenProducto();
             var filaOrden = fila.getIdOrdenProducto();
             var catalogo = filaOrden == null ? null : filaOrden.getIdProducto();
@@ -58,13 +52,10 @@ public final class FacturaDTO {
             idOrden = filaOrden == null || filaOrden.getIdOrden() == null
                     ? null : filaOrden.getIdOrden().getIdOrden();
             idProducto = catalogo == null ? null : catalogo.getIdProducto();
-            producto = filaOrden != null && filaOrden.getProductoHistorico() != null ? filaOrden.getProductoHistorico() : catalogo == null ? null : catalogo.getNombre();
+            producto = catalogo == null ? null : catalogo.getNombre();
             var orden = filaOrden == null ? null : filaOrden.getIdOrden();
-            caracteristicas = filaOrden == null ? "" : (filaOrden.getCaracteristicasHistoricas() == null ? entity.CaracteristicasProducto.texto(catalogo) : filaOrden.getCaracteristicasHistoricas());
-            atendidoPor = orden == null ? null : orden.getAtendidoPor();
+            atendidoPor = entity.AtencionOrden.describir(orden, virtual);
             fechaOrden = orden == null || orden.getFechaCreacion() == null ? null : orden.getFechaCreacion().toInstant().toString();
-            precioBase = filaOrden == null || filaOrden.getPrecioBase() == null ? fila.getPrecio() : filaOrden.getPrecioBase();
-            descuento = filaOrden == null || filaOrden.getDescuentoAplicado() == null ? BigDecimal.ZERO : filaOrden.getDescuentoAplicado();
             precio = fila.getPrecio();
             observaciones = fila.getObservaciones();
         }

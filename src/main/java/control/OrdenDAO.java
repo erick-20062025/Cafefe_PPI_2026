@@ -59,7 +59,7 @@ public class OrdenDAO extends DefaultDAO<Orden> {
     /** Órdenes con al menos una fila que todavía se puede incluir en una factura. */
     public List<Orden> findPendientesFacturar() {
         return em.createQuery("SELECT DISTINCT o FROM Orden o JOIN o.ordenProductoCollection op "
-                + "WHERE o.estadoPreparacion = 'DESPACHADA' AND NOT EXISTS (SELECT fp FROM FacturaOrdenProducto fp WHERE fp.idOrdenProducto = op) "
+                + "WHERE NOT EXISTS (SELECT fp FROM FacturaOrdenProducto fp WHERE fp.idOrdenProducto = op) "
                 + "ORDER BY o.fechaCreacion DESC", Orden.class).getResultList();
     }
 
@@ -120,11 +120,6 @@ public class OrdenDAO extends DefaultDAO<Orden> {
             throw new IllegalArgumentException("Ya existe una orden con ese identificador");
         }
         orden.setIdEmpleadoRol(camarero);
-        if (orden.getAtendidoPor() == null && camarero.getIdEmpleado() != null) {
-            var e = camarero.getIdEmpleado();
-            orden.setAtendidoPor((e.getNombre() == null ? "" : e.getNombre()) + " " + (e.getApellido() == null ? "" : e.getApellido()));
-        }
-        if (orden.getEstadoPreparacion() == null) orden.setEstadoPreparacion("PENDIENTE");
         em.persist(orden);
         em.flush();
     }
@@ -170,7 +165,7 @@ public class OrdenDAO extends DefaultDAO<Orden> {
         if (countProductosByOrden(orden.getIdOrden()) > 0) {
             throw new IllegalArgumentException("No se puede eliminar una orden con productos");
         }
-        throw new IllegalArgumentException("Las órdenes se conservan. Utiliza la cancelación autorizada.");
+        throw new IllegalArgumentException("Las órdenes se conservan; no se permite eliminar su historial.");
     }
 
     /**
@@ -188,7 +183,6 @@ public class OrdenDAO extends DefaultDAO<Orden> {
         if (orden == null || producto == null || !Boolean.TRUE.equals(producto.getActivo())) {
             throw new IllegalArgumentException("La orden o el producto no existe o está inactivo");
         }
-        if ("CANCELADA".equals(orden.getEstadoPreparacion())) throw new CancelacionRechazada(409,"La orden está cancelada.");
         BigDecimal precioCatalogo = validarPrecio(producto.getPrecioSugerido());
         if (precio.compareTo(precioCatalogo) != 0) {
             throw new IllegalArgumentException(
@@ -200,7 +194,6 @@ public class OrdenDAO extends DefaultDAO<Orden> {
         detalle.setIdOrden(orden);
         detalle.setIdProducto(producto);
         detalle.setPrecio(precio);
-        fijarImportes(detalle, orden, producto);
         em.persist(detalle);
         em.flush();
     }
@@ -224,7 +217,6 @@ public class OrdenDAO extends DefaultDAO<Orden> {
             fila.setIdProducto(producto);
             fila.setPrecio(precio);
             fila.setObservaciones(observaciones);
-            fijarImportes(fila, orden, producto);
             em.persist(fila);
             filas.add(fila);
         }
@@ -250,7 +242,6 @@ public class OrdenDAO extends DefaultDAO<Orden> {
     private Orden bloquearOrdenEditable(UUID id) {
         Orden orden = em.find(Orden.class, id, LockModeType.PESSIMISTIC_WRITE);
         if (orden == null) throw new OrdenNoEncontrada();
-        if ("CANCELADA".equals(orden.getEstadoPreparacion())) throw new CancelacionRechazada(409,"La orden está cancelada.");
         // Factura toma estos mismos bloqueos en orden de UUID antes de asociar filas.
         List<UUID> ids = findProductosByOrden(id).stream()
                 .map(OrdenProducto::getIdOrdenProducto).sorted().toList();
@@ -263,7 +254,7 @@ public class OrdenDAO extends DefaultDAO<Orden> {
 
     public List<OrdenProducto> findProductosFacturables(UUID idOrden) {
         return em.createQuery("SELECT op FROM OrdenProducto op LEFT JOIN FETCH op.idProducto "
-                + "WHERE op.idOrden.idOrden = :id AND op.idOrden.estadoPreparacion = 'DESPACHADA' AND NOT EXISTS "
+                + "WHERE op.idOrden.idOrden = :id AND NOT EXISTS "
                 + "(SELECT f FROM FacturaOrdenProducto f WHERE f.idOrdenProducto = op) "
                 + "ORDER BY op.idOrdenProducto", OrdenProducto.class)
                 .setParameter("id", idOrden).getResultList();
@@ -285,7 +276,7 @@ public class OrdenDAO extends DefaultDAO<Orden> {
         if (estaFacturado(actual.getIdOrdenProducto())) {
             throw new IllegalArgumentException("No se puede modificar un producto facturado");
         }
-        if (actual.getPrecioBase() != null && actual.getPrecio().compareTo(precio) != 0)
+        if (actual.getPrecio().compareTo(precio) != 0)
             throw new IllegalStateException("El importe histórico de la orden no puede modificarse");
         actual.setPrecio(precio);
         actual.setObservaciones(detalle.getObservaciones());
@@ -464,7 +455,7 @@ public class OrdenDAO extends DefaultDAO<Orden> {
                 throw new IllegalArgumentException(
                         "La promoción no puede aplicarse: existe un producto facturado");
             }
-            if (fila.getPrecioBase() != null || (fila.getObservaciones() != null && fila.getObservaciones().contains("Aplicado descuento ")))
+            if (fila.getObservaciones() != null && fila.getObservaciones().contains("Aplicado descuento "))
                 throw new IllegalStateException("La fila ya tiene un importe histórico; no se permite duplicar descuentos");
             BigDecimal actual = validarPrecio(fila.getPrecio());
             int porcentaje = asociacion.getValor();
@@ -527,53 +518,6 @@ public class OrdenDAO extends DefaultDAO<Orden> {
             detalle.setIdOrden(orden);
             agregarProducto(detalle);
         }
-    }
-
-    private void fijarImportes(OrdenProducto fila, Orden orden, Producto producto) {
-        if (fila.getPrecioBase() != null) return;
-        Date fecha = orden.getFechaCreacion();
-        var resultado = ImportesOrden.calcular(fila.getPrecio(), fecha,
-                findDescuentosAplicables(producto.getIdProducto(), fecha));
-        fila.setPrecioBase(resultado.base()); fila.setDescuentoAplicado(resultado.descuento());
-        fila.setPrecio(resultado.total()); fila.setPromocionAplicada(resultado.promocion());
-        fila.setCaracteristicasHistoricas(entity.CaracteristicasProducto.texto(producto));
-        fila.setProductoHistorico(producto.getNombre());
-    }
-
-    @jakarta.ejb.ApplicationException(rollback=true)
-    public static class CancelacionRechazada extends RuntimeException {
-        private final int estado;
-        public CancelacionRechazada(int estado,String mensaje) { super(mensaje);this.estado=estado; }
-        public int getEstado() { return estado; }
-    }
-    public List<Orden> findGestionables(UUID empleado, boolean administrador) {
-        var consulta=em.createQuery("SELECT o FROM Orden o " + (administrador ? "" : "WHERE o.idEmpleadoRol.idEmpleado.idEmpleado = :empleado ")
-                + "ORDER BY o.fechaCreacion DESC", Orden.class);
-        if (!administrador) consulta.setParameter("empleado",empleado);
-        return consulta.setMaxResults(100).getResultList();
-    }
-    public Orden cancelar(UUID id, UUID empleado, boolean administrador, boolean camarero) {
-        if (empleado==null) throw new CancelacionRechazada(401,"Inicia sesión para cancelar una orden.");
-        Orden orden=em.find(Orden.class,id,LockModeType.PESSIMISTIC_WRITE);
-        if (orden==null) throw new CancelacionRechazada(404,"La orden no existe.");
-        boolean propietario=orden.getIdEmpleadoRol()!=null && orden.getIdEmpleadoRol().getIdEmpleado()!=null
-                && empleado.equals(orden.getIdEmpleadoRol().getIdEmpleado().getIdEmpleado());
-        if (!administrador && !(camarero && propietario)) throw new CancelacionRechazada(403,"Solo el camarero propietario o un administrador puede cancelar esta orden.");
-        if (!"PENDIENTE".equals(orden.getEstadoPreparacion()) || tieneProductosFacturados(id))
-            throw new CancelacionRechazada(409,"Solo se cancelan órdenes pendientes, sin factura ni pagos.");
-        orden.setEstadoPreparacion("CANCELADA");orden.setCanceladaPor(empleado.toString());orden.setCanceladaEn(new Date());
-        em.flush();return orden;
-    }
-
-    public Orden cambiarPreparacion(UUID id, String esperado, String siguiente) {
-        var estados = List.of("PENDIENTE", "EN_PREPARACION", "LISTA", "DESPACHADA");
-        Orden orden = em.find(Orden.class, id, LockModeType.PESSIMISTIC_WRITE);
-        if (orden == null) throw new OrdenNoEncontrada();
-        String actual = orden.getEstadoPreparacion() == null ? "PENDIENTE" : orden.getEstadoPreparacion();
-        int indice = estados.indexOf(actual);
-        if (!actual.equals(esperado) || indice < 0 || indice == estados.size()-1 || !estados.get(indice+1).equals(siguiente))
-            throw new IllegalStateException("La orden cambió o la transición no es válida. Actualiza el listado.");
-        orden.setEstadoPreparacion(siguiente); em.flush(); return orden;
     }
 
     private static BigDecimal validarPrecio(BigDecimal precio) {

@@ -30,6 +30,7 @@ import static org.mockito.Mockito.*;
 /** Pruebas negativas y positivas del recurso sin arrancar PostgreSQL. */
 @ExtendWith(MockitoExtension.class)
 class OrdenResourceTest {
+    @Mock control.RecepcionDAO recepcionDAO;
     private static final UUID ID_CAMARERO = UUID.fromString("11111111-1111-4111-8111-111111111111");
     private static final UUID ID_PRODUCTO = UUID.fromString("22222222-2222-4222-8222-222222222222");
     @Mock private OrdenDAO ordenDAO;
@@ -175,7 +176,7 @@ class OrdenResourceTest {
     }
 
     @Test void pendientesUsaConsultaEspecialDelDao() {
-        when(ordenDAO.findPendientesPago()).thenReturn(List.of(orden()));
+        when(recepcionDAO.pendientes()).thenReturn(List.of(new control.RecepcionDAO.Resumen(orden().getIdOrden(), new java.util.Date())));
         Response r = resource.pendientes();
         assertEquals(200, r.getStatus());
         assertEquals(1, ((List<?>) r.getEntity()).size());

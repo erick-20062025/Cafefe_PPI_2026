@@ -135,7 +135,7 @@ class PagoResourceTest {
     @Test void consultaResumenYSoloDetallesDeUnaFactura() {
         when(pagoDAO.consultarResumen(FACTURA))
                 .thenReturn(resumen("12.00", "2.00", "10.00", false));
-        when(pagoDAO.obtenerDetallesFactura(FACTURA)).thenReturn(List.of());
+        when(pagoDAO.listarProductosFacturados(FACTURA)).thenReturn(List.of());
         when(detalleDAO.findByFactura(FACTURA)).thenReturn(List.of());
         assertEquals(200, recurso.resumen(FACTURA.toString()).getStatus());
         Response productos = recurso.productos(FACTURA.toString());
@@ -145,8 +145,25 @@ class PagoResourceTest {
         assertTrue(((List<?>) productos.getEntity()).isEmpty());
         assertTrue(((List<?>) abonos.getEntity()).isEmpty());
         verify(pagoDAO, times(3)).consultarResumen(FACTURA);
-        verify(pagoDAO).obtenerDetallesFactura(FACTURA);
+        verify(pagoDAO).listarProductosFacturados(FACTURA);
         verify(detalleDAO).findByFactura(FACTURA);
+    }
+
+    @Test void productosConservanPrecioFacturadoYContrato() {
+        when(pagoDAO.consultarResumen(FACTURA))
+                .thenReturn(resumen("7.25", "0.00", "7.25", false));
+        UUID producto = UUID.randomUUID();
+        UUID detalle = UUID.randomUUID();
+        when(pagoDAO.listarProductosFacturados(FACTURA)).thenReturn(List.of(
+                new control.ProductoFacturado(detalle, producto, "Café", new BigDecimal("7.25"))));
+        Response respuesta = recurso.productos(FACTURA.toString());
+        assertEquals(200, respuesta.getStatus());
+        PagoDTO.ProductoFactura fila = (PagoDTO.ProductoFactura) ((List<?>) respuesta.getEntity()).get(0);
+        assertEquals(detalle, fila.getIdOrdenProducto());
+        assertEquals(producto, fila.getIdProducto());
+        assertEquals("Café", fila.getNombreProducto());
+        assertEquals(new BigDecimal("7.25"), fila.getPrecio());
+        verify(pagoDAO, never()).obtenerDetallesFactura(any());
     }
 
     @Test void consultaFallidaDePostgresqlRetorna500Seguro() {

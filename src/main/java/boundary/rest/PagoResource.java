@@ -5,9 +5,9 @@ import boundary.rest.dto.PagoSolicitud;
 import boundary.rest.messages.ApiMensajes;
 import boundary.rest.messages.ApiResponse;
 import control.PagoDAO;
+import control.ProductoFacturado;
 import control.PagoDetalleDAO;
 import entity.Factura;
-import entity.FacturaOrdenProducto;
 import entity.PagoDetalle;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.Consumes;
@@ -98,9 +98,9 @@ public class PagoResource {
             // Garantiza que la factura existe; las listas vacías no significan 404.
             pagoDAO.consultarResumen(uuid);
             List<PagoDTO.ProductoFactura> salida = new ArrayList<>();
-            List<FacturaOrdenProducto> filas = pagoDAO.obtenerDetallesFactura(uuid);
+            List<ProductoFacturado> filas = pagoDAO.listarProductosFacturados(uuid);
             if (filas != null) {
-                for (FacturaOrdenProducto fila : filas) {
+                for (ProductoFacturado fila : filas) {
                     salida.add(new PagoDTO.ProductoFactura(fila));
                 }
             }
@@ -261,6 +261,7 @@ public class PagoResource {
         if (mensaje.startsWith("El abono supera el saldo pendiente de $")
                 || mensaje.equals("La factura no tiene productos con un total positivo")
                 || mensaje.equals("El abono debe ser mayor que cero")
+                || mensaje.equals("Efectivo recibido inválido")
                 || mensaje.equals("El monto admite como máximo dos decimales")
                 || mensaje.equals("Debe seleccionar una factura")
                 || mensaje.equals("Debe seleccionar un método de pago")
