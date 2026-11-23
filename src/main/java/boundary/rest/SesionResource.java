@@ -18,7 +18,8 @@ import java.util.UUID;
 @Path("/sesion")
 @Produces(MediaType.APPLICATION_JSON)
 public class SesionResource {
-    public static final String ORIGEN = System.getProperty("cafefe.frontend.origin", "http://127.0.0.1:5501");
+    public static final String ORIGEN = System.getProperty("cafefe.frontend.origin",
+            System.getenv().getOrDefault("CAFEFE_FRONTEND_ORIGIN", "http://127.0.0.1:5501"));
     @Inject AccesoPersonal acceso;
     @Context HttpServletRequest request;
 

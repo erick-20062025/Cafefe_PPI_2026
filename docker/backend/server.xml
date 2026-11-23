@@ -1,0 +1,21 @@
+<server description="Cafefe PPI115">
+    <featureManager><feature>webProfile-10.0</feature><feature>jdbc-4.2</feature></featureManager>
+    <httpEndpoint id="defaultHttpEndpoint" host="*" httpPort="9080" httpsPort="-1"/>
+    <httpSession cookieHttpOnly="true" cookieSameSite="Lax" useContextRootAsCookiePath="true"
+                 invalidationTimeout="30m" urlRewritingEnabled="false"/>
+    <cors id="frontend" domain="/cafefe/api/" allowedOrigins="${env.CAFEFE_FRONTEND_ORIGIN}"
+          allowedMethods="GET,POST,PUT,DELETE,OPTIONS" allowedHeaders="Content-Type,Accept"
+          allowCredentials="true" maxAge="0"/>
+    <library id="PostgreSQLLib"><fileset dir="/opt/libraries" includes="postgresql.jar"/></library>
+    <library id="PrimeFacesLib"><fileset dir="/opt/libraries" includes="primefaces.jar"/></library>
+    <jdbcDriver id="PostgreSQLDriver" libraryRef="PostgreSQLLib"/>
+    <dataSource id="PostgreSQLDS" jndiName="jdbc/CafefeDS">
+        <jdbcDriver ref="PostgreSQLDriver"/>
+        <properties.postgresql serverName="${env.PG_HOST}" portNumber="${env.PG_PORT}"
+            databaseName="${env.PG_DB}" user="${env.PG_USER}" password="${env.PG_PASS}"/>
+    </dataSource>
+    <applicationMonitor dropinsEnabled="false"/>
+    <webApplication id="cafefe" location="/opt/war/cafefe.war" contextRoot="/cafefe">
+        <classloader privateLibraryRef="PrimeFacesLib"/>
+    </webApplication>
+</server>

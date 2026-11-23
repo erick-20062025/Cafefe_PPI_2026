@@ -1,0 +1,7 @@
+**
+!Dockerfile.backend
+!docker/
+!docker/backend/
+!docker/backend/server.xml
+!docker/backend/iniciar.sh
+!docker/backend/descargar.sh

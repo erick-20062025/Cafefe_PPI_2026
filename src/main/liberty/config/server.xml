@@ -24,7 +24,12 @@
 
     <!-- Definición de la librería del driver -->
     <library id="PostgreSQLLib">
-        <fileset dir="${server.config.dir}/lib/postgres" includes="postgresql-42.5.4.jar"/>
+        <fileset dir="${server.config.dir}/lib/postgres" includes="postgresql-42.7.3.jar"/>
+    </library>
+
+    <!-- PrimeFaces es provided: también debe estar disponible fuera de Docker. -->
+    <library id="global">
+        <fileset dir="${server.config.dir}/lib/primefaces" includes="primefaces-13.0.0-jakarta.jar"/>
     </library>
 
     <!-- Conector JDBC -->
