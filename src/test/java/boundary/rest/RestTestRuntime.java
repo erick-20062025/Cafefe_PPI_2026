@@ -18,13 +18,13 @@ import static org.mockito.Mockito.mock;
  * para comprobar los codigos HTTP y las entidades devueltas por los recursos.
  * No se incluye en el WAR y no modifica el comportamiento de produccion.
  */
-final class RestTestRuntime {
+public final class RestTestRuntime {
 
     private RestTestRuntime() {
     }
 
     /** Instala un delegado aislado antes de cada prueba. */
-    static void instalar() {
+    public static void instalar() {
         RuntimeDelegate delegado = mock(RuntimeDelegate.class, invocacion -> {
             if ("createResponseBuilder".equals(invocacion.getMethod().getName())) {
                 return nuevoConstructorRespuesta();
@@ -35,7 +35,7 @@ final class RestTestRuntime {
     }
 
     /** Quita el delegado simulado para no contaminar otras pruebas. */
-    static void limpiar() {
+    public static void limpiar() {
         RuntimeDelegate.setInstance(null);
     }
 

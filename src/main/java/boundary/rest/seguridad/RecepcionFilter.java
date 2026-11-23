@@ -22,6 +22,11 @@ public class RecepcionFilter implements ContainerRequestFilter, ContainerRespons
         return tipo != null && (EmpleadoResource.class.isAssignableFrom(tipo)
                 || EmpleadoRolResource.class.isAssignableFrom(tipo) || RolResource.class.isAssignableFrom(tipo));
     }
+    private boolean cobrosHeredados() {
+        Class<?> tipo = recurso.getResourceClass();
+        return tipo != null && (FacturaResource.class.isAssignableFrom(tipo)
+                || PagoResource.class.isAssignableFrom(tipo));
+    }
     private String operacionOrden() {
         Class<?> tipo = recurso.getResourceClass();
         return tipo != null && OrdenResource.class.isAssignableFrom(tipo) && recurso.getResourceMethod() != null
@@ -32,20 +37,24 @@ public class RecepcionFilter implements ContainerRequestFilter, ContainerRespons
         String orden = operacionOrden();
         boolean pendientes = "pendientes".equals(orden);
         boolean detalle = "productos".equals(orden) && "GET".equals(contexto.getMethod());
-        if (!pendientes && !detalle && !administracion()) return;
-        if (administracion() && !"GET".equals(contexto.getMethod())
+        if (!pendientes && !detalle && !administracion() && !cobrosHeredados()) return;
+        if ((administracion() || cobrosHeredados()) && !"GET".equals(contexto.getMethod())
                 && !SesionResource.ORIGEN.equals(request.getHeader("Origin"))) {
             contexto.abortWith(SesionResource.error(403, "Origen no permitido.")); return;
         }
         try {
             AccesoPersonal.Identidad identidad = acceso.recuperar(request);
             if (identidad == null) contexto.abortWith(SesionResource.error(401, "Inicia sesión para consultar este recurso."));
+            else if (administracion() && !identidad.getRoles().contains("administrador"))
+                contexto.abortWith(SesionResource.error(403, "Se requiere una asignación administrativa activa."));
+            else if (cobrosHeredados() && !identidad.getRoles().contains("cajero"))
+                contexto.abortWith(SesionResource.error(403, "Tu rol no permite acceder a Cobros."));
             else if (pendientes && identidad.getRoles().stream().noneMatch(rol -> rol.equals("barista") || rol.equals("cocinero")))
                 contexto.abortWith(SesionResource.error(403, "Tu rol no permite acceder a Recepción."));
         } catch (RuntimeException ex) { contexto.abortWith(SesionResource.error(503, "No fue posible comprobar el acceso.")); }
     }
     @Override public void filter(ContainerRequestContext solicitud, ContainerResponseContext respuesta) {
-        if (administracion() || "pendientes".equals(operacionOrden()) || "productos".equals(operacionOrden()))
+        if (administracion() || cobrosHeredados() || "pendientes".equals(operacionOrden()) || "productos".equals(operacionOrden()))
             respuesta.getHeaders().putSingle("Cache-Control", "no-store");
     }
 }
