@@ -1,0 +1,42 @@
+CAFEFE — TERCER PARCIAL PPI115 — PRELIMINAR
+Integrantes:
+Diego: {{NOMBRE_COMPLETO_DIEGO}} — {{CARNET_DIEGO}}
+Erick: {{NOMBRE_COMPLETO_ERICK}} — {{CARNET_ERICK}}
+
+Backend: {{URL_BACKEND}}
+Commit backend: {{COMMIT_BACKEND}}
+Frontend: {{URL_FRONTEND}}
+Commit frontend: {{COMMIT_FRONTEND}}
+
+Imágenes previstas (todavía no publicadas):
+{{DOCKERHUB}}/cafefe-backend:ppi115-tercer-parcial
+{{DOCKERHUB}}/cafefe-frontend:ppi115-tercer-parcial
+
+Descomprimir entrega-cafefe.zip y frontend-src.zip. Ejecutar desde esa carpeta.
+Crear ppi115net si no existe: docker network create ppi115net
+PostgreSQL debe ser accesible desde ppi115net. No se incluye una base ni migraciones.
+Crear fuera de Git un archivo privado backend.env (chmod 600) con:
+PG_USER, PG_PASS, PG_DB, PG_HOST, PG_PORT
+CAFEFE_FRONTEND_ORIGIN=http://localhost
+CAFEFE_CAMARERO_VIRTUAL_ID=ID de la asignación empleado_rol virtual autorizada en esa base
+No es el UUID de un empleado ni su contraseña. Si falta, Pedido público explica la configuración faltante.
+No incluir backend.env en la entrega. El evaluador aporta los datos de su base.
+
+Montaje WAR: /opt/war/cafefe.war (archivo legible, solo lectura).
+Montaje src: /var/www/html (directorio legible, solo lectura).
+Backend: puerto interno 9080, contexto /cafefe.
+Frontend: puerto interno 80, Document Root /var/www/html.
+El navegador usa /cafefe/api/ en el origen frontend; Nginx usa http://cafefe.backend:9080/cafefe/api/.
+
+Después de publicar y verificar las imágenes:
+docker pull {{DOCKERHUB}}/cafefe-backend:ppi115-tercer-parcial
+docker pull {{DOCKERHUB}}/cafefe-frontend:ppi115-tercer-parcial
+docker run -d --name cafefe.backend -h cafefe.backend --network ppi115net -p 127.0.0.1:9080:9080 --env-file ./backend.env --mount "type=bind,src=$PWD/cafefe.war,dst=/opt/war/cafefe.war,readonly" {{DOCKERHUB}}/cafefe-backend:ppi115-tercer-parcial
+docker run -d --name cafefe.frontend -h cafefe.frontend --network ppi115net -p 127.0.0.1:80:80 --mount "type=bind,src=$PWD/src,dst=/var/www/html,readonly" {{DOCKERHUB}}/cafefe-frontend:ppi115-tercer-parcial
+Abrir http://localhost . Si cambia host o puerto del navegador, cambiar CAFEFE_FRONTEND_ORIGIN al origen exacto y recrear solo backend.
+Si la base requiere nombre externo, añadir --add-host FQDN:IP al backend con valores reales del evaluador.
+No es necesario publicar 9080 para el proxy; se muestra para cumplir la opción de acceso directo.
+
+Preparación: seguimiento temporal en memoria de cada pantalla; no compartido ni persistido.
+PWA: localhost o HTTPS. Una IP remota con HTTP no permite service worker en navegadores habituales.
+La prueba final, la publicación y los identificadores definitivos están pendientes.
