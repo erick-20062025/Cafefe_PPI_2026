@@ -5,14 +5,17 @@ set -eu
 : "${PG_DB:?Falta PG_DB}"
 : "${PG_HOST:?Falta PG_HOST}"
 : "${PG_PORT:?Falta PG_PORT}"
-: "${CAFEFE_FRONTEND_ORIGIN:?Falta el origen exacto del navegador}"
+# CAFEFE_FRONTEND_ORIGIN es opcional: el proxy Nginx usa el mismo origen.
+# Si se sirve frontend separado (Live Server), se puede configurar explícitamente.
 case "$PG_PORT" in *[!0-9]*|'') echo 'PG_PORT debe ser numérico' >&2; exit 1;; esac
-case "$CAFEFE_FRONTEND_ORIGIN" in
-    http://*|https://*) ;;
-    *) echo 'CAFEFE_FRONTEND_ORIGIN debe ser http(s)://host[:puerto]' >&2; exit 1;;
-esac
-origen_host=${CAFEFE_FRONTEND_ORIGIN#*://}
-case "$origen_host" in ''|*[/?\#\ @\*]*) echo 'Origen inválido: sin ruta, comodines ni credenciales' >&2; exit 1;; esac
+if [ -n "${CAFEFE_FRONTEND_ORIGIN:-}" ]; then
+    case "$CAFEFE_FRONTEND_ORIGIN" in
+        http://*|https://*) ;;
+        *) echo 'CAFEFE_FRONTEND_ORIGIN debe ser http(s)://host[:puerto]' >&2; exit 1;;
+    esac
+    origen_host=${CAFEFE_FRONTEND_ORIGIN#*://}
+    case "$origen_host" in ''|*[/?\#\ @\*]*) echo 'Origen inválido: sin ruta, comodines ni credenciales' >&2; exit 1;; esac
+fi
 if [ ! -r /opt/war/cafefe.war ] || [ ! -s /opt/war/cafefe.war ]; then
     echo 'Monte un archivo WAR legible en /opt/war/cafefe.war (solo lectura).' >&2
     exit 1

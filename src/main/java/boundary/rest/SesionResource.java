@@ -12,6 +12,7 @@ import jakarta.servlet.http.HttpSession;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.*;
 import java.io.StringReader;
+import java.net.URI;
 import java.util.Set;
 import java.util.UUID;
 
@@ -20,13 +21,47 @@ import java.util.UUID;
 public class SesionResource {
     public static final String ORIGEN = System.getProperty("cafefe.frontend.origin",
             System.getenv().getOrDefault("CAFEFE_FRONTEND_ORIGIN", "http://127.0.0.1:5501"));
+    /**
+     * Permite el origen configurado para desarrollo o el mismo origen del Host
+     * recibido por la API. Nginx debe reenviar Host con $http_host.
+     * No se confía en X-Forwarded-Host/Proto, que un cliente puede falsificar.
+     * Esta validación protege peticiones de navegador; no sustituye la sesión
+     * ni los permisos de cada operación.
+     */
+    public static boolean origenPermitido(HttpServletRequest solicitud) {
+        if (solicitud == null) return false;
+        String origen = solicitud.getHeader("Origin");
+        if (origen == null || origen.isBlank() || "null".equalsIgnoreCase(origen)) return false;
+        if (!ORIGEN.isBlank() && ORIGEN.equals(origen)) return true;
+        String host = solicitud.getHeader("Host");
+        if (host == null || host.isBlank()) return false;
+        try {
+            URI origenUri = new URI(origen);
+            URI hostUri = new URI("http://" + host);
+            if (!"http".equalsIgnoreCase(origenUri.getScheme())
+                    || origenUri.getHost() == null || hostUri.getHost() == null
+                    || origenUri.getRawUserInfo() != null || hostUri.getRawUserInfo() != null
+                    || origenUri.getRawPath() != null && !origenUri.getRawPath().isEmpty()
+                    || origenUri.getRawQuery() != null || origenUri.getRawFragment() != null
+                    || hostUri.getRawPath() != null && !hostUri.getRawPath().isEmpty()
+                    || hostUri.getRawQuery() != null || hostUri.getRawFragment() != null
+                    || host.contains("@") || host.contains("/") || host.contains("\\")) return false;
+            int puertoOrigen = origenUri.getPort() == -1 ? 80 : origenUri.getPort();
+            int puertoHost = hostUri.getPort() == -1 ? 80 : hostUri.getPort();
+            return puertoOrigen > 0 && puertoOrigen == puertoHost
+                    && origenUri.getHost().equalsIgnoreCase(hostUri.getHost());
+        } catch (Exception ex) {
+            return false;
+        }
+    }
+
     @Inject AccesoPersonal acceso;
     @Context HttpServletRequest request;
 
     @POST
     @Consumes(MediaType.APPLICATION_JSON)
     public Response entrar(String json) {
-        if (!ORIGEN.equals(request.getHeader("Origin"))) return error(403, "Origen no permitido.");
+        if (!origenPermitido(request)) return error(403, "Origen no permitido.");
         String nombre;
         UUID id;
         try (JsonReader lector = Json.createReader(new StringReader(json == null ? "" : json))) {
@@ -64,7 +99,7 @@ public class SesionResource {
 
     @DELETE
     public Response salir() {
-        if (!ORIGEN.equals(request.getHeader("Origin"))) return error(403, "Origen no permitido.");
+        if (!origenPermitido(request)) return error(403, "Origen no permitido.");
         HttpSession sesion = request.getSession(false);
         if (sesion != null) sesion.invalidate();
         return respuesta(Response.noContent());

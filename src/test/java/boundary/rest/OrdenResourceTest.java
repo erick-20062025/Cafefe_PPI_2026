@@ -4,6 +4,10 @@ import boundary.rest.dto.OrdenDTO;
 import boundary.rest.messages.ApiResponse;
 import control.OrdenDAO;
 import control.ProductoDAO;
+import control.EmpleadoRolDAO;
+import boundary.rest.seguridad.AccesoPersonal;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpSession;
 import entity.Descuento;
 import entity.EmpleadoRol;
 import entity.Orden;
@@ -34,6 +38,9 @@ class OrdenResourceTest {
     private static final UUID ID_CAMARERO = UUID.fromString("11111111-1111-4111-8111-111111111111");
     private static final UUID ID_PRODUCTO = UUID.fromString("22222222-2222-4222-8222-222222222222");
     @Mock private OrdenDAO ordenDAO;
+    @Mock private EmpleadoRolDAO rolesPersonal;
+    @Mock private AccesoPersonal accesoPersonal;
+    @Mock private HttpServletRequest peticion;
     @Mock private ProductoDAO productoDAO;
     @Spy @InjectMocks private OrdenResource resource;
 
@@ -129,31 +136,53 @@ class OrdenResourceTest {
         verifyNoInteractions(ordenDAO, productoDAO);
     }
 
-    @Test void publicaUsaCamareroVirtualYEscribeNombreEnObservaciones() {
-        doReturn(ID_CAMARERO.toString()).when(resource).camareroVirtualConfigurado();
-        catalogoValido();
+    @Test void publicaSinSesionNoRequiereCamareroYConservaNombre() {
+        when(productoDAO.findById(ID_PRODUCTO)).thenReturn(producto(true, new BigDecimal("3.50")));
         String cuerpo = "{\"nombreCliente\":\" Ana \" ,\"productos\":[{\"idProducto\":\"" + ID_PRODUCTO
                 + "\",\"observaciones\":\"taza grande\"}]}";
         Response r = resource.crearPublica(cuerpo);
         assertEquals(201, r.getStatus());
+        OrdenDTO dto = (OrdenDTO) r.getEntity();
+        assertNull(dto.getIdEmpleadoRol());
+        ArgumentCaptor<Orden> cabecera = ArgumentCaptor.forClass(Orden.class);
         @SuppressWarnings("unchecked")
         ArgumentCaptor<List<OrdenProducto>> filas = ArgumentCaptor.forClass(List.class);
-        verify(ordenDAO).crearOrdenCompleta(any(), filas.capture());
+        verify(ordenDAO).crearOrdenPublica(cabecera.capture(), filas.capture());
+        assertNull(cabecera.getValue().getIdEmpleadoRol());
         assertEquals("Cliente: Ana | taza grande", filas.getValue().get(0).getObservaciones());
+        verify(ordenDAO, never()).findCamareroActivoById(any());
+        verify(ordenDAO, never()).crearOrdenCompleta(any(), anyList());
     }
 
-    @Test void publicaNoCreaSiNoHayCamareroVirtualConfigurado() {
-        doReturn(null).when(resource).camareroVirtualConfigurado();
+    @Test void publicaNoRequiereVariableDeCamareroVirtual() {
+        when(productoDAO.findById(ID_PRODUCTO)).thenReturn(producto(true, new BigDecimal("3.50")));
         String json = "{\"nombreCliente\":\"Ana\",\"productos\":[{\"idProducto\":\"" + ID_PRODUCTO + "\"}]}";
-        codigo(resource.crearPublica(json), 503);
-        verifyNoInteractions(ordenDAO, productoDAO);
+        assertEquals(201, resource.crearPublica(json).getStatus());
+        verify(ordenDAO).crearOrdenPublica(any(), anyList());
     }
 
-    @Test void publicaNoCreaConIdVirtualInvalido() {
-        doReturn("no-es-uuid").when(resource).camareroVirtualConfigurado();
+    @Test void publicaConCamareroAutenticadoConservaAsignacionReal() {
+        UUID empleado = UUID.randomUUID();
+        HttpSession sesion = mock(HttpSession.class);
+        when(peticion.getSession(false)).thenReturn(sesion);
+        when(accesoPersonal.recuperar(peticion)).thenReturn(
+                new AccesoPersonal.Identidad("Ana", List.of("camarero")));
+        when(peticion.getHeader("Origin")).thenReturn(SesionResource.ORIGEN);
+        when(sesion.getAttribute(AccesoPersonal.ATRIBUTO)).thenReturn(empleado);
+        EmpleadoRol relacion = camarero();
+        relacion.setActivo(true);
+        entity.Rol rol = new entity.Rol(UUID.randomUUID());
+        rol.setActivo(true);
+        rol.setNombre("camarero");
+        relacion.setIdRol(rol);
+        when(rolesPersonal.findByIdEmpleado(empleado)).thenReturn(List.of(relacion));
+        catalogoValido();
         String json = "{\"nombreCliente\":\"Ana\",\"productos\":[{\"idProducto\":\"" + ID_PRODUCTO + "\"}]}";
-        codigo(resource.crearPublica(json), 503);
-        verifyNoInteractions(ordenDAO, productoDAO);
+        assertEquals(201, resource.crearPublica(json).getStatus());
+        ArgumentCaptor<Orden> cabecera = ArgumentCaptor.forClass(Orden.class);
+        verify(ordenDAO).crearOrdenCompleta(cabecera.capture(), anyList());
+        assertEquals(ID_CAMARERO, cabecera.getValue().getIdEmpleadoRol().getIdEmpleadoRol());
+        verify(ordenDAO, never()).crearOrdenPublica(any(), anyList());
     }
 
     @Test void errorDeBaseDeDatosNoExponeInformacionInterna() {

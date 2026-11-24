@@ -4,7 +4,8 @@ package entity;
 public final class AtencionOrden {
     private AtencionOrden() { }
     public static String describir(Orden orden, String asignacionVirtual) {
-        if (orden == null || orden.getIdEmpleadoRol() == null) return null;
+        if (orden == null) return null;
+        if (orden.getIdEmpleadoRol() == null) return "Pedido web";
         EmpleadoRol asignacion = orden.getIdEmpleadoRol();
         if (asignacion.getIdEmpleadoRol() != null && asignacion.getIdEmpleadoRol().toString().equals(asignacionVirtual))
             return "Pedido web";

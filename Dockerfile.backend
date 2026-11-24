@@ -12,7 +12,6 @@ RUN sh /tmp/descargar.sh && rm /tmp/descargar.sh \
 COPY --chown=cafefe:cafefe docker/backend/server.xml /opt/liberty/wlp/usr/servers/cafefe/server.xml
 COPY --chmod=755 docker/backend/iniciar.sh /usr/local/bin/iniciar-cafefe
 ENV JAVA_HOME=/opt/java
-ENV CAFEFE_FRONTEND_ORIGIN=http://localhost
 USER 10001:10001
 EXPOSE 9080
 HEALTHCHECK --interval=30s --timeout=5s --start-period=90s CMD curl -fsS http://127.0.0.1:9080/cafefe/api/tipos-producto > /dev/null || exit 1

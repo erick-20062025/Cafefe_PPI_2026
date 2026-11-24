@@ -154,7 +154,7 @@ public class CobrosResource {
     }
 
     private Response conCajero(boolean escritura, Function<UUID, Response> operacion) {
-        if (escritura && !SesionResource.ORIGEN.equals(request.getHeader("Origin"))) {
+        if (escritura && !SesionResource.origenPermitido(request)) {
             return error(403, "Origen no permitido.");
         }
         try {

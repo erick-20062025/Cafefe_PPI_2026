@@ -24,7 +24,7 @@ public class VistasInternasFilter implements Filter {
         }
         response.setHeader("Cache-Control", "no-store");
         if (!"GET".equals(request.getMethod()) && !"HEAD".equals(request.getMethod())
-                && !SesionResource.ORIGEN.equals(request.getHeader("Origin"))) {
+                && !SesionResource.origenPermitido(request)) {
             response.sendError(403); return;
         }
         AccesoPersonal.Identidad identidad;

@@ -13,6 +13,10 @@ class DescripcionAtencionOrdenTest {
   assertEquals("Pedido web",AtencionOrden.describir(o,er.getIdEmpleadoRol().toString()));
   assertNull(AtencionOrden.describir(o,null));
  }
+ @Test void pedidoAnonimoNoInventaCamarero() {
+  var o = new Orden(UUID.randomUUID());
+  assertEquals("Pedido web", AtencionOrden.describir(o, null));
+ }
  @Test void camareroRealSeObtieneDeOrden() {
   var o=new Orden();var er=new EmpleadoRol(UUID.randomUUID());o.setIdEmpleadoRol(er);
   var e=new Empleado();e.setNombre("Ana");e.setApellido("Peña");er.setIdEmpleado(e);

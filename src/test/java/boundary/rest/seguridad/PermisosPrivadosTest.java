@@ -83,4 +83,38 @@ class PermisosPrivadosTest {
         when(request.getServletPath()).thenReturn("/jakarta.faces.resource/components.js.xhtml");
         f.doFilter(request,response,chain); verify(chain).doFilter(request,response); verifyNoInteractions(f.acceso);
     }
+    @ParameterizedTest @CsvSource({
+        "crearPublica,POST,anonimo,200", "cotizacion,POST,anonimo,200",
+        "listar,GET,anonimo,401", "listar,GET,barista,403", "listar,GET,camarero,200",
+        "productosFacturables,GET,cajero,200", "productosFacturables,GET,camarero,403",
+        "crear,POST,anonimo,401", "crear,POST,camarero,200", "crear,POST,cajero,403",
+        "agregarProductos,POST,barista,403", "quitarProducto,DELETE,anonimo,401",
+        "aplicarPromocion,POST,cajero,403", "eliminar,DELETE,anonimo,401"
+    })
+    void rutasInternasOrden(String operacion,String metodo,String rol,int esperado) {
+        var f=new RecepcionFilter(); f.acceso=mock(AccesoPersonal.class);
+        f.request=mock(HttpServletRequest.class); f.recurso=mock(ResourceInfo.class);
+        doReturn(OrdenResource.class).when(f.recurso).getResourceClass();
+        when(f.recurso.getResourceMethod()).thenReturn(java.util.Arrays.stream(OrdenResource.class.getMethods())
+                .filter(m->m.getName().equals(operacion)).findFirst().orElseThrow());
+        when(f.request.getHeader("Origin")).thenReturn(SesionResource.ORIGEN);
+        if(!rol.equals("anonimo")) when(f.acceso.recuperar(f.request)).thenReturn(new AccesoPersonal.Identidad("Prueba",List.of(rol)));
+        var c=mock(ContainerRequestContext.class);when(c.getMethod()).thenReturn(metodo);f.filter(c);
+        if(esperado==200) verify(c,never()).abortWith(any());
+        else verify(c).abortWith(argThat(r->r.getStatus()==esperado));
+    }
+
+    @Test void catalogoPublicoSoloLectura() {
+        for(Class<?> tipo:List.of(ProductoResource.class,TipoProductoResource.class,CajaResource.class,
+                CaracteristicaResource.class,ProductoTipoProductoResource.class,ProductoCaracteristicaResource.class,
+                DescuentoResource.class,DescuentoProductoResource.class,TipoCaracteristicaResource.class,TipoDescuentoResource.class)) {
+            var f=new RecepcionFilter();f.acceso=mock(AccesoPersonal.class);f.request=mock(HttpServletRequest.class);
+            f.recurso=mock(ResourceInfo.class);doReturn(tipo).when(f.recurso).getResourceClass();
+            when(f.request.getHeader("Origin")).thenReturn(SesionResource.ORIGEN);
+            var c=mock(ContainerRequestContext.class);when(c.getMethod()).thenReturn("GET");f.filter(c);
+            verify(c,never()).abortWith(any());verifyNoInteractions(f.acceso);
+            when(c.getMethod()).thenReturn("POST");f.filter(c);
+            verify(c).abortWith(argThat(r->r.getStatus()==401));
+        }
+    }
 }
