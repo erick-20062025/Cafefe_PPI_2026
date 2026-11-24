@@ -1,0 +1,9 @@
+# Copiar fuera del repositorio y aplicar chmod 600. No contiene credenciales válidas.
+PG_USER=REEMPLAZAR
+PG_PASS=REEMPLAZAR
+PG_DB=REEMPLAZAR
+PG_HOST=REEMPLAZAR
+PG_PORT=5432
+CAFEFE_FRONTEND_ORIGIN=http://localhost
+# ID de empleado_rol virtual previamente autorizado; nunca una credencial real.
+CAFEFE_CAMARERO_VIRTUAL_ID=

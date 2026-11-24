@@ -520,6 +520,50 @@ public class OrdenDAO extends DefaultDAO<Orden> {
         }
     }
 
+    /**
+     * Pedido anónimo conforme al SQL oficial: orden.id_empleado_rol es NULL.
+     * La cabecera y todos los detalles se guardan en la misma transacción EJB.
+     * crear() y crearOrdenCompleta() siguen exigiendo un camarero real.
+     */
+    public void crearOrdenPublica(Orden orden, List<OrdenProducto> productos) {
+        if (orden == null || orden.getIdOrden() == null || orden.getFechaCreacion() == null
+                || orden.getIdEmpleadoRol() != null || productos == null || productos.isEmpty()) {
+            throw new IllegalArgumentException("El pedido público debe tener fecha, productos y ningún empleado");
+        }
+        for (OrdenProducto detalle : productos) {
+            if (detalle == null || detalle.getIdOrdenProducto() == null
+                    || detalle.getIdProducto() == null || detalle.getIdProducto().getIdProducto() == null
+                    || entity.DescripcionOrden.cliente(detalle.getObservaciones()) == null) {
+                throw new IllegalArgumentException("El pedido público requiere nombre de cliente en cada producto");
+            }
+            validarPrecio(detalle.getPrecio());
+        }
+        if (em.find(Orden.class, orden.getIdOrden()) != null) {
+            throw new IllegalArgumentException("Ya existe una orden con ese identificador");
+        }
+        // EclipseLink puede enlazar una relación UUID nula como VARCHAR.
+        // Insertamos la cabecera omitiendo id_empleado_rol: PostgreSQL usa NULL
+        // con el tipo correcto, sin empleado ficticio ni cambios de esquema.
+        // El UUID se convierte explícitamente y la fecha se parametriza.
+        int insertadas = em.createNativeQuery(
+                "INSERT INTO orden (id_orden, fecha_creacion) VALUES (CAST(?1 AS uuid), ?2)")
+                .setParameter(1, orden.getIdOrden().toString())
+                .setParameter(2, new java.sql.Timestamp(orden.getFechaCreacion().getTime()))
+                .executeUpdate();
+        if (insertadas != 1) {
+            throw new IllegalStateException("No fue posible registrar la cabecera del pedido público");
+        }
+        // Se recupera como entidad administrada antes de asociar los detalles.
+        Orden registrada = em.find(Orden.class, orden.getIdOrden());
+        if (registrada == null) {
+            throw new IllegalStateException("No se pudo recuperar el pedido público registrado");
+        }
+        for (OrdenProducto detalle : productos) {
+            detalle.setIdOrden(registrada);
+            agregarProducto(detalle);
+        }
+    }
+
     private static BigDecimal validarPrecio(BigDecimal precio) {
         if (precio == null || precio.signum() < 0) {
             throw new IllegalArgumentException("El precio debe ser mayor o igual a cero");

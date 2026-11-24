@@ -241,8 +241,9 @@ public class OrdenResource {
     }
 
     /**
-     * POST /api/ordenes/publicas: pedido sin inicio de sesión.
-     * El camarero virtual se configura EN EL SERVIDOR, no viene del cliente.
+     * POST /api/ordenes/publicas: sin sesión de camarero se crea una orden
+     * con id_empleado_rol NULL. Si un camarero real inició sesión, conserva
+     * su asignación real. Nunca se crea ni se exige un empleado ficticio.
      */
     @POST
     @Path("/publicas")
@@ -256,7 +257,7 @@ public class OrdenResource {
         if (peticion != null && peticion.getSession(false) != null) {
             var identidad = accesoPersonal.recuperar(peticion);
             if (identidad != null && identidad.getRoles().contains("camarero")) {
-                if (!SesionResource.ORIGEN.equals(peticion.getHeader("Origin"))) return SesionResource.error(403, "Origen no permitido.");
+                if (!SesionResource.origenPermitido(peticion)) return SesionResource.error(403, "Origen no permitido.");
                 UUID empleado = (UUID) peticion.getSession(false).getAttribute(boundary.rest.seguridad.AccesoPersonal.ATRIBUTO);
                 var asignacion = rolesPersonal.findByIdEmpleado(empleado).stream()
                     .filter(er -> Boolean.TRUE.equals(er.getActivo()) && er.getIdRol() != null && Boolean.TRUE.equals(er.getIdRol().getActivo())
@@ -266,18 +267,7 @@ public class OrdenResource {
                 return crearConCamarero(solicitud, asignacion);
             }
         }
-        String configurado = camareroVirtualConfigurado();
-        if (configurado == null || configurado.isBlank()) {
-            return error(503, "El servicio de pedidos en línea no tiene camarero virtual configurado");
-        }
-        UUID idVirtual;
-        try {
-            idVirtual = convertirUUID(configurado.trim());
-        } catch (IllegalArgumentException ex) {
-            LOGGER.severe("CAFEFE_CAMARERO_VIRTUAL_ID no es un UUID válido");
-            return error(503, "El servicio de pedidos en línea no está disponible");
-        }
-        return crearConCamarero(solicitud, idVirtual);
+        return crearConCamarero(solicitud, null);
     }
 
     /** Cotización pública calculada en servidor; no persiste ni reserva una promoción. */
@@ -302,11 +292,6 @@ public class OrdenResource {
         } catch (OrdenSolicitud.DatoInvalido ex) { return error(ex.getEstadoHttp(),ex.getMessage()); }
         catch (IllegalArgumentException ex) { return error(422,"No fue posible calcular el pedido"); }
         catch (RuntimeException ex) { return errorOperacion(ex,"cotizar el pedido"); }
-    }
-
-    /** Punto sustituible en pruebas; configuración de Liberty desde server.env. */
-    protected String camareroVirtualConfigurado() {
-        return System.getenv("CAFEFE_CAMARERO_VIRTUAL_ID");
     }
 
     /** POST /api/ordenes/{id}/promociones/{idPromocion}. */
@@ -372,9 +357,12 @@ public class OrdenResource {
 
     private Response crearConCamarero(OrdenSolicitud solicitud, UUID idCamarero) {
         try {
-            EmpleadoRol camarero = ordenDAO.findCamareroActivoById(idCamarero);
-            if (camarero == null) {
-                return error(422, "El camarero indicado no existe o no está activo");
+            EmpleadoRol camarero = null;
+            if (idCamarero != null) {
+                camarero = ordenDAO.findCamareroActivoById(idCamarero);
+                if (camarero == null) {
+                    return error(422, "El camarero indicado no existe o no está activo");
+                }
             }
 
             // Todos los productos se verifican ANTES de crear la cabecera.
@@ -418,7 +406,8 @@ public class OrdenResource {
             orden.setIdEmpleadoRol(camarero);
             // @Stateless: llamada externa EJB, transacción REQUIRED por defecto.
             // Si falla una fila, la excepción provoca rollback de toda la orden.
-            ordenDAO.crearOrdenCompleta(orden, filas);
+            if (camarero == null) ordenDAO.crearOrdenPublica(orden, filas);
+            else ordenDAO.crearOrdenCompleta(orden, filas);
             return Response.status(Response.Status.CREATED)
                     .entity(OrdenDTO.detalle(orden, filas)).build();
         } catch (IllegalArgumentException | IllegalStateException ex) {

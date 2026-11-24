@@ -41,6 +41,23 @@ class SesionResourceTest {
         assertEquals(403,recurso.entrar(cuerpo()).getStatus()); assertEquals(403,recurso.salir().getStatus());
         verifyNoInteractions(recurso.acceso);
     }
+    @Test void origenDelProxyAceptaPuertosDiferentesYRechazaAjeno() {
+        HttpServletRequest req = mock(HttpServletRequest.class);
+        when(req.getHeader("Host")).thenReturn("localhost:18080");
+        when(req.getHeader("Origin")).thenReturn("http://localhost:18080");
+        assertTrue(SesionResource.origenPermitido(req));
+        when(req.getHeader("Origin")).thenReturn("http://sitio-ajeno.example");
+        assertFalse(SesionResource.origenPermitido(req));
+        when(req.getHeader("Origin")).thenReturn("null");
+        assertFalse(SesionResource.origenPermitido(req));
+        when(req.getHeader("Origin")).thenReturn("http://localhost:18080.evil.example");
+        assertFalse(SesionResource.origenPermitido(req));
+        when(req.getHeader("Origin")).thenReturn("http://localhost:18080/path");
+        assertFalse(SesionResource.origenPermitido(req));
+        when(req.getHeader("Host")).thenReturn("localhost");
+        when(req.getHeader("Origin")).thenReturn("http://localhost");
+        assertTrue(SesionResource.origenPermitido(req));
+    }
     @Test void recuperaYCierra() {
         assertEquals(401,recurso.recuperar().getStatus());
         when(recurso.acceso.recuperar(recurso.request)).thenReturn(new AccesoPersonal.Identidad("Prueba",List.of("cocinero")));

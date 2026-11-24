@@ -13,7 +13,7 @@
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <jakartaee>11.0.0-M1</jakartaee>
+        <jakartaee>10.0.0</jakartaee>
         <maven.compiler.source>21</maven.compiler.source>
         <maven.compiler.target>21</maven.compiler.target>
     </properties>
@@ -65,12 +65,32 @@
             <artifactId>primefaces</artifactId>
             <version>13.0.0</version>
             <classifier>jakarta</classifier>
+            <scope>provided</scope>
         </dependency>
 
     </dependencies>
 
     <build>
         <plugins>
+            <!-- Dependencias suministradas por Liberty también en desarrollo local. -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <version>3.8.1</version>
+                <executions><execution><id>librerias-liberty</id><phase>generate-resources</phase>
+                    <goals><goal>copy</goal></goals>
+                    <configuration><artifactItems>
+                        <artifactItem><groupId>org.primefaces</groupId><artifactId>primefaces</artifactId>
+                            <version>13.0.0</version><classifier>jakarta</classifier>
+                            <outputDirectory>${project.build.directory}/liberty/wlp/usr/servers/defaultServer/lib/primefaces</outputDirectory>
+                        </artifactItem>
+                        <artifactItem><groupId>org.postgresql</groupId><artifactId>postgresql</artifactId>
+                            <version>42.7.3</version>
+                            <outputDirectory>${project.build.directory}/liberty/wlp/usr/servers/defaultServer/lib/postgres</outputDirectory>
+                        </artifactItem>
+                    </artifactItems></configuration>
+                </execution></executions>
+            </plugin>
 
             <plugin>
                 <groupId>io.openliberty.tools</groupId>

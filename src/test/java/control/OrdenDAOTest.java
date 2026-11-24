@@ -8,6 +8,7 @@ import entity.OrdenProducto;
 import entity.Producto;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.LockModeType;
+import jakarta.persistence.Query;
 import jakarta.persistence.TypedQuery;
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -383,6 +384,45 @@ class OrdenDAOTest {
         when(q.getSingleResult()).thenReturn(2L);
         assertThrows(IllegalArgumentException.class, () -> dao.eliminar(o));
         verify(em, never()).remove(any());
+    }
+
+    @Test
+    void pedidoPublicoPersisteCabeceraSinCamareroYDetalleConNombre() {
+        Orden o = orden();
+        Producto p = new Producto(UUID.randomUUID());
+        p.setActivo(true);
+        p.setPrecioSugerido(new BigDecimal("2.50"));
+        OrdenProducto detalle = new OrdenProducto(UUID.randomUUID());
+        detalle.setIdProducto(p);
+        detalle.setPrecio(new BigDecimal("2.50"));
+        detalle.setObservaciones("Cliente: Carlos");
+
+        // La primera consulta comprueba duplicados; la segunda recupera
+        // la cabecera creada mediante SQL con el UUID nulo omitido.
+        doReturn(null, o).when(em).find(Orden.class, o.getIdOrden());
+        Query insercion = mock(Query.class);
+        when(em.createNativeQuery("INSERT INTO orden (id_orden, fecha_creacion) VALUES (CAST(?1 AS uuid), ?2)"))
+                .thenReturn(insercion);
+        when(insercion.setParameter(1, o.getIdOrden().toString())).thenReturn(insercion);
+        when(insercion.setParameter(eq(2), any(java.sql.Timestamp.class))).thenReturn(insercion);
+        when(insercion.executeUpdate()).thenReturn(1);
+        when(em.find(Orden.class, o.getIdOrden(), LockModeType.PESSIMISTIC_WRITE)).thenReturn(o);
+        when(em.find(Producto.class, p.getIdProducto())).thenReturn(p);
+
+        dao.crearOrdenPublica(o, List.of(detalle));
+        verify(insercion).executeUpdate();
+        verify(em, never()).persist(o);
+        verify(em).persist(detalle);
+        assertNull(o.getIdEmpleadoRol());
+        assertEquals("Cliente: Carlos", detalle.getObservaciones());
+        assertSame(o, detalle.getIdOrden());
+    }
+    @Test
+    void pedidoPublicoRechazaEmpleadoFicticio() {
+        Orden o = orden();
+        o.setIdEmpleadoRol(new EmpleadoRol(UUID.randomUUID()));
+        assertThrows(IllegalArgumentException.class, () -> dao.crearOrdenPublica(o, List.of()));
+        verifyNoInteractions(em);
     }
 
     @Test

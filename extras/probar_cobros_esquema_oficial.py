@@ -70,9 +70,14 @@ def main():
         endpoint.set('host', '127.0.0.1')
         endpoint.set('httpPort', str(httpport))
         endpoint.set('httpsPort', '-1')
-        for files in root.findall('.//library/fileset'):
+        for files in root.findall("./library[@id='PostgreSQLLib']/fileset"):
             files.set('dir', '${server.config.dir}')
             files.set('includes', jdbc.name)
+        primefaces = wlp / 'usr/servers/defaultServer/lib/primefaces/primefaces-13.0.0-jakarta.jar'
+        assert primefaces.is_file(), 'Ejecutá mvn package para preparar PrimeFaces provided'
+        shutil.copy2(primefaces, server / primefaces.name)
+        pf = root.find("./library[@id='global']/fileset")
+        pf.set('dir', '${server.config.dir}')
         root.find('cors').set('domain', '/cafefe/api/')
         root.find('cors').set('allowedOrigins', origen)
         (server / 'jvm.options').write_text(f'-Dcafefe.frontend.origin={origen}\n')
@@ -126,9 +131,11 @@ INSERT INTO empleado_rol(id_empleado_rol,id_empleado,id_rol,activo) VALUES ('{ai
                                        env=env, stdout=output, stderr=subprocess.STDOUT)
             base = f'http://127.0.0.1:{httpport}/cafefe/api/pagos/facturas/'
 
+            cajero_lectura = build_opener(HTTPCookieProcessor(CookieJar()))
+
             def get(path):
                 try:
-                    with urlopen(base + path, timeout=10) as response:
+                    with cajero_lectura.open(base + path, timeout=10) as response:
                         return response.status, json.load(response)
                 except HTTPError as error:
                     return error.code, json.load(error)
@@ -144,6 +151,13 @@ INSERT INTO empleado_rol(id_empleado_rol,id_empleado,id_rol,activo) VALUES ('{ai
                 if time.monotonic() >= deadline or liberty.poll() is not None:
                     raise AssertionError('Liberty no inició: ' + (tmp / 'liberty.log').read_text()[-5000:])
                 time.sleep(1)
+            assert status == 401, (status, body)
+            login_lectura = Request(f'http://127.0.0.1:{httpport}/cafefe/api/sesion',
+                    data=json.dumps({'nombre': 'Caja prueba', 'uuid': empleado}).encode(),
+                    headers={'Content-Type': 'application/json', 'Origin': origen})
+            with cajero_lectura.open(login_lectura, timeout=10) as response:
+                assert response.status == 200
+            status, body = get(factura + '/productos')
             assert status == 200, (status, body)
             assert body == [{'idOrdenProducto': detalle, 'idProducto': producto,
                              'nombreProducto': 'Café de prueba', 'precio': 7.25}], body
@@ -157,19 +171,33 @@ INSERT INTO empleado_rol(id_empleado_rol,id_empleado,id_rol,activo) VALUES ('{ai
             api = f'http://127.0.0.1:{httpport}/cafefe/api/'
             cliente = build_opener(HTTPCookieProcessor(CookieJar()))
 
-            def request(path, data=None, opener=cliente):
+            def request(path, data=None, opener=cliente, method=None):
                 req = Request(api + path, data=None if data is None else json.dumps(data).encode(),
-                              headers={'Content-Type': 'application/json', 'Origin': origen})
+                              headers={'Content-Type': 'application/json', 'Origin': origen}, method=method)
                 try:
                     with opener.open(req, timeout=10) as response:
-                        return response.status, json.load(response)
+                        return response.status, json.load(response) if response.status != 204 else None
                 except HTTPError as error:
-                    return error.code, json.load(error)
+                    contenido = error.read()
+                    try: body = json.loads(contenido)
+                    except (ValueError, UnicodeDecodeError): body = None
+                    return error.code, body
 
+            privadas = ['facturas', 'pagos/facturas/pendientes', 'empleados', 'empleado-roles', 'roles']
+            for ruta in privadas:
+                assert request(ruta)[0] == 401, ruta
+                assert request(ruta, {})[0] in (401, 405), ruta
+            assert request('tipos-producto')[0] == 200
+            assert request('productos')[0] == 200
             abonos = f'cobros/facturas/{factura}/abonos'
             assert request(abonos)[0] == 401
             status, body = request('sesion', {'nombre': 'Caja prueba', 'uuid': empleado})
             assert status == 200, (status, body)
+            assert request('facturas')[0] == 200
+            assert request('pagos/facturas/pendientes')[0] == 200
+            for ruta in ('empleados', 'empleado-roles', 'roles'):
+                assert request(ruta)[0] == 403, ruta
+                assert request(ruta, {})[0] == 403, ruta
             assert request(abonos) == (200, [])
             for data, expected in [
                 ({'monto': 0, 'tipoPago': 'EFECTIVO'}, 422),
@@ -218,7 +246,21 @@ INSERT INTO empleado_rol(id_empleado_rol,id_empleado,id_rol,activo) VALUES ('{ai
                 status, detalles = request(f'ordenes/{oid}/productos', opener=lector)
                 assert status == 200 and len(detalles) == 2, (status, detalles)
                 assert all('Cliente: Ana prueba' in d['observaciones'] and 'Sin azúcar' in d['observaciones'] for d in detalles)
-                assert request('cobros/facturas/pendientes', opener=lector)[0] == 403
+                for ruta in ('cobros/facturas/pendientes', 'facturas', 'pagos/facturas/pendientes',
+                             'empleados', 'empleado-roles', 'roles'):
+                    assert request(ruta, opener=lector)[0] == 403, ruta
+                assert request('facturas', {}, lector)[0] == 403
+                assert request(f'pagos/facturas/{factura}/abonos', {'monto': 1, 'tipoPago': 'EFECTIVO'}, lector)[0] == 403
+            assert sql("SELECT count(*) FROM rol WHERE lower(trim(nombre))='administrador';").strip() == '0'
+            # Comprobar también las páginas heredadas: no pueden saltarse el filtro REST.
+            for pagina in ('Empleado.xhtml', 'Rol.xhtml', 'Factura.xhtml', 'Pago.xhtml'):
+                for navegador, esperado in ((anonimo, 401), (lectores[0], 403)):
+                    try:
+                        navegador.open(f'http://127.0.0.1:{httpport}/cafefe/paginas/{pagina}', timeout=10)
+                        raise AssertionError('La vista privada fue accesible')
+                    except HTTPError as error:
+                        assert error.code == esperado, (pagina, error.code)
+            print('PASS permisos: cajero en facturas/pagos, otros roles 403, anónimo 401, administración cerrada sin crear administrador', flush=True)
             status, pendientes = request('cobros/ordenes-pendientes')
             assert status == 200 and oid in [o['idOrden'] for o in pendientes]
             status, emitida = request(f'cobros/ordenes/{oid}/facturas', {'idCaja': caja, 'cliente': 'Ana prueba'})
@@ -243,6 +285,9 @@ INSERT INTO empleado_rol(id_empleado_rol,id_empleado,id_rol,activo) VALUES ('{ai
             assert sql("SELECT count(*) FROM information_schema.columns WHERE table_schema='public' AND column_name IN ('precio_base','estado_preparacion','cliente_web','cambio_entregado');").strip() == '0'
             print('PASS HU2/HU3/HU4: pedido anónimo → Recepción ambos roles → factura sin preparación → abonos → ticket pagado', flush=True)
             print('PASS: nombre y observaciones conservados, orden pagada desaparece, precios históricos intactos', flush=True)
+            if not args.browser:
+                assert request('sesion', method='DELETE')[0] == 204
+                assert request('sesion')[0] == 401
             assert sql(consulta_esquema) == esquema_antes, 'JPA alteró el esquema'
             print('PASS: esquema oficial de 19 tablas sin columnas añadidas; JPA no alteró su estructura', flush=True)
             if args.browser:
